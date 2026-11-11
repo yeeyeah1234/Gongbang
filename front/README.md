@@ -1,32 +1,22 @@
-# React + TypeScript + Vite
+# 공방 프론트엔드
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript + Vite. 라우팅은 React Router, 서버 데이터는 TanStack Query, 전역 상태는 Zustand, HTTP는 axios, 스타일은 Tailwind CSS를 씁니다.
 
-Currently, two official plugins are available:
+## 명령어
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install          # 의존성 설치
+npm run dev          # 개발 서버 (/api 요청은 localhost:8080 백엔드로 전달)
+npm run build        # 타입 검사 + 빌드
+npm run lint         # ESLint
+npm run format       # Prettier로 포맷 (커밋 전에 실행)
+npm run format:check # 포맷 검사만
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+## 폴더
+
+- `src/api/client.ts` — 공통 axios 인스턴스 (401 처리는 여기에만)
+- `src/lib/queryClient.ts` — TanStack Query 클라이언트
+- `src/router.tsx` — 라우트 정의
+- `src/styles/theme.css` — Tailwind 디자인 토큰 (STYLE_GUIDE 6장)
+- `src/pages/` — 화면
