@@ -89,8 +89,12 @@ def parse_detail_page(html):
     title_el = soup.select_one("div.tit-area h6.tit")
     title = title_el.get_text(strip=True) if title_el else ""
 
-    thumb_img = soup.select_one("div.cd-area div.img div.thumb img")
-    thumbnail_url = urljoin(WEVITY_BASE_URL, thumb_img["src"]) if thumb_img and thumb_img.get("src") else None
+    og_image = soup.select_one("meta[property='og:image']")
+    thumbnail_url = (
+        urljoin(WEVITY_BASE_URL, og_image["content"])
+        if og_image and og_image.get("content")
+        else None
+    )
 
     fields = {}
     for li in soup.select("ul.cd-info-list > li"):

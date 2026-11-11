@@ -1,12 +1,23 @@
 import datetime
 import logging
+import os
 
 import backend_client
+import config
+import json_sink
 import state_store
 import wevity_client
 from category_map import map_categories_to_code
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+os.makedirs(os.path.dirname(config.LOG_FILE_PATH), exist_ok=True)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(config.LOG_FILE_PATH, encoding="utf-8"),
+    ],
+)
 log = logging.getLogger("crawler")
 
 MAX_PAGES = 100  # 안전장치: 목록 페이지가 비정상적으로 계속 나오는 경우 대비.
@@ -49,6 +60,9 @@ def main():
     state = state_store.load()
     pending_state = {}
     contests_batch = []
+    created = 0
+    updated = 0
+    deadline_changed = 0
 
     for item in collect_list_items():
         source_url = wevity_client.build_source_url(item["ix"])
@@ -74,15 +88,34 @@ def main():
         contests_batch.append(build_contest_payload(item, detail, source_url))
         pending_state[source_url] = {"deadline": detail["end_date"]}
 
+        if cached_deadline is None:
+            created += 1
+        else:
+            updated += 1
+            if detail["end_date"] != cached_deadline:
+                deadline_changed += 1
+
     if not contests_batch:
         log.info("보낼 변경 사항이 없습니다.")
         return
 
-    result = backend_client.send_batch(contests_batch)
-    log.info(
-        "배치 전송 완료: created=%s updated=%s deadlineChanged=%s",
-        result.get("created"), result.get("updated"), result.get("deadlineChanged"),
-    )
+    if config.OUTPUT_MODE == "backend":
+        remote_result = backend_client.send_batch(contests_batch)
+        log.info(
+            "배치 전송 완료: created=%s updated=%s deadlineChanged=%s",
+            remote_result.get("created"),
+            remote_result.get("updated"),
+            remote_result.get("deadlineChanged"),
+        )
+    else:
+        output_path = json_sink.save(contests_batch)
+        log.info(
+            "백엔드 미연동 - JSON 파일로 저장: %s (created=%s updated=%s deadlineChanged=%s)",
+            output_path,
+            created,
+            updated,
+            deadline_changed,
+        )
 
     state.update(pending_state)
     state_store.save(state)

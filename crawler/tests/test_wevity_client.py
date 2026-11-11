@@ -25,10 +25,8 @@ LIST_HTML = """
 """
 
 DETAIL_HTML = """
+<meta property="og:image" content="/upload/thumb.jpg">
 <div class="tit-area"><h6 class="tit">상세 공모전 제목</h6></div>
-<div class="cd-area">
-  <div class="img"><div class="thumb"><img src="/upload/thumb.jpg"></div></div>
-</div>
 <ul class="cd-info-list">
   <li><span class="tit">주최/주관</span> 문화체육관광부</li>
   <li><span class="tit">분야</span> 기획/아이디어, 광고/마케팅</li>
@@ -83,3 +81,8 @@ def test_원본_url_생성():
     url = build_source_url("12345")
     assert "ix=12345" in url
     assert "gp=" not in url
+
+
+def test_og_image가_없으면_썸네일은_None():
+    detail = parse_detail_page("<div class=\"tit-area\"><h6 class=\"tit\">제목</h6></div>")
+    assert detail["thumbnail_url"] is None
