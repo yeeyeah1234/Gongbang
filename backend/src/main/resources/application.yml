@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: gongbang-backend
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/gongbang?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
+        default_batch_fetch_size: 100
+        highlight_sql: true
+
+  flyway:
+    enabled: false # 초기 스키마 마이그레이션 파일 추가 후 true 권장
+    baseline-on-migrate: true
+
+  jackson:
+    time-zone: Asia/Seoul
+    locale: ko_KR
+
+server:
+  port: 8080
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
