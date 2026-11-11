@@ -3,9 +3,12 @@ package com.gongbang.contest.domain;
 import com.gongbang.contest.dto.ContestBatchItem;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import lombok.AccessLevel;
@@ -25,17 +28,18 @@ public class Contest {
     @Column(name = "source_url", nullable = false, unique = true, length = 500)
     private String sourceUrl;
 
-    @Column(name = "source_site", nullable = false, length = 50)
+    @Column(name = "source_site", nullable = false, length = 30)
     private String sourceSite;
 
-    @Column(name = "title", nullable = false)
+    @Column(name = "title", nullable = false, length = 200)
     private String title;
 
-    @Column(name = "host")
-    private String host;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
 
-    @Column(name = "category_code", nullable = false, length = 50)
-    private String categoryCode;
+    @Column(name = "host", length = 100)
+    private String host;
 
     @Column(name = "thumbnail_url", length = 500)
     private String thumbnailUrl;
@@ -46,27 +50,30 @@ public class Contest {
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
 
-    @Column(name = "description", columnDefinition = "LONGTEXT")
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    private Contest(String sourceUrl, ContestBatchItem item) {
+    @Column(name = "view_count", nullable = false)
+    private int viewCount = 0;
+
+    private Contest(String sourceUrl, Category category, ContestBatchItem item) {
         this.sourceUrl = sourceUrl;
-        applyItem(item);
+        applyItem(category, item);
     }
 
-    public static Contest create(String sourceUrl, ContestBatchItem item) {
-        return new Contest(sourceUrl, item);
+    public static Contest create(String sourceUrl, Category category, ContestBatchItem item) {
+        return new Contest(sourceUrl, category, item);
     }
 
-    public void update(ContestBatchItem item) {
-        applyItem(item);
+    public void update(Category category, ContestBatchItem item) {
+        applyItem(category, item);
     }
 
-    private void applyItem(ContestBatchItem item) {
+    private void applyItem(Category category, ContestBatchItem item) {
         this.sourceSite = item.sourceSite();
         this.title = item.title();
+        this.category = category;
         this.host = item.host();
-        this.categoryCode = item.categoryCode();
         this.thumbnailUrl = item.thumbnailUrl();
         this.startDate = item.startDate();
         this.endDate = item.deadline();
