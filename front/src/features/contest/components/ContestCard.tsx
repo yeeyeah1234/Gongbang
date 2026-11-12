@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '../../../components/ui/Badge'
+import { Highlight } from '../../search/components/Highlight'
 import { useIsLoggedIn, useToggleBookmark } from '../hooks'
 import type { ContestCardItem } from '../types'
 
@@ -29,6 +30,8 @@ interface ContestCardProps {
   contest: ContestCardItem
   // MAIN-06 ③: 비로그인 사용자가 북마크를 누르면 부르는 함수 (토스트는 페이지가 띄운다)
   onRequireLogin: () => void
+  // SRCH-02 ③: 검색 결과에서 제목·주최의 검색어를 강조한다
+  highlight?: string
 }
 
 function BookmarkButton({ contest, onRequireLogin }: ContestCardProps) {
@@ -67,7 +70,7 @@ function BookmarkButton({ contest, onRequireLogin }: ContestCardProps) {
 }
 
 // MAIN-06 공모전 카드. 마감된 공모전은 MAIN-03 ③대로 「마감됨」 배지 + 어둡게.
-export function ContestCard({ contest, onRequireLogin }: ContestCardProps) {
+export function ContestCard({ contest, onRequireLogin, highlight }: ContestCardProps) {
   const [imageFailed, setImageFailed] = useState(false)
   const showImage = contest.thumbnailUrl && !imageFailed
 
@@ -100,8 +103,12 @@ export function ContestCard({ contest, onRequireLogin }: ContestCardProps) {
             <Badge variant="primary-soft">{contest.categoryName}</Badge>
             {!contest.isClosed && <DDayBadge dDay={contest.dDay} />}
           </div>
-          <h3 className="line-clamp-2 text-subheading font-bold">{contest.title}</h3>
-          <p className="truncate text-small text-text-sub">{contest.host}</p>
+          <h3 className="line-clamp-2 text-subheading font-bold">
+            <Highlight text={contest.title} keyword={highlight} />
+          </h3>
+          <p className="truncate text-small text-text-sub">
+            <Highlight text={contest.host} keyword={highlight} />
+          </p>
         </div>
       </Link>
       <BookmarkButton contest={contest} onRequireLogin={onRequireLogin} />
