@@ -10,7 +10,7 @@ import { DDayBadge, DefaultThumbnail } from '../features/contest/components/Cont
 import { useContestDetail, useIsLoggedIn, useToggleBookmark } from '../features/contest/hooks'
 import { sanitizeDescription } from '../features/contest/sanitizeDescription'
 import type { ContestDetail } from '../features/contest/types'
-import { useTimedToast } from '../features/contest/useTimedToast'
+import { useTimedToast } from '../hooks/useTimedToast'
 
 const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
 
