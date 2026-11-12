@@ -28,7 +28,7 @@ class CrawlerKeyFilterTest {
     @BeforeEach
     void setUp() {
         crawlerKeyFilter = new CrawlerKeyFilter(new ObjectMapper());
-        ReflectionTestUtils.setField(crawlerKeyFilter, "crawlerApiKey", VALID_KEY);
+        ReflectionTestUtils.setField(crawlerKeyFilter, "crawlerInternalKey", VALID_KEY);
     }
 
     @Test
@@ -40,7 +40,7 @@ class CrawlerKeyFilterTest {
     }
 
     @Test
-    @DisplayName("키 헤더가 없으면 401 INVALID_CRAWLER_KEY를 응답하고 체인을 타지 않는다")
+    @DisplayName("키 헤더가 없으면 401 INVALID_INTERNAL_KEY를 응답하고 체인을 타지 않는다")
     void 키가_없으면_401() throws Exception {
         MockHttpServletRequest request =
                 new MockHttpServletRequest("POST", "/internal/contests/batch");
@@ -49,7 +49,22 @@ class CrawlerKeyFilterTest {
         crawlerKeyFilter.doFilterInternal(request, response, filterChain);
 
         assertThat(response.getStatus()).isEqualTo(401);
-        assertThat(response.getContentAsString()).contains("INVALID_CRAWLER_KEY");
+        assertThat(response.getContentAsString()).contains("INVALID_INTERNAL_KEY");
+        verifyNoInteractions(filterChain);
+    }
+
+    @Test
+    @DisplayName("다른 내부 키(예: 동기화 서버 키)로는 401 INVALID_INTERNAL_KEY")
+    void 다른_내부_키로는_401() throws Exception {
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("POST", "/internal/contests/batch");
+        request.addHeader("X-Crawler-Key", "sync-server-key");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        crawlerKeyFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString()).contains("INVALID_INTERNAL_KEY");
         verifyNoInteractions(filterChain);
     }
 
