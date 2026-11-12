@@ -20,7 +20,8 @@ logging.basicConfig(
 )
 log = logging.getLogger("crawler")
 
-MAX_PAGES = 100  # 안전장치: 목록 페이지가 비정상적으로 계속 나오는 경우 대비.
+# 포트폴리오용 서비스라 최신 공모전 일부만 모은다 (목록 1페이지 15건, 2페이지면 약 30건).
+MAX_PAGES = 2
 
 
 def _estimate_deadline(dday):

@@ -1,6 +1,24 @@
 import datetime
 
+import main
 from main import _estimate_deadline, build_contest_payload
+
+
+def test_목록은_MAX_PAGES까지만_가져온다(monkeypatch):
+    fetched_pages = []
+
+    def fake_fetch(page):
+        fetched_pages.append(page)
+        return "<html>"
+
+    monkeypatch.setattr(main.wevity_client, "fetch_list_page", fake_fetch)
+    # 목록이 끝나지 않고 계속 나오는 경우에도 MAX_PAGES에서 멈춰야 한다
+    monkeypatch.setattr(main.wevity_client, "parse_list_page", lambda html: [{"ix": "1"}] * 15)
+
+    items = main.collect_list_items()
+
+    assert fetched_pages == list(range(1, main.MAX_PAGES + 1))
+    assert len(items) == 15 * main.MAX_PAGES
 
 
 def test_dday로_마감일을_추정한다():
