@@ -1,16 +1,13 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
 import { Badge } from '../../../components/ui/Badge'
-import { useToggleBookmark } from '../hooks'
+import { useIsLoggedIn, useToggleBookmark } from '../hooks'
 import type { ContestCardItem } from '../types'
-
-// TODO(확인 필요): 인증 모듈(정진우)의 로그인 사용자 조회가 생기면 그 값으로 바꾼다.
-const isLoggedIn = false
 
 // D-day 배지는 마감 7일 이내면 빨갛게 (STYLE_GUIDE 5-3)
 const DDAY_EMPHASIS_DAYS = 7
 
-function DDayBadge({ dDay }: { dDay: number }) {
+export function DDayBadge({ dDay }: { dDay: number }) {
   return (
     <Badge variant={dDay <= DDAY_EMPHASIS_DAYS ? 'danger-soft' : 'surface-sub'}>
       {dDay === 0 ? 'D-Day' : `D-${dDay}`}
@@ -20,7 +17,7 @@ function DDayBadge({ dDay }: { dDay: number }) {
 
 // MAIN-06 ①: 썸네일이 없거나 불러오지 못하면 기본 이미지
 // TODO(확인 필요): 기본 이미지 파일이 정해지면 그 이미지로 바꾼다. 지금은 로고 글자로 대신한다.
-function DefaultThumbnail() {
+export function DefaultThumbnail() {
   return (
     <div className="flex size-full items-center justify-center text-subheading font-bold text-text-disabled">
       공방
@@ -36,6 +33,7 @@ interface ContestCardProps {
 
 function BookmarkButton({ contest, onRequireLogin }: ContestCardProps) {
   const toggleBookmark = useToggleBookmark()
+  const isLoggedIn = useIsLoggedIn()
 
   const handleClick = () => {
     if (!isLoggedIn) {

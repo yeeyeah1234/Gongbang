@@ -1,6 +1,6 @@
 import { apiClient } from '../../api/client'
 import type { ApiResponse, PageResponse } from '../../api/types'
-import type { Category, ContestCardItem, ContestSort, ContestStatus } from './types'
+import type { Category, ContestCardItem, ContestDetail, ContestSort, ContestStatus } from './types'
 
 export interface ContestListParams {
   status: ContestStatus
@@ -17,6 +17,12 @@ export async function fetchContests(params: ContestListParams) {
     '/api/contests',
     { params },
   )
+  return response.data.data
+}
+
+// MAIN-02. 부를 때마다 서버 조회수가 1 오른다.
+export async function fetchContest(contestId: number) {
+  const response = await apiClient.get<ApiResponse<ContestDetail>>(`/api/contests/${contestId}`)
   return response.data.data
 }
 

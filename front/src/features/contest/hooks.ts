@@ -1,6 +1,11 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchCategories, fetchContests, updateBookmark } from './api'
+import { fetchCategories, fetchContest, fetchContests, updateBookmark } from './api'
 import type { ContestSort } from './types'
+
+// TODO(확인 필요): 인증 모듈(정진우)의 로그인 사용자 조회가 생기면 그 값으로 바꾼다. 지금은 항상 비로그인.
+export function useIsLoggedIn() {
+  return false
+}
 
 // MAIN-01 ③: 한 번에 20개씩
 const CONTEST_PAGE_SIZE = 20
@@ -25,6 +30,19 @@ export function useContestList(filter: { sort: ContestSort; category?: string })
       }),
     initialPageParam: 0,
     getNextPageParam: (lastPage) => (lastPage.hasNext ? lastPage.page + 1 : undefined),
+  })
+}
+
+// MAIN-02. 상세 API는 부를 때마다 조회수가 오르므로, 한 번 연 화면에서는 다시 부르지 않는다.
+// (키를 'contests' 밖에 둬서 북마크 후 목록을 새로 고칠 때 같이 다시 부르지 않게 한다)
+export function useContestDetail(contestId: number) {
+  return useQuery({
+    queryKey: ['contest-detail', contestId],
+    queryFn: () => fetchContest(contestId),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: false,
   })
 }
 
