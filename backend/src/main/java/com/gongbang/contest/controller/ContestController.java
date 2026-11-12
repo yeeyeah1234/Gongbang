@@ -3,12 +3,17 @@ package com.gongbang.contest.controller;
 import com.gongbang.contest.dto.CategoryResponse;
 import com.gongbang.contest.dto.ContestCardResponse;
 import com.gongbang.contest.dto.ContestDetailResponse;
+import com.gongbang.contest.dto.ContestDetailView;
 import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
+import com.gongbang.contest.service.ContestViewCookie;
 import com.gongbang.global.common.ApiResponse;
 import com.gongbang.global.common.PageResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -35,10 +40,15 @@ public class ContestController {
                 contestQueryService.getContests(status, sort, category, keyword, page, size));
     }
 
-    /** MAIN-02: 열 때마다 조회수 +1. */
+    /** MAIN-02: 같은 브라우저는 하루(한국 시간 자정 기준)에 한 번만 조회수 +1. 「오늘 본 공모전」 쿠키를 함께 내려준다. */
     @GetMapping("/api/contests/{contestId}")
-    public ApiResponse<ContestDetailResponse> getContest(@PathVariable Long contestId) {
-        return ApiResponse.success(contestDetailService.getContest(contestId));
+    public ResponseEntity<ApiResponse<ContestDetailResponse>> getContest(
+            @PathVariable Long contestId,
+            @CookieValue(name = ContestViewCookie.NAME, required = false) String viewedCookie) {
+        ContestDetailView view = contestDetailService.getContest(contestId, viewedCookie);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, view.viewedCookie().toString())
+                .body(ApiResponse.success(view.detail()));
     }
 
     /** MAIN-05 */
