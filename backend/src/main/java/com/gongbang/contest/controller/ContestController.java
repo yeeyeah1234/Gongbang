@@ -40,6 +40,13 @@ public class ContestController {
                 contestQueryService.getContests(status, sort, category, keyword, page, size));
     }
 
+    /** SRCH-04 인기 공모전(추천): 진행 중, 조회수 순. */
+    @GetMapping("/api/contests/popular")
+    public ApiResponse<List<ContestCardResponse>> getPopularContests(
+            @RequestParam(defaultValue = "5") int size) {
+        return ApiResponse.success(contestQueryService.getPopularContests(size));
+    }
+
     /** MAIN-02: 같은 브라우저는 하루(한국 시간 자정 기준)에 한 번만 조회수 +1. 「오늘 본 공모전」 쿠키를 함께 내려준다. */
     @GetMapping("/api/contests/{contestId}")
     public ResponseEntity<ApiResponse<ContestDetailResponse>> getContest(

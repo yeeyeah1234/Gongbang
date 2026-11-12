@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 
 import com.gongbang.contest.domain.Category;
 import com.gongbang.contest.domain.Contest;
+import com.gongbang.contest.domain.ContestSearchSort;
 import com.gongbang.contest.domain.ContestSort;
 import com.gongbang.contest.domain.ContestStatus;
 import com.gongbang.contest.dto.ContestCardResponse;
@@ -160,5 +161,38 @@ class ContestQueryServiceTest {
         assertThat(closed.isClosed()).isTrue();
         assertThat(open.isClosed()).isFalse();
         assertThat(open.dDay()).isEqualTo(14);
+    }
+
+    @Test
+    @DisplayName("통합 검색 정렬은 accuracy|latest|deadline만 받고, 그 밖이면 400 INVALID_SORT")
+    void 검색_정렬이_잘못되면_400() {
+        BusinessException e =
+                assertThrows(
+                        BusinessException.class,
+                        () -> contestQueryService.searchContests("공모전", "views", false, 0, 20));
+
+        assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_SORT);
+    }
+
+    @Test
+    @DisplayName("통합 검색은 기본으로 진행 중만, 「마감된 공모전 포함」이면 마감된 것까지 찾는다")
+    void 마감된_공모전_포함_여부() {
+        given(
+                        contestQueryRepository.searchContests(
+                                any(), any(), any(), anyLong(), anyInt()))
+                .willReturn(List.of());
+        ArgumentCaptor<ContestSearchCondition> captor =
+                ArgumentCaptor.forClass(ContestSearchCondition.class);
+
+        contestQueryService.searchContests("공모전", "accuracy", false, 0, 20);
+        contestQueryService.searchContests("공모전", "accuracy", true, 0, 20);
+
+        verify(contestQueryRepository, org.mockito.Mockito.times(2))
+                .searchContests(
+                        captor.capture(), eq(ContestSearchSort.ACCURACY), any(), eq(0L), eq(20));
+        assertThat(captor.getAllValues())
+                .extracting(ContestSearchCondition::status)
+                .containsExactly(ContestStatus.ACTIVE, ContestStatus.ALL);
+        assertThat(captor.getValue().keyword()).isEqualTo("공모전");
     }
 }
