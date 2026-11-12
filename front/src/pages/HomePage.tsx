@@ -1,23 +1,43 @@
-import { useNavigate } from 'react-router'
-import { Button } from '../components/ui/Button'
+import { useRef, useState } from 'react'
+import { Toast } from '../components/ui/Toast'
+import { CategoryFilter } from '../features/contest/components/CategoryFilter'
+import { ContestList } from '../features/contest/components/ContestList'
+import { SortSelect } from '../features/contest/components/SortSelect'
+import type { ContestSort } from '../features/contest/types'
 
-// TODO(확인 필요): 메인 화면은 기능정의서·Figma 기준으로 담당자가 채운다
+// STYLE_GUIDE 5-8: 토스트는 2.5초 뒤 사라진다
+const TOAST_DURATION_MS = 2500
+
+// 메인 화면: 진행 중인 공모전 목록 (MAIN-01·03·04·05·06)
 export default function HomePage() {
-  const navigate = useNavigate()
+  // MAIN-04 ②: 기본은 최신순 / MAIN-05 ①: 기본은 「전체」
+  const [sort, setSort] = useState<ContestSort>('latest')
+  const [category, setCategory] = useState<string>()
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+  const toastTimerRef = useRef<number | null>(null)
+
+  const showToast = (message: string) => {
+    setToastMessage(message)
+    if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current)
+    toastTimerRef.current = window.setTimeout(() => setToastMessage(null), TOAST_DURATION_MS)
+  }
 
   return (
     <main className="mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]">
-      <div className="rounded-card border border-line bg-surface p-8">
-        <h1 className="text-subheading font-bold text-primary">공방</h1>
-        <p className="mt-3 text-body text-text-sub">
-          워크스페이스 채팅 화면(F-NET-06)을 바로 확인할 수 있습니다.
-        </p>
-        <div className="mt-6">
-          <Button variant="primary" size="md" onClick={() => navigate('/teams/1/chat')}>
-            현대차 공모전 · 알파팀 채팅방 열기
-          </Button>
-        </div>
+      <title>공모전 | 공방</title>
+      <div className="flex items-start justify-between gap-6">
+        <CategoryFilter selected={category} onSelect={setCategory} />
+        <SortSelect value={sort} onChange={setSort} />
       </div>
+      <section className="mt-8">
+        <ContestList
+          sort={sort}
+          category={category}
+          onRequireLogin={() => showToast('로그인이 필요한 서비스입니다')}
+        />
+      </section>
+      <Toast message={toastMessage} />
     </main>
   )
 }
