@@ -12,8 +12,10 @@ interface RoomSettingsDrawerProps {
   members: TeamMember[]
   currentUserId: number
   onClose: () => void
+  onRequestDelegateLeader: (member: TeamMember) => void
   onStartDirectChat: (member: TeamMember) => void
   onRequestKickMember: (member: TeamMember) => void
+  onRequestReportMember: (member: TeamMember) => void
   onRequestInviteMember: () => void
   onRequestDeleteRoom: () => void
 }
@@ -25,8 +27,10 @@ export function RoomSettingsDrawer({
   members,
   currentUserId,
   onClose,
+  onRequestDelegateLeader,
   onStartDirectChat,
   onRequestKickMember,
+  onRequestReportMember,
   onRequestInviteMember,
   onRequestDeleteRoom,
 }: RoomSettingsDrawerProps) {
@@ -96,31 +100,44 @@ export function RoomSettingsDrawer({
                     </div>
                   </div>
 
-                  {isMemberLeader ? (
-                    <Badge variant="primary-soft">팀장</Badge>
-                  ) : (
-                    !isSelf && (
+                  <div className="flex shrink-0 items-center gap-1.5 self-start">
+                    {isMemberLeader && <Badge variant="primary-soft">팀장</Badge>}
+                    {!isSelf && (
                       <button
                         type="button"
                         aria-label={`${member.name} 메뉴`}
+                        aria-expanded={isMenuOpen}
                         onClick={(event) => {
                           event.stopPropagation()
                           setSelectedMemberId(member.id)
                           setOpenMenuMemberId((prev) => (prev === member.id ? null : member.id))
                         }}
-                        className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-text-sub transition-colors hover:bg-bg hover:text-text"
+                        className="-mt-1 -mr-1 flex h-6 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-text-sub transition-colors hover:bg-bg hover:text-text"
                       >
                         <MoreHorizontalIcon className="h-5 w-5" />
                       </button>
-                    )
-                  )}
+                    )}
+                  </div>
                 </div>
 
                 {isMenuOpen && (
                   <div
                     role="menu"
-                    className="absolute top-14 right-2 z-30 w-[180px] rounded-popover border border-line bg-surface py-2 shadow-pop"
+                    className="absolute top-[22px] right-0 z-30 w-[210px] rounded-[10px] border border-line bg-surface p-1.5 shadow-pop"
                   >
+                    {isLeader && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setOpenMenuMemberId(null)
+                          onRequestDelegateLeader(member)
+                        }}
+                        className="flex h-[38px] w-full cursor-pointer items-center rounded-[6px] px-[13px] text-left text-[14px] leading-[17px] text-text transition-colors hover:bg-surface-sub"
+                      >
+                        팀장 권한 위임하기
+                      </button>
+                    )}
                     <button
                       type="button"
                       role="menuitem"
@@ -128,7 +145,7 @@ export function RoomSettingsDrawer({
                         setOpenMenuMemberId(null)
                         onStartDirectChat(member)
                       }}
-                      className="flex h-11 w-full cursor-pointer items-center px-4 text-left text-body text-text hover:bg-bg"
+                      className="flex h-[38px] w-full cursor-pointer items-center rounded-[6px] px-[13px] text-left text-[14px] leading-[17px] text-text transition-colors hover:bg-surface-sub"
                     >
                       1:1 채팅하기
                     </button>
@@ -140,11 +157,23 @@ export function RoomSettingsDrawer({
                           setOpenMenuMemberId(null)
                           onRequestKickMember(member)
                         }}
-                        className="flex h-11 w-full cursor-pointer items-center px-4 text-left text-body text-danger hover:bg-bg"
+                        className="flex h-[38px] w-full cursor-pointer items-center rounded-[6px] px-[13px] text-left text-[14px] leading-[17px] text-danger transition-colors hover:bg-surface-sub"
                       >
-                        강제 퇴장
+                        팀원 강제 퇴장
                       </button>
                     )}
+                    <hr className="my-1 border-t border-divider" />
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setOpenMenuMemberId(null)
+                        onRequestReportMember(member)
+                      }}
+                      className="flex h-[38px] w-full cursor-pointer items-center rounded-[6px] px-[13px] text-left text-[14px] leading-[17px] text-text transition-colors hover:bg-surface-sub"
+                    >
+                      신고하기
+                    </button>
                   </div>
                 )}
               </li>
