@@ -126,27 +126,6 @@ export default function ContestDetailPage() {
             </dd>
           </dl>
 
-          {/* MAIN-02 ④ 버튼 */}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button
-              variant="primary"
-              onClick={() => window.open(contest.sourceUrl, '_blank', 'noopener,noreferrer')}
-            >
-              바로가기
-            </Button>
-            <Button
-              variant="outline"
-              aria-pressed={contest.isBookmarked}
-              loading={toggleBookmark.isPending}
-              onClick={handleBookmark}
-            >
-              북마크
-            </Button>
-            <Button variant="outline" onClick={handleCopyLink}>
-              복사
-            </Button>
-          </div>
-
           {/* MAIN-02 ②: 크롤링한 상세 본문 (DOMPurify로 정리한 HTML) */}
           <section className="mt-10 border-t border-divider pt-10">
             <div
@@ -174,15 +153,37 @@ export default function ContestDetailPage() {
           </section>
         </article>
 
-        {/* MAIN-02 ③: 포스터와 조회수 */}
-        <aside className="w-full lg:w-100 lg:shrink-0">
+        {/* MAIN-02 ③: 포스터와 조회수. 넓은 화면에서는 본문을 내려도 GNB(72px) 아래에 고정된다 */}
+        <aside className="w-full lg:sticky lg:top-24 lg:w-100 lg:shrink-0 lg:self-start">
           <div className="overflow-hidden rounded-card border border-line bg-surface">
             <div className="aspect-3/4 bg-surface-sub">
               <Poster contest={contest} />
             </div>
-            <p className="px-6 py-4 text-small text-text-sub">
+            <p className="px-6 pt-4 text-small text-text-sub">
               조회수 {contest.viewCount.toLocaleString()}
             </p>
+
+            {/* MAIN-02 ④ 버튼 */}
+            <div className="flex gap-2 p-6 pt-4">
+              <Button
+                variant="primary"
+                className="flex-1"
+                onClick={() => window.open(contest.sourceUrl, '_blank', 'noopener,noreferrer')}
+              >
+                바로가기
+              </Button>
+              <Button
+                variant="outline"
+                aria-pressed={contest.isBookmarked}
+                loading={toggleBookmark.isPending}
+                onClick={handleBookmark}
+              >
+                북마크
+              </Button>
+              <Button variant="outline" onClick={handleCopyLink}>
+                복사
+              </Button>
+            </div>
           </div>
         </aside>
       </div>
