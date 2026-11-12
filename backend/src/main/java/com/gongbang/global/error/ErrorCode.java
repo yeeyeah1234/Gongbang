@@ -23,6 +23,8 @@ public enum ErrorCode {
 
     // 404 Not Found
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "존재하지 않거나 삭제된 자원입니다."),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (API 명세서 MAIN-02)
+    CONTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTEST_NOT_FOUND", "존재하지 않는 공모전입니다."),
 
     // 409 Conflict
     ALREADY_APPLIED(HttpStatus.CONFLICT, "ALREADY_APPLIED", "이미 지원한 모집글입니다."),

@@ -2,12 +2,15 @@ package com.gongbang.contest.controller;
 
 import com.gongbang.contest.dto.CategoryResponse;
 import com.gongbang.contest.dto.ContestCardResponse;
+import com.gongbang.contest.dto.ContestDetailResponse;
+import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.common.ApiResponse;
 import com.gongbang.global.common.PageResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ContestController {
 
     private final ContestQueryService contestQueryService;
+    private final ContestDetailService contestDetailService;
 
     /** MAIN-01·04·05: 기본은 진행 중 공모전, 최신순, 20개씩. */
     @GetMapping("/api/contests")
@@ -29,6 +33,12 @@ public class ContestController {
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success(
                 contestQueryService.getContests(status, sort, category, keyword, page, size));
+    }
+
+    /** MAIN-02: 열 때마다 조회수 +1. */
+    @GetMapping("/api/contests/{contestId}")
+    public ApiResponse<ContestDetailResponse> getContest(@PathVariable Long contestId) {
+        return ApiResponse.success(contestDetailService.getContest(contestId));
     }
 
     /** MAIN-05 */
