@@ -4,9 +4,11 @@ import type { MemberColorIndex } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
 import { Toast } from '../components/ui/Toast'
 import {
+  DelegateLeaderModal,
   DeleteRoomModal,
   InviteMemberModal,
   KickMemberModal,
+  ReportMemberModal,
 } from '../features/chat/components/ChatModals'
 import { ChatRoomList } from '../features/chat/components/ChatRoomList'
 import { ChatTimeline } from '../features/chat/components/ChatTimeline'
@@ -83,7 +85,9 @@ export default function WorkspaceChatPage() {
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [delegateTarget, setDelegateTarget] = useState<TeamMember | null>(null)
   const [kickTarget, setKickTarget] = useState<TeamMember | null>(null)
+  const [reportTarget, setReportTarget] = useState<TeamMember | null>(null)
   const [deleteRoomOpen, setDeleteRoomOpen] = useState(false)
 
   const [toastMessage, setToastMessage] = useState<string | null>(null)
@@ -231,6 +235,18 @@ export default function WorkspaceChatPage() {
     showToast(`${payload.name}님을 팀 채팅에 초대했습니다`)
   }
 
+  const handleConfirmDelegateLeader = (target: TeamMember) => {
+    setMembers((prev) =>
+      prev.map((member) => {
+        if (member.id === target.id) return { ...member, role: 'LEADER' }
+        if (member.id === CURRENT_USER_ID) return { ...member, role: 'MEMBER' }
+        return member
+      }),
+    )
+    setDelegateTarget(null)
+    showToast(`${target.name}님에게 팀장 권한을 위임했습니다`)
+  }
+
   const handleConfirmKick = (target: TeamMember) => {
     setMembers((prev) => prev.filter((member) => member.id !== target.id))
     setRooms((prev) =>
@@ -241,6 +257,13 @@ export default function WorkspaceChatPage() {
     )
     setKickTarget(null)
     showToast(`${target.name}님을 채팅방에서 내보냈습니다`)
+  }
+
+  const handleConfirmReport = (target: TeamMember, reason: string, detail: string) => {
+    // TODO(확인 필요): 신고 API 연동 시 reason, detail 함께 전송
+    void detail
+    setReportTarget(null)
+    showToast(`${target.name}님에 대한 신고(${reason})가 접수되었습니다`)
   }
 
   const handleConfirmDeleteRoom = () => {
@@ -316,8 +339,10 @@ export default function WorkspaceChatPage() {
         members={members}
         currentUserId={CURRENT_USER_ID}
         onClose={() => setDrawerOpen(false)}
+        onRequestDelegateLeader={(member) => setDelegateTarget(member)}
         onStartDirectChat={handleStartDirectChat}
         onRequestKickMember={(member) => setKickTarget(member)}
+        onRequestReportMember={(member) => setReportTarget(member)}
         onRequestInviteMember={() => setInviteOpen(true)}
         onRequestDeleteRoom={() => setDeleteRoomOpen(true)}
       />
@@ -328,10 +353,22 @@ export default function WorkspaceChatPage() {
         onInvite={handleInviteMember}
       />
 
+      <DelegateLeaderModal
+        member={delegateTarget}
+        onClose={() => setDelegateTarget(null)}
+        onConfirmDelegate={handleConfirmDelegateLeader}
+      />
+
       <KickMemberModal
         member={kickTarget}
         onClose={() => setKickTarget(null)}
         onConfirmKick={handleConfirmKick}
+      />
+
+      <ReportMemberModal
+        member={reportTarget}
+        onClose={() => setReportTarget(null)}
+        onConfirmReport={(member, reason, detail) => handleConfirmReport(member, reason, detail)}
       />
 
       <DeleteRoomModal
@@ -345,4 +382,3 @@ export default function WorkspaceChatPage() {
     </div>
   )
 }
-
