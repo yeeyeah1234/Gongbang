@@ -13,7 +13,7 @@ public enum ErrorCode {
 
     // 401 Unauthorized
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요하거나 만료되었습니다."),
-    INVALID_CRAWLER_KEY(HttpStatus.UNAUTHORIZED, "INVALID_CRAWLER_KEY", "크롤러 전용 키가 올바르지 않습니다."),
+    INVALID_INTERNAL_KEY(HttpStatus.UNAUTHORIZED, "INVALID_INTERNAL_KEY", "내부 키가 올바르지 않습니다."),
 
     // 403 Forbidden
     NOT_TEAM_MEMBER(HttpStatus.FORBIDDEN, "NOT_TEAM_MEMBER", "팀원만 접근할 수 있습니다."),

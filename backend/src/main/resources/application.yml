@@ -36,4 +36,4 @@ server:
 
 app:
   crawler:
-    api-key: ${CRAWLER_API_KEY:}
+    internal-key: ${CRAWLER_INTERNAL_KEY:}

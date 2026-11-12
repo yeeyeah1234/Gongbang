@@ -16,7 +16,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * CRW-01, AGENTS.md 9장: /internal/contests/** 는 크롤러 전용 키가 맞을 때만 받는다. TODO(확인 필요):
+ * CRW-01, AGENTS.md 9장: /internal/contests/** 는 크롤러 키(CRAWLER_INTERNAL_KEY)가 맞을 때만 받는다.
+ * 동기화 서버 키(SYNC_INTERNAL_KEY) 등 다른 내부 키로는 열리지 않는다. TODO(확인 필요):
  * 헤더명(X-Crawler-Key)이 API 명세서에 아직 정해지지 않아 임시로 정함.
  */
 @Component
@@ -28,8 +29,8 @@ public class CrawlerKeyFilter extends OncePerRequestFilter {
 
     private final ObjectMapper objectMapper;
 
-    @Value("${app.crawler.api-key:}")
-    private String crawlerApiKey;
+    @Value("${app.crawler.internal-key:}")
+    private String crawlerInternalKey;
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -41,7 +42,7 @@ public class CrawlerKeyFilter extends OncePerRequestFilter {
             HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String key = request.getHeader(HEADER_NAME);
-        if (crawlerApiKey.isBlank() || !crawlerApiKey.equals(key)) {
+        if (crawlerInternalKey.isBlank() || !crawlerInternalKey.equals(key)) {
             writeUnauthorized(response);
             return;
         }
@@ -49,13 +50,13 @@ public class CrawlerKeyFilter extends OncePerRequestFilter {
     }
 
     private void writeUnauthorized(HttpServletResponse response) throws IOException {
-        response.setStatus(ErrorCode.INVALID_CRAWLER_KEY.getHttpStatus().value());
+        response.setStatus(ErrorCode.INVALID_INTERNAL_KEY.getHttpStatus().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter()
                 .write(
                         objectMapper.writeValueAsString(
                                 ApiResponse.failure(
-                                        ErrorResponse.from(ErrorCode.INVALID_CRAWLER_KEY))));
+                                        ErrorResponse.from(ErrorCode.INVALID_INTERNAL_KEY))));
     }
 }
