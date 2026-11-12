@@ -24,4 +24,5 @@ def send_batch(contests):
         timeout=30,
     )
     response.raise_for_status()
-    return response.json()
+    # 백엔드 공통 응답 { success, data, error }에서 data만 꺼낸다 (AGENTS.md 5장)
+    return response.json().get("data") or {}
