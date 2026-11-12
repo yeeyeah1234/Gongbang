@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router'
+import { useState, type MouseEvent } from 'react'
+import { Link, useNavigate } from 'react-router'
 import { Badge } from '../../../components/ui/Badge'
 import { Highlight } from '../../search/components/Highlight'
 import { useIsLoggedIn, useToggleBookmark } from '../hooks'
@@ -71,20 +71,35 @@ function BookmarkButton({ contest, onRequireLogin }: ContestCardProps) {
 
 // MAIN-06 공모전 카드. 마감된 공모전은 MAIN-03 ③대로 「마감됨」 배지 + 어둡게.
 export function ContestCard({ contest, onRequireLogin, highlight }: ContestCardProps) {
+  const navigate = useNavigate()
   const [imageFailed, setImageFailed] = useState(false)
   const showImage = contest.thumbnailUrl && !imageFailed
+  const detailPath = `/contests/${contest.contestId}`
+
+  // MAIN-06 ②: 카드 어디를 눌러도 상세(MAIN-02)로 간다.
+  // 단, 링크·북마크 버튼은 자기 동작을 하고, 제목·주최 글자를 드래그로 선택한 직후에는 이동하지 않는다.
+  const handleCardClick = (event: MouseEvent<HTMLElement>) => {
+    if ((event.target as Element).closest('a, button')) return
+    const selection = window.getSelection()
+    if (selection && !selection.isCollapsed && event.currentTarget.contains(selection.anchorNode)) {
+      return
+    }
+    navigate(detailPath)
+  }
 
   return (
     <article
-      className={`relative h-full overflow-hidden rounded-card border border-line bg-surface ${contest.isClosed ? 'opacity-50' : ''}`}
+      onClick={handleCardClick}
+      className={`relative h-full cursor-pointer overflow-hidden rounded-card border border-line bg-surface ${contest.isClosed ? 'opacity-50' : ''}`}
     >
-      {/* MAIN-06 ②: 카드를 누르면 상세(MAIN-02)로 */}
-      <Link to={`/contests/${contest.contestId}`} className="block h-full">
+      {/* 키보드 이동·새 탭 열기는 포스터 링크로 한다. 제목·주최는 링크 밖에 둬서 드래그로 선택할 수 있다 */}
+      <Link to={detailPath} aria-label={contest.title} draggable={false} className="block">
         <div className="relative aspect-3/4 bg-surface-sub">
           {showImage ? (
             <img
               src={contest.thumbnailUrl ?? undefined}
               alt=""
+              draggable={false}
               loading="lazy"
               onError={() => setImageFailed(true)}
               className="size-full object-cover"
@@ -98,19 +113,19 @@ export function ContestCard({ contest, onRequireLogin, highlight }: ContestCardP
             </span>
           )}
         </div>
-        <div className="flex flex-col gap-2 p-6">
-          <div className="flex items-center gap-2">
-            <Badge variant="primary-soft">{contest.categoryName}</Badge>
-            {!contest.isClosed && <DDayBadge dDay={contest.dDay} />}
-          </div>
-          <h3 className="line-clamp-2 text-subheading font-bold">
-            <Highlight text={contest.title} keyword={highlight} />
-          </h3>
-          <p className="truncate text-small text-text-sub">
-            <Highlight text={contest.host} keyword={highlight} />
-          </p>
-        </div>
       </Link>
+      <div className="flex flex-col gap-2 p-6">
+        <div className="flex items-center gap-2">
+          <Badge variant="primary-soft">{contest.categoryName}</Badge>
+          {!contest.isClosed && <DDayBadge dDay={contest.dDay} />}
+        </div>
+        <h3 className="line-clamp-2 text-subheading font-bold">
+          <Highlight text={contest.title} keyword={highlight} />
+        </h3>
+        <p className="truncate text-small text-text-sub">
+          <Highlight text={contest.host} keyword={highlight} />
+        </p>
+      </div>
       <BookmarkButton contest={contest} onRequireLogin={onRequireLogin} />
     </article>
   )
