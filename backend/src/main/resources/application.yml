@@ -20,7 +20,7 @@ spring:
         highlight_sql: true
 
   flyway:
-    enabled: false # 초기 스키마 마이그레이션 파일 추가 후 true 권장
+    enabled: true
     baseline-on-migrate: true
 
   jackson:
@@ -33,3 +33,7 @@ server:
     encoding:
       charset: UTF-8
       force: true
+
+app:
+  crawler:
+    api-key: ${CRAWLER_API_KEY:}
