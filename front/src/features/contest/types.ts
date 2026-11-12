@@ -16,6 +16,14 @@ export interface ContestCardItem {
   isBookmarked: boolean
 }
 
+// API 명세서 MAIN-02 GET /api/contests/{contestId}
+export interface ContestDetail extends ContestCardItem {
+  startDate: string | null // YYYY-MM-DD
+  description: string | null // 크롤링한 원본 HTML. 화면에 넣기 전에 반드시 sanitizeDescription을 거친다
+  sourceUrl: string
+  viewCount: number
+}
+
 // API 명세서 MAIN-05 GET /api/categories
 export interface Category {
   categoryCode: string

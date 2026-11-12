@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -55,6 +56,10 @@ public class Contest {
 
     @Column(name = "view_count", nullable = false)
     private int viewCount = 0;
+
+    // DB가 채우는 공통 컬럼. 최신순(MAIN-04) 정렬에 쓴다.
+    @Column(name = "created_at", insertable = false, updatable = false)
+    private LocalDateTime createdAt;
 
     private Contest(String sourceUrl, Category category, ContestBatchItem item) {
         this.sourceUrl = sourceUrl;

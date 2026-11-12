@@ -16,7 +16,7 @@ OUTPUT_MODE = os.environ.get("CRAWLER_OUTPUT_MODE", "json")  # "json" | "backend
 
 # backend 모드에서만 필요. json 모드에서는 비어 있어도 된다.
 BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL")
-CRAWLER_API_KEY = os.environ.get("CRAWLER_API_KEY")
+CRAWLER_INTERNAL_KEY = os.environ.get("CRAWLER_INTERNAL_KEY")
 
 # TODO(확인 필요): 백엔드 /internal/contests/batch가 크롤러 전용 키를 어떤 헤더로
 # 받을지 API 명세서에 정해져 있지 않음. 백엔드 구현 시 맞춰서 바꿀 것.
