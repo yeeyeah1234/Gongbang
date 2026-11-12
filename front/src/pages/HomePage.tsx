@@ -4,7 +4,7 @@ import { CategoryFilter } from '../features/contest/components/CategoryFilter'
 import { ContestList } from '../features/contest/components/ContestList'
 import { SortSelect } from '../features/contest/components/SortSelect'
 import type { ContestSort } from '../features/contest/types'
-import { useTimedToast } from '../features/contest/useTimedToast'
+import { useTimedToast } from '../hooks/useTimedToast'
 
 // 메인 화면: 진행 중인 공모전 목록 (MAIN-01·03·04·05·06)
 export default function HomePage() {
