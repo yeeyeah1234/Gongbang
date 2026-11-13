@@ -15,8 +15,8 @@ const MENUS = [
   { label: '공모전', to: '/', activePrefixes: ['/contests/'] },
   // TODO(확인 필요): 커뮤니티(팀원 모집 게시판, PST-001 김수형) 화면 경로가 정해지면 맞춘다
   { label: '커뮤니티', to: '/posts', activePrefixes: ['/posts/'] },
-  // 비로그인도 보인다. 비로그인이 누르면 「로그인 후 이용 가능합니다」 팝업 → [로그인하기]로 로그인 화면 (GNB-01 ③)
-  // TODO(확인 필요): 워크스페이스 팀 목록(WS-08, 이상현) 화면 경로가 정해지면 맞춘다
+  // 비로그인도 보인다. 비로그인이 누르면 「로그인이 필요한 서비스입니다」 팝업 → [로그인]으로 로그인 화면 (GNB-01 ④)
+  // 경로 /workspaces는 이상현과 확정 (11/13, WS-08)
   {
     label: '워크스페이스',
     to: '/workspaces',
@@ -148,16 +148,18 @@ export function Gnb() {
       <Modal
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
-        title="로그인 후 이용 가능합니다"
+        title="로그인이 필요한 서비스입니다"
         size="sm"
         footer={
           <Button
             onClick={() => {
               setLoginModalOpen(false)
+              // TODO(확인 필요): 로그인 후 워크스페이스(/workspaces)로 돌아오게 한다 (이상현 제안).
+              // 돌아갈 주소를 넘기는 방식은 로그인 화면(정진우, AUTH-01)이 정해지면 맞춘다
               navigate(LOGIN_PATH)
             }}
           >
-            로그인하기
+            로그인
           </Button>
         }
       />

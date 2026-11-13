@@ -19,6 +19,9 @@ function formatDate(date: string | null) {
   return date ? date.replaceAll('-', '.') : ''
 }
 
+// MAIN-02 ④: [바로가기] 주소가 없어 비활성일 때 마우스를 올리면 보이는 안내
+const NO_HOMEPAGE_MESSAGE = '바로가기 주소가 없는 공모전입니다.'
+
 function errorMessageOf(error: unknown) {
   if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
     return error.response.data.error.message as string
@@ -81,7 +84,7 @@ export default function ContestDetailPage() {
     )
   }
 
-  // MAIN-02 ④ [북마크]: 회원만 켜고 끌 수 있고, 비회원은 「로그인이 필요해요」 모달
+  // MAIN-02 ④ [북마크]: 회원만 켜고 끌 수 있고, 비회원은 「로그인이 필요한 서비스입니다」 모달
   const handleBookmark = () => {
     if (!isLoggedIn) {
       setLoginModalOpen(true)
@@ -163,15 +166,26 @@ export default function ContestDetailPage() {
               조회수 {contest.viewCount.toLocaleString()}
             </p>
 
-            {/* MAIN-02 ④ 버튼 */}
+            {/* MAIN-02 ④ 버튼. [바로가기]는 위비티가 아닌 주최 측 원래 페이지로, 주소가 없으면 비활성 */}
             <div className="flex gap-2 p-6 pt-4">
-              <Button
-                variant="primary"
-                className="flex-1"
-                onClick={() => window.open(contest.sourceUrl, '_blank', 'noopener,noreferrer')}
+              {/* 비활성 버튼은 마우스 이벤트를 받지 않아서 안내 문구(title)는 감싼 span에 둔다 */}
+              <span
+                className="flex flex-1"
+                title={contest.homepageUrl ? undefined : NO_HOMEPAGE_MESSAGE}
               >
-                바로가기
-              </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  disabled={!contest.homepageUrl}
+                  onClick={() => {
+                    if (contest.homepageUrl) {
+                      window.open(contest.homepageUrl, '_blank', 'noopener,noreferrer')
+                    }
+                  }}
+                >
+                  바로가기
+                </Button>
+              </span>
               <Button
                 variant="outline"
                 aria-pressed={contest.isBookmarked}
@@ -191,7 +205,7 @@ export default function ContestDetailPage() {
       <Modal
         open={loginModalOpen}
         onClose={() => setLoginModalOpen(false)}
-        title="로그인이 필요해요"
+        title="로그인이 필요한 서비스입니다"
       />
       <Toast message={toast.message} />
     </main>

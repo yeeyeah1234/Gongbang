@@ -18,6 +18,7 @@ public record ContestDetailResponse(
         boolean isClosed,
         String description,
         String sourceUrl,
+        String homepageUrl,
         int viewCount,
         boolean isBookmarked) {
 
@@ -36,6 +37,7 @@ public record ContestDetailResponse(
                 deadline.isBefore(today),
                 contest.getDescription(),
                 contest.getSourceUrl(),
+                contest.getHomepageUrl(),
                 contest.getViewCount(),
                 // TODO(확인 필요): 북마크(MY-03, 정진우)·로그인 사용자 조회가 생기면 실제 값으로 바꾼다
                 false);
