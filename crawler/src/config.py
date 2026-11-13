@@ -18,8 +18,7 @@ OUTPUT_MODE = os.environ.get("CRAWLER_OUTPUT_MODE", "json")  # "json" | "backend
 BACKEND_BASE_URL = os.environ.get("BACKEND_BASE_URL")
 CRAWLER_INTERNAL_KEY = os.environ.get("CRAWLER_INTERNAL_KEY")
 
-# TODO(확인 필요): 백엔드 /internal/contests/batch가 크롤러 전용 키를 어떤 헤더로
-# 받을지 API 명세서에 정해져 있지 않음. 백엔드 구현 시 맞춰서 바꿀 것.
+# 크롤러 전용 키를 담는 헤더 (API 명세서 CRW-01 비고, 백엔드 CrawlerKeyFilter와 같은 이름)
 CRAWLER_KEY_HEADER = "X-Crawler-Key"
 
 _BASE_DIR = os.path.dirname(__file__)
