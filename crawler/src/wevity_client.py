@@ -97,11 +97,14 @@ def parse_detail_page(html):
     )
 
     fields = {}
+    homepage_url = None
     for li in soup.select("ul.cd-info-list > li"):
         label_el = li.select_one("span.tit")
         if not label_el:
             continue
         label = label_el.get_text(strip=True)
+        if label == "홈페이지":
+            homepage_url = _parse_homepage_url(li)
         value_text = li.get_text(" ", strip=True)
         # label과 span 텍스트를 뺀 나머지가 값이다.
         value = value_text[len(label):].strip() if value_text.startswith(label) else value_text
@@ -123,7 +126,17 @@ def parse_detail_page(html):
         "start_date": start_date,
         "end_date": end_date,
         "description": description,
+        "homepage_url": homepage_url,
     }
+
+
+def _parse_homepage_url(li):
+    # MAIN-02 ④ [바로가기]: 주최 측 원래 공모전 페이지. http(s) 주소만 받는다 (AGENTS.md 9장, javascript: 등 차단)
+    link = li.select_one("a[href]")
+    href = link["href"].strip() if link else li.get_text(" ", strip=True).replace("홈페이지", "", 1).strip()
+    if href.startswith(("http://", "https://")) and len(href) <= 500:
+        return href
+    return None
 
 
 def _parse_category_labels(text):
