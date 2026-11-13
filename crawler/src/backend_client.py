@@ -7,7 +7,7 @@ def send_batch(contests):
     """POST /internal/contests/batch (CRW-01, API 명세서).
 
     요청: { contests: [{ sourceUrl, sourceSite, title, host, categoryCode,
-            thumbnailUrl, startDate, deadline, description }] }
+            thumbnailUrl, startDate, deadline, description, homepageUrl }] }
     응답: { created, updated, deadlineChanged }
     에러: 401 INVALID_INTERNAL_KEY · 400 INVALID_INPUT
     """
