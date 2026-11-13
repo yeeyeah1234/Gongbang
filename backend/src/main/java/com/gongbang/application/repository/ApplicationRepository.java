@@ -34,4 +34,13 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from Application a where a.id = :applicationId")
     Optional<Application> findByIdForUpdate(@Param("applicationId") Long applicationId);
+
+    /**
+     * 한 글의 특정 상태 지원을 모두 잠근다 (PST-004 ④ 종료, REC-006 ④ 자동 거절). 잠근 뒤 바꾸므로 그 사이 지원자가 취소해도
+     * 엇갈리지 않는다(취소는 이 처리가 끝날 때까지 기다렸다가 「이미 처리된 지원」을 받는다).
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Application a where a.postId = :postId and a.status = :status")
+    List<Application> findByPostIdAndStatusForUpdate(
+            @Param("postId") Long postId, @Param("status") ApplicationStatus status);
 }
