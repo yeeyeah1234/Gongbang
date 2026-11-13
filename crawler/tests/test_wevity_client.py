@@ -31,6 +31,7 @@ DETAIL_HTML = """
   <li><span class="tit">주최/주관</span> 문화체육관광부</li>
   <li><span class="tit">분야</span> 기획/아이디어, 광고/마케팅</li>
   <li><span class="tit">접수기간</span> 2026-10-26 ~ 2026-12-06 D-25</li>
+  <li><span class="tit">홈페이지</span> <a href="https://example.org/contest" target="_blank">https://example.org/contest</a></li>
 </ul>
 <div class="comm-desc" id="viewContents"><p>상세 설명 내용</p></div>
 """
@@ -58,6 +59,14 @@ def test_상세_페이지를_파싱한다():
     assert detail["start_date"] == "2026-10-26"
     assert detail["end_date"] == "2026-12-06"
     assert "상세 설명 내용" in detail["description"]
+    assert detail["homepage_url"] == "https://example.org/contest"
+
+
+def test_홈페이지가_없거나_http가_아니면_None():
+    assert parse_detail_page(LIST_HTML)["homepage_url"] is None
+    for href in ["javascript:alert(1)", "www.example.org", ""]:
+        html = f'<ul class="cd-info-list"><li><span class="tit">홈페이지</span> <a href="{href}">x</a></li></ul>'
+        assert parse_detail_page(html)["homepage_url"] is None
 
 
 def test_카테고리_라벨_파싱():
