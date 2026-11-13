@@ -196,13 +196,20 @@ public class PostCommandService {
         // TODO(확인 필요): 팀 초대(team_invitation, 김건우·김수형)가 생기면 이 글의 PENDING 초대를 CANCELED로 바꾼다 (④).
     }
 
+    /**
+     * 다른 도메인(지원 REC-001 등)용: 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근다 (SELECT … FOR UPDATE). 없거나 삭제된
+     * 글이면 404 POST_NOT_FOUND. 잠금은 그 트랜잭션이 끝날 때 풀린다.
+     */
+    public RecruitPost lockPost(Long postId) {
+        return recruitPostRepository
+                .findByIdForUpdate(postId)
+                .filter(found -> found.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+    }
+
     /** 모집글 행을 잠그고, 없거나 삭제된 글이면 404, 작성자가 아니면 403. */
     private RecruitPost lockOwnPost(Long memberId, Long postId) {
-        RecruitPost post =
-                recruitPostRepository
-                        .findByIdForUpdate(postId)
-                        .filter(found -> found.getDeletedAt() == null)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+        RecruitPost post = lockPost(postId);
         if (!post.getAuthorId().equals(memberId)) {
             throw new BusinessException(ErrorCode.NOT_POST_AUTHOR);
         }

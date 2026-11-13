@@ -8,6 +8,9 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.gongbang.application.domain.ApplicationStatus;
+import com.gongbang.application.dto.MyApplication;
+import com.gongbang.application.service.ApplicationQueryService;
 import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.error.ErrorCode;
@@ -41,12 +44,59 @@ class PostDetailServiceTest {
 
     @Mock private RecruitPostRepository recruitPostRepository;
     @Mock private ContestLookupService contestLookupService;
+    @Mock private ApplicationQueryService applicationQueryService;
 
     private PostDetailService postDetailService;
 
     @BeforeEach
     void setUp() {
-        postDetailService = new PostDetailService(recruitPostRepository, contestLookupService);
+        postDetailService =
+                new PostDetailService(
+                        recruitPostRepository, contestLookupService, applicationQueryService);
+    }
+
+    private void givenViewedBefore(Long viewerId) {
+        given(recruitPostRepository.touchStaleView(POST_ID, viewerId, NOW, NOW.minusHours(24)))
+                .willReturn(0);
+        given(recruitPostRepository.insertViewIfAbsent(POST_ID, viewerId, NOW)).willReturn(0);
+    }
+
+    @Test
+    @DisplayName("대기 중인 지원이 있는 회원은 myStatus PENDING과 그 지원 ID를 받는다 (지원 취소용)")
+    void 대기_지원자는_PENDING과_지원_ID() {
+        givenContestPost(5);
+        givenViewedBefore(VIEWER_ID);
+        given(applicationQueryService.findMyApplication(POST_ID, VIEWER_ID))
+                .willReturn(Optional.of(new MyApplication(55L, ApplicationStatus.PENDING)));
+
+        PostDetailResponse response = postDetailService.getPost(POST_ID, VIEWER_ID, NOW);
+
+        assertThat(response.myStatus()).isEqualTo(MyStatus.PENDING);
+        assertThat(response.myApplicationId()).isEqualTo(55L);
+    }
+
+    @Test
+    @DisplayName("거절된 회원은 myStatus REJECTED")
+    void 거절된_지원자는_REJECTED() {
+        givenContestPost(5);
+        givenViewedBefore(VIEWER_ID);
+        given(applicationQueryService.findMyApplication(POST_ID, VIEWER_ID))
+                .willReturn(Optional.of(new MyApplication(56L, ApplicationStatus.REJECTED)));
+
+        assertThat(postDetailService.getPost(POST_ID, VIEWER_ID, NOW).myStatus())
+                .isEqualTo(MyStatus.REJECTED);
+    }
+
+    @Test
+    @DisplayName("작성자와 비회원은 지원 기록을 찾지 않는다")
+    void 작성자와_비회원은_지원을_찾지_않는다() {
+        givenContestPost(5);
+        givenViewedBefore(AUTHOR_ID);
+
+        postDetailService.getPost(POST_ID, AUTHOR_ID, NOW);
+        postDetailService.getPost(POST_ID, null, NOW);
+
+        verify(applicationQueryService, never()).findMyApplication(any(), any());
     }
 
     private RecruitPost givenContestPost(int viewCount) {
