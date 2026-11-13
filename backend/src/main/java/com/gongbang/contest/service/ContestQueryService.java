@@ -27,8 +27,8 @@ public class ContestQueryService {
 
     private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
-    // TODO(확인 필요): 한 번에 받을 수 있는 최대 개수가 문서에 없어 임시로 정함
-    static final int MAX_PAGE_SIZE = 100;
+    // 한 번에 받을 수 있는 최대 개수 (API 명세서 MAIN-01·SRCH-02 비고, 11/13 결정)
+    static final int MAX_PAGE_SIZE = 50;
 
     private final ContestQueryRepository contestQueryRepository;
     private final CategoryRepository categoryRepository;
