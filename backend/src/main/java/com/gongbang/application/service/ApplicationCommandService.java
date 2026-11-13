@@ -2,6 +2,7 @@ package com.gongbang.application.service;
 
 import com.gongbang.application.domain.Application;
 import com.gongbang.application.domain.ApplicationStatus;
+import com.gongbang.application.domain.RejectType;
 import com.gongbang.application.dto.ApplicationCreateResponse;
 import com.gongbang.application.repository.ApplicationRepository;
 import com.gongbang.global.error.ErrorCode;
@@ -9,7 +10,9 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.service.PostCommandService;
+import com.gongbang.post.service.PostQueryService;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -26,6 +29,7 @@ public class ApplicationCommandService {
 
     private final ApplicationRepository applicationRepository;
     private final PostCommandService postCommandService;
+    private final PostQueryService postQueryService;
 
     /**
      * REC-001 지원하기. 「대기」 지원을 만든다 (②). 모집 시작일 전에도 지원할 수 있고 종료일 당일까지 받는다 (11/10·11/13
@@ -84,5 +88,33 @@ public class ApplicationCommandService {
             throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
         }
         applicationRepository.delete(application);
+    }
+
+    /**
+     * REC-005 지원자 거절. 작성자만, 대기 지원만 거절한다 (①). 모집 인원은 그대로이고(②) 행이 남아 같은 글에 다시 지원할 수 없다
+     * (③). 지원 행만 잠근다: 수락(REC-004)은 모집글 → 지원 순서로 잠그므로, 여기서 모집글까지 잠그면 순서가 엇갈려 교착이 날
+     * 수 있다. 모집글은 작성자 확인용으로 읽기만 한다.
+     *
+     * @param memberId 로그인 회원 ID (인증 모듈에서 받는다)
+     */
+    public void reject(Long memberId, Long applicationId) {
+        reject(memberId, applicationId, LocalDateTime.now(KST));
+    }
+
+    void reject(Long memberId, Long applicationId, LocalDateTime now) {
+        Application application =
+                applicationRepository
+                        .findByIdForUpdate(applicationId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
+        RecruitPost post = postQueryService.getActivePost(application.getPostId());
+        if (!post.getAuthorId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.NOT_POST_AUTHOR);
+        }
+        if (!application.isPending()) {
+            throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
+        }
+        application.reject(RejectType.MANUAL, now);
+        // TODO(확인 필요): NotificationService(정진우)가 생기면 지원자에게 APPLY_REJECTED 알림을 보낸다 (④, INT-003 ③).
+        // 문구 「‘제목’ 지원이 거절되었어요」, 누르면 모집글 상세.
     }
 }

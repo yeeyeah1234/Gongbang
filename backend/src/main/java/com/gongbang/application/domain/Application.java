@@ -57,4 +57,15 @@ public class Application {
     public static Application pending(Long postId, Long applicantId) {
         return new Application(postId, applicantId);
     }
+
+    public boolean isPending() {
+        return status == ApplicationStatus.PENDING;
+    }
+
+    /** REC-005 거절(MANUAL), REC-006 ④ 자동 거절(AUTO). 대기 확인은 부르는 쪽이 한다. */
+    public void reject(RejectType rejectType, LocalDateTime now) {
+        this.status = ApplicationStatus.REJECTED;
+        this.rejectType = rejectType;
+        this.processedAt = now;
+    }
 }
