@@ -54,6 +54,7 @@ def build_contest_payload(item, detail, source_url):
         "startDate": detail["start_date"],
         "deadline": detail["end_date"],
         "description": detail["description"],
+        "homepageUrl": detail["homepage_url"],
     }
 
 

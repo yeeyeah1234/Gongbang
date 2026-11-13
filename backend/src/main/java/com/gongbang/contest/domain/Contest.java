@@ -32,6 +32,10 @@ public class Contest {
     @Column(name = "source_site", nullable = false, length = 30)
     private String sourceSite;
 
+    // MAIN-02 ④ [바로가기]: 주최 측 원래 공모전 페이지 (위비티 「홈페이지」 칸). 없으면 null
+    @Column(name = "homepage_url", length = 500)
+    private String homepageUrl;
+
     @Column(name = "title", nullable = false, length = 200)
     private String title;
 
@@ -76,6 +80,7 @@ public class Contest {
 
     private void applyItem(Category category, ContestBatchItem item) {
         this.sourceSite = item.sourceSite();
+        this.homepageUrl = item.homepageUrl();
         this.title = item.title();
         this.category = category;
         this.host = item.host();

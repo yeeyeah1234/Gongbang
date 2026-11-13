@@ -21,6 +21,7 @@ export interface ContestDetail extends ContestCardItem {
   startDate: string | null // YYYY-MM-DD
   description: string | null // 크롤링한 원본 HTML. 화면에 넣기 전에 반드시 sanitizeDescription을 거친다
   sourceUrl: string
+  homepageUrl: string | null // 주최 측 원래 공모전 페이지 (MAIN-02 ④ [바로가기]). 없으면 null
   viewCount: number
 }
 
