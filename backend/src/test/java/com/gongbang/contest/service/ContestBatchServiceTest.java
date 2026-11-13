@@ -42,7 +42,7 @@ class ContestBatchServiceTest {
 
     private ContestBatchItem item(String sourceUrl, LocalDate deadline) {
         return new ContestBatchItem(
-                sourceUrl, "WEVITY", "제목", "주최", "PLANNING", null, null, deadline, "설명");
+                sourceUrl, "WEVITY", "제목", "주최", "PLANNING", null, null, deadline, "설명", null);
     }
 
     @Test
@@ -66,7 +66,7 @@ class ContestBatchServiceTest {
         given(categoryRepository.findByCode("UNKNOWN")).willReturn(Optional.empty());
         ContestBatchItem item =
                 new ContestBatchItem(
-                        "url-x", "WEVITY", "제목", "주최", "UNKNOWN", null, null, LocalDate.of(2026, 12, 6), "설명");
+                        "url-x", "WEVITY", "제목", "주최", "UNKNOWN", null, null, LocalDate.of(2026, 12, 6), "설명", null);
 
         assertThrows(BusinessException.class, () -> contestBatchService.upsert(List.of(item)));
     }

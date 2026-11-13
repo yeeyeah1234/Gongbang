@@ -19,6 +19,7 @@ def _detail():
         "start_date": "2026-10-01",
         "end_date": "2026-12-06",
         "description": "설명",
+        "homepage_url": None,
     }
 
 
