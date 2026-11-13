@@ -7,6 +7,7 @@ import com.gongbang.contest.repository.CategoryRepository;
 import com.gongbang.contest.repository.ContestRepository;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,11 @@ public class ContestLookupService {
         }
         return contestRepository.findAllWithCategoryByIdIn(contestIds).stream()
                 .collect(Collectors.toMap(Contest::getId, ContestSummary::from));
+    }
+
+    /** 공모전 하나의 요약 (PST-005 상세). 없으면 빈 값. */
+    public Optional<ContestSummary> findSummary(Long contestId) {
+        return contestRepository.findWithCategoryById(contestId).map(ContestSummary::from);
     }
 
     /** 분야 ID → 분야 이름. 외부 공모전 분야 표시에 쓴다 (PST-001). */
