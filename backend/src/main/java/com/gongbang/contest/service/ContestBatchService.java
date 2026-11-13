@@ -43,8 +43,8 @@ public class ContestBatchService {
             Contest contest = existing.get();
             if (!contest.getEndDate().equals(item.deadline())) {
                 deadlineChanged++;
-                // TODO(확인 필요): API 명세서 CRW-01 비고 - 마감일이 바뀌면 자동 일정(CAL-06 ④)·
-                // 예약 알림을 재예약해야 함. team/calendar 도메인(이상현)이 아직 없어서 지금은 호출하지 않음.
+                // TODO(확인 필요): CalendarService.upsertAutoEvent(teamId) 호출 (API 명세서 CAL-06, CRW-01 ⑦).
+                // 마감일이 바뀌면 이 공모전에 연결된 팀마다 자동 일정·예약 알림을 갱신한다. 이상현이 만들고 연결하기로 함 (11/13)
             }
             contest.update(category, item);
             updated++;
