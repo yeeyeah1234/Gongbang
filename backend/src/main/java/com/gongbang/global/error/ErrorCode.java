@@ -97,6 +97,9 @@ public enum ErrorCode {
     // 404 Not Found
     // PST-004 ⑤ 문구
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "삭제되었거나 없는 모집글이에요"),
+    // REC-002 ⑥ 문구 (11/13 추가)
+    APPLICATION_NOT_FOUND(
+            HttpStatus.NOT_FOUND, "APPLICATION_NOT_FOUND", "이미 취소되었거나 없는 지원이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (API 명세서 MAIN-02)
     CONTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTEST_NOT_FOUND", "존재하지 않는 공모전입니다."),
 

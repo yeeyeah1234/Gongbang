@@ -1,8 +1,12 @@
 package com.gongbang.application.repository;
 
 import com.gongbang.application.domain.Application;
+import jakarta.persistence.LockModeType;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
@@ -10,4 +14,12 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     boolean existsByPostIdAndApplicantId(Long postId, Long applicantId);
 
     Optional<Application> findByPostIdAndApplicantId(Long postId, Long applicantId);
+
+    /**
+     * 지원 상태를 바꾸는 처리(REC-002 취소, REC-004 수락, REC-005 거절)에서 지원 행을 잠근다 (SELECT … FOR UPDATE). 취소와
+     * 수락·거절이 동시에 들어와도 한쪽만 성공한다.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select a from Application a where a.id = :applicationId")
+    Optional<Application> findByIdForUpdate(@Param("applicationId") Long applicationId);
 }
