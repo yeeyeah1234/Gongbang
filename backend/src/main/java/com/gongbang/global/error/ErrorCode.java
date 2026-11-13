@@ -16,6 +16,8 @@ public enum ErrorCode {
     KEYWORD_TOO_SHORT(HttpStatus.BAD_REQUEST, "KEYWORD_TOO_SHORT", "검색어는 2글자 이상 입력해주세요"),
     // PST-002 ⑥ 문구
     CONTEST_REQUIRED(HttpStatus.BAD_REQUEST, "CONTEST_REQUIRED", "공모전을 선택해 주세요"),
+    // PST-002 ②⑥ 문구
+    CONTEST_ENDED(HttpStatus.BAD_REQUEST, "CONTEST_ENDED", "이미 마감된 공모전이에요"),
     // PST-002 ⑥ 문구 (서버 기간 오류)
     INVALID_PERIOD(HttpStatus.BAD_REQUEST, "INVALID_PERIOD", "모집 기간을 다시 확인해 주세요"),
     // PST-003 ④ 문구
