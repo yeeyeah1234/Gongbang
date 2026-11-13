@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useIsLoggedIn } from '../../features/contest/hooks'
 import { useTimedToast } from '../../hooks/useTimedToast'
 import { Button } from '../ui/Button'
+import { Modal } from '../ui/Modal'
 import { Toast } from '../ui/Toast'
 
 // SRCH-03 ①: 2글자 미만이면 검색하지 않는다
@@ -14,7 +15,18 @@ const MENUS = [
   { label: '공모전', to: '/', activePrefixes: ['/contests/'] },
   // TODO(확인 필요): 커뮤니티(팀원 모집 게시판, PST-001 김수형) 화면 경로가 정해지면 맞춘다
   { label: '커뮤니티', to: '/posts', activePrefixes: ['/posts/'] },
+  // 비로그인도 보인다. 비로그인이 누르면 「로그인 후 이용 가능합니다」 팝업 → [로그인하기]로 로그인 화면 (GNB-01 ③)
+  // TODO(확인 필요): 워크스페이스 팀 목록(WS-08, 이상현) 화면 경로가 정해지면 맞춘다
+  {
+    label: '워크스페이스',
+    to: '/workspaces',
+    activePrefixes: ['/workspaces/'],
+    requiresLogin: true,
+  },
 ]
+
+// TODO(확인 필요): 로그인 화면 경로는 인증 담당(정진우)과 맞춘다 (api/client.ts의 401 처리와 같은 /login)
+const LOGIN_PATH = '/login'
 
 function SearchIcon() {
   return (
@@ -83,6 +95,7 @@ export function Gnb() {
   const { pathname } = useLocation()
   const isLoggedIn = useIsLoggedIn()
   const toast = useTimedToast()
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
   // 검색 결과 화면으로 가거나 뒤로 가면 입력칸도 주소의 검색어에 맞춘다 (key가 바뀌면 새로 그림)
   const keywordParam = useSearchParams()[0].get('keyword') ?? ''
 
@@ -104,6 +117,12 @@ export function Gnb() {
                   key={menu.to}
                   to={menu.to}
                   aria-current={isActive ? 'page' : undefined}
+                  onClick={(event) => {
+                    if ('requiresLogin' in menu && !isLoggedIn) {
+                      event.preventDefault()
+                      setLoginModalOpen(true)
+                    }
+                  }}
                   className={`text-body font-bold ${isActive ? 'text-primary' : 'text-text hover:text-primary'}`}
                 >
                   {menu.label}
@@ -115,10 +134,9 @@ export function Gnb() {
           <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-4">
             <SearchBar key={keywordParam} initialKeyword={keywordParam} onInvalid={toast.show} />
             {/* GNB-02 ①: 비로그인은 [로그인] 버튼
-              TODO(확인 필요): GNB-02 ③④ 닉네임 드롭다운·GNB-03 로그아웃은 인증 모듈(정진우, AUTH-01·11)과 함께 만든다
-              TODO(확인 필요): 로그인 화면 경로는 인증 담당(정진우)과 맞춘다 (api/client.ts의 401 처리와 같은 /login) */}
+              TODO(확인 필요): GNB-02 ③④ 닉네임 드롭다운·GNB-03 로그아웃은 인증 모듈(정진우, AUTH-01·11)과 함께 만든다 */}
             {!isLoggedIn && (
-              <Button variant="outline" size="sm" onClick={() => navigate('/login')}>
+              <Button variant="outline" size="sm" onClick={() => navigate(LOGIN_PATH)}>
                 로그인
               </Button>
             )}
@@ -127,6 +145,22 @@ export function Gnb() {
       </header>
       {/* 토스트는 상단바(sticky·z-index) 밖에 둬야 화면 위에 제대로 그려진다 */}
       <Toast message={toast.message} />
+      <Modal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        title="로그인 후 이용 가능합니다"
+        size="sm"
+        footer={
+          <Button
+            onClick={() => {
+              setLoginModalOpen(false)
+              navigate(LOGIN_PATH)
+            }}
+          >
+            로그인하기
+          </Button>
+        }
+      />
     </>
   )
 }
