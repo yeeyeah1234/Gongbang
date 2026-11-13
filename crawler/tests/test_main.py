@@ -37,10 +37,12 @@ def test_상세_정보가_있으면_상세_값을_우선한다():
         "start_date": "2026-10-26",
         "end_date": "2026-12-06",
         "description": "<p>내용</p>",
+        "homepage_url": "https://example.org/contest",
     }
 
     payload = build_contest_payload(item, detail, "https://www.wevity.com/?ix=1")
 
+    assert payload["homepageUrl"] == "https://example.org/contest"
     assert payload["title"] == "상세 제목"
     assert payload["host"] == "상세 주최"
     assert payload["categoryCode"] == "PLANNING"
@@ -58,6 +60,7 @@ def test_상세_값이_비어있으면_목록_값으로_보완한다():
         "start_date": None,
         "end_date": "2026-12-06",
         "description": "",
+        "homepage_url": None,
     }
 
     payload = build_contest_payload(item, detail, "https://www.wevity.com/?ix=1")
