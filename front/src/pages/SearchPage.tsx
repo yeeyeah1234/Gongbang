@@ -28,8 +28,8 @@ function errorMessageOf(error: unknown) {
   if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
     return error.response.data.error.message as string
   }
-  // TODO(확인 필요): 검색 실패 문구가 기능정의서에 없다. 정해지면 바꾼다.
-  return '검색 결과를 불러오지 못했어요.'
+  // SRCH-02 ⑤
+  return '검색 결과를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'
 }
 
 function ContestGrid({

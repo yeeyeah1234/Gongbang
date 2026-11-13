@@ -16,8 +16,7 @@ export function DDayBadge({ dDay }: { dDay: number }) {
   )
 }
 
-// MAIN-06 ①: 썸네일이 없거나 불러오지 못하면 기본 이미지
-// TODO(확인 필요): 기본 이미지 파일이 정해지면 그 이미지로 바꾼다. 지금은 로고 글자로 대신한다.
+// MAIN-06 ①: 썸네일이 없거나 불러오지 못하면 기본 이미지 (로고 글자 칸)
 export function DefaultThumbnail() {
   return (
     <div className="flex size-full items-center justify-center text-subheading font-bold text-text-disabled">
