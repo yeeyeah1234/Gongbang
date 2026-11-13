@@ -9,6 +9,7 @@ import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.PostDetailResponse;
 import com.gongbang.post.dto.PostDetailResponse.AuthorInfo;
 import com.gongbang.post.repository.RecruitPostRepository;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Objects;
@@ -52,7 +53,16 @@ public class PostDetailService {
             recruitPostRepository.increaseViewCount(postId);
             viewCount++;
         }
+        return describe(post, viewerId, viewCount, now.toLocalDate());
+    }
 
+    /** 이미 읽은 모집글을 상세 응답으로 만든다. 조회수는 건드리지 않는다 (PST-003 수정 응답 등). */
+    PostDetailResponse describe(RecruitPost post, Long viewerId, LocalDate today) {
+        return describe(post, viewerId, post.getViewCount(), today);
+    }
+
+    private PostDetailResponse describe(
+            RecruitPost post, Long viewerId, int viewCount, LocalDate today) {
         MyStatus myStatus = myStatus(post, viewerId);
         // TODO(확인 필요): 회원 도메인(정진우)이 생기면 닉네임·프로필 사진을 채운다 (INT-002 ①).
         AuthorInfo author = new AuthorInfo(post.getAuthorId(), null, null);
@@ -63,14 +73,13 @@ public class PostDetailService {
                             .findCategoryNames(Set.of(post.getExternalContest().getCategoryId()))
                             .get(post.getExternalContest().getCategoryId());
             return PostDetailResponse.of(
-                    post, categoryName, author, viewCount, myStatus, null, now.toLocalDate());
+                    post, categoryName, author, viewCount, myStatus, null, today);
         }
         ContestSummary contest =
                 contestLookupService
                         .findSummary(post.getContestId())
                         .orElseThrow(() -> new IllegalStateException("모집글의 공모전이 없습니다"));
-        return PostDetailResponse.of(
-                post, contest, author, viewCount, myStatus, null, now.toLocalDate());
+        return PostDetailResponse.of(post, contest, author, viewCount, myStatus, null, today);
     }
 
     /** 24시간이 지난 기록을 갱신했거나 처음 기록했으면 true. */

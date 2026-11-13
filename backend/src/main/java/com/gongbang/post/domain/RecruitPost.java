@@ -109,6 +109,25 @@ public class RecruitPost {
         this.relatedUrl = relatedUrl;
     }
 
+    /**
+     * PST-003 수정. 연결된 공모전과 대표 이미지는 바꾸지 않는다 (②). 모집완료 글은 목표 인원을 늘려도 모집중으로 돌아가지
+     * 않는다 (⑤). 값 검증은 PostCommandService가 한다.
+     */
+    public void update(
+            String title,
+            String content,
+            int targetCount,
+            LocalDate recruitStartDate,
+            LocalDate recruitEndDate,
+            String relatedUrl) {
+        this.title = title;
+        this.content = content;
+        this.targetCount = targetCount;
+        this.recruitStartDate = recruitStartDate;
+        this.recruitEndDate = recruitEndDate;
+        this.relatedUrl = relatedUrl;
+    }
+
     /** PST-002: 서비스 공모전으로 작성. */
     public static RecruitPost withContest(
             Long authorId,

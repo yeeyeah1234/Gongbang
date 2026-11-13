@@ -40,6 +40,7 @@ class PostCommandServiceTest {
     @Mock private RecruitPostRepository recruitPostRepository;
     @Mock private ContestDetailService contestDetailService;
     @Mock private ContestQueryService contestQueryService;
+    @Mock private PostDetailService postDetailService;
 
     private PostCommandService postCommandService;
 
@@ -47,7 +48,10 @@ class PostCommandServiceTest {
     void setUp() {
         postCommandService =
                 new PostCommandService(
-                        recruitPostRepository, contestDetailService, contestQueryService);
+                        recruitPostRepository,
+                        contestDetailService,
+                        contestQueryService,
+                        postDetailService);
     }
 
     private static PostCreateRequest contestRequest(

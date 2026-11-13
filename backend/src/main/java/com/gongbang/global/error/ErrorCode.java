@@ -23,6 +23,11 @@ public enum ErrorCode {
     // PST-003 ④ 문구
     TARGET_BELOW_CURRENT(
             HttpStatus.BAD_REQUEST, "TARGET_BELOW_CURRENT", "현재 확정된 팀원 수보다 적게 설정할 수 없습니다"),
+    // PST-003 ④ 문구 (모집중인 글, 11/13 결정)
+    TARGET_EQUALS_CURRENT(
+            HttpStatus.BAD_REQUEST,
+            "TARGET_EQUALS_CURRENT",
+            "현재 확정된 팀원 수와 같게 설정할 수 없습니다. 모집을 마치려면 「모집 완료」를 눌러 주세요"),
 
     // 401 Unauthorized
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요하거나 만료되었습니다."),
