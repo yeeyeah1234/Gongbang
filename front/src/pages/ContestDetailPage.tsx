@@ -23,8 +23,8 @@ function errorMessageOf(error: unknown) {
   if (axios.isAxiosError(error) && error.response?.data?.error?.message) {
     return error.response.data.error.message as string
   }
-  // TODO(확인 필요): 상세를 불러오지 못했을 때의 문구가 기능정의서에 없다. 정해지면 바꾼다.
-  return '공모전을 불러오지 못했어요.'
+  // MAIN-02 ⑧
+  return '공모전을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.'
 }
 
 function Poster({ contest }: { contest: ContestDetail }) {
