@@ -24,6 +24,16 @@ export async function fetchMyProfile() {
 export async function updateMyProfile(body: UpdateProfileRequest) {
   return (await apiClient.patch<ApiResponse<MyProfile>>('/api/members/me', body)).data.data
 }
+// MY-01 ③ 프로필 사진 올리기 (JPG·PNG 5MB 이하) → 서버가 바로 프로필 사진으로 바꾼다
+export async function uploadProfileImage(file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  return (
+    await apiClient.post<ApiResponse<MyProfile>>('/api/members/me/image', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  ).data.data
+}
 
 // MY-05
 export async function fetchPublicProfile(memberId: number) {

@@ -53,6 +53,10 @@ public enum ErrorCode {
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-08 ③)
     PROOF_REQUIRED(HttpStatus.BAD_REQUEST, "PROOF_REQUIRED", "증빙 파일을 올려 주세요"),
 
+    // AUTH-10 ③: 1회용 키가 없거나 1분이 지남 (문구는 ⑧과 같은 뜻으로 임시)
+    OAUTH_CODE_INVALID(
+            HttpStatus.BAD_REQUEST, "OAUTH_CODE_INVALID", "간편 로그인을 완료하지 못했어요. 다시 시도해 주세요"),
+
     // 401 Unauthorized
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요하거나 만료되었습니다."),
     INVALID_INTERNAL_KEY(HttpStatus.UNAUTHORIZED, "INVALID_INTERNAL_KEY", "내부 키가 올바르지 않습니다."),
@@ -100,6 +104,9 @@ public enum ErrorCode {
     // ---- 정진우 409 ----
     // AUTH-05 ⑥ 문구
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "EMAIL_DUPLICATED", "이미 가입된 이메일이에요"),
+    // AUTH-05 ⑥: 카카오·구글로 가입된 이메일로 이메일 가입을 시도 → 그 방식으로 로그인 안내
+    SOCIAL_EMAIL_REGISTERED(
+            HttpStatus.CONFLICT, "SOCIAL_EMAIL_REGISTERED", "간편 로그인으로 가입된 이메일이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-06 ③)
     NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "NICKNAME_DUPLICATED", "이미 쓰고 있는 닉네임이에요"),
     // AUTH-05 ③: 5번 틀리면 그 번호는 무효 (문구는 임시)

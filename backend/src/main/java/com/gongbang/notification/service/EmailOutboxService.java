@@ -35,6 +35,11 @@ public class EmailOutboxService {
 
     // ---------- 계정 보안 메일 (항상 보냄) ----------
 
+    /** 메일 서버(MAIL_HOST)가 설정돼 있는지 */
+    public boolean isMailConfigured() {
+        return emailDispatcher.isMailConfigured();
+    }
+
     /** AUTH-05: 인증번호는 3분짜리라 대기열에 넣고 그 자리에서 보낸다. 실패하면 false */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean sendVerificationCodeNow(String email, String code) {
@@ -50,7 +55,12 @@ public class EmailOutboxService {
                                 "[공방] 인증번호를 확인해 주세요",
                                 "인증번호: " + code + "\n\n3분 안에 입력해 주세요. 본인이 요청하지 않았다면 이 메일을 무시해 주세요.",
                                 LocalDateTime.now()));
-        return emailDispatcher.dispatch(mail);
+        boolean sent = emailDispatcher.dispatch(mail);
+        if (!sent) {
+            // 실패한 인증번호 메일은 1분 뒤 다시 보내지 않는다 (그 번호는 이미 무효라 헷갈림)
+            mail.cancel();
+        }
+        return sent;
     }
 
     public void enqueueSignupComplete(Member member) {

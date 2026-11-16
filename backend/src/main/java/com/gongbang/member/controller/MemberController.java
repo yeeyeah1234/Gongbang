@@ -10,11 +10,13 @@ import com.gongbang.member.dto.UpdateProfileRequest;
 import com.gongbang.member.dto.WithdrawRequest;
 import com.gongbang.member.service.AccountService;
 import com.gongbang.member.service.MemberService;
+import com.gongbang.member.service.ProfileImageService;
 import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -22,9 +24,12 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /** AUTH-06 닉네임 확인, MY-01·04·05·11 */
 @RestController
@@ -32,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MemberController {
 
     private final MemberService memberService;
+    private final ProfileImageService profileImageService;
     private final AccountService accountService;
 
     @GetMapping("/api/members/check-nickname")
@@ -51,6 +57,14 @@ public class MemberController {
             @Valid @RequestBody UpdateProfileRequest request) {
         return ApiResponse.success(
                 memberService.updateMyProfile(loginMember.getMemberId(), request));
+    }
+
+    /** MY-01 ③ 프로필 사진 올리기 (form-data의 file, JPG·PNG 5MB 이하) → 바로 프로필 사진으로 바뀐다 */
+    @PostMapping(value = "/api/members/me/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<MyProfileResponse> uploadImage(
+            @AuthenticationPrincipal LoginMember loginMember,
+            @RequestPart("file") MultipartFile file) {
+        return ApiResponse.success(profileImageService.change(loginMember.getMemberId(), file));
     }
 
     @GetMapping("/api/members/{memberId}/profile")

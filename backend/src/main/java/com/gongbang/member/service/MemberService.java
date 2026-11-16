@@ -6,6 +6,7 @@ import com.gongbang.auth.dto.TermsItem;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.DesiredRole;
+import com.gongbang.member.domain.LoginType;
 import com.gongbang.member.domain.Member;
 import com.gongbang.member.domain.MemberStatus;
 import com.gongbang.member.domain.TermsAgreement;
@@ -103,6 +104,14 @@ public class MemberService {
                             if (member.isWithdrawn()) {
                                 throw withdrawn(member);
                             }
+                            if (member.getLoginType() != LoginType.EMAIL) {
+                                // ⑥ 카카오·구글로 가입된 이메일 → 그 방식으로 로그인 안내
+                                String provider =
+                                        member.getLoginType() == LoginType.KAKAO ? "카카오" : "구글";
+                                throw new BusinessException(
+                                        ErrorCode.SOCIAL_EMAIL_REGISTERED,
+                                        provider + "로 가입된 이메일이에요. " + provider + "로 로그인해 주세요");
+                            }
                             throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
                         });
     }
@@ -181,6 +190,46 @@ public class MemberService {
         return member;
     }
 
+    /** AUTH-10 ④: 이미 가입한 카카오·구글 계정 찾기 (탈퇴 대기 계정 포함) */
+    @Transactional(readOnly = true)
+    public Optional<Member> findBySocialId(LoginType loginType, String providerId) {
+        return loginType == LoginType.GOOGLE
+                ? memberRepository.findByGoogleId(providerId)
+                : memberRepository.findByKakaoId(providerId);
+    }
+
+    /** AUTH-10 ⑤: 추가 정보(필수 약관 + 닉네임 + 관심 분야)를 받아 가입 */
+    @Transactional
+    public Member createSocialMember(
+            LoginType loginType,
+            String providerId,
+            String email,
+            String rawNickname,
+            List<TermsItem> terms,
+            List<String> interestCategoryCodes) {
+        validateTerms(terms);
+        String nickname = NicknamePolicy.validate(rawNickname);
+        if (findBySocialId(loginType, providerId).isPresent()
+                || memberRepository.findByEmail(email).isPresent()) {
+            throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
+        }
+        if (memberRepository.existsByNickname(nickname)) {
+            throw new BusinessException(ErrorCode.NICKNAME_DUPLICATED);
+        }
+        Member member = Member.createSocialMember(loginType, providerId, email, nickname);
+        member.replaceInterests(resolveCategoryIds(interestCategoryCodes));
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.NICKNAME_DUPLICATED);
+        }
+        for (TermsItem item : terms) {
+            termsAgreementRepository.save(
+                    new TermsAgreement(member.getId(), item.type(), item.version(), item.agreed()));
+        }
+        return member;
+    }
+
     /** MY-11 ⑥ */
     @Transactional
     public Member restore(String email) {
@@ -202,7 +251,7 @@ public class MemberService {
     public MyProfileResponse getMyProfile(Long memberId) {
         Member member = getActiveMember(memberId);
         return MyProfileResponse.of(
-                member, categoryCodes(member.getInterestCategoryIds()), completion(member));
+                member, categoryCodes(member.getInterestCategoryIds()));
     }
 
     @Transactional
@@ -264,7 +313,7 @@ public class MemberService {
         }
         memberRepository.flush();
         return MyProfileResponse.of(
-                member, categoryCodes(member.getInterestCategoryIds()), completion(member));
+                member, categoryCodes(member.getInterestCategoryIds()));
     }
 
     /** MY-05: 이메일·가입 방식·실명·증빙 파일은 넣지 않는다 (AGENTS 9) */
@@ -301,15 +350,6 @@ public class MemberService {
     }
 
     // ---------- 내부 ----------
-
-    int completion(Member member) {
-        Long id = member.getId();
-        return ProfileCompletion.calculate(
-                member,
-                careerRepository.countByMemberId(id),
-                certificateRepository.findByMemberIdOrderByAcquiredDateDescIdDesc(id).size(),
-                awardRepository.findByMemberIdOrderByAwardedDateDescIdDesc(id).size());
-    }
 
     private void validateTerms(List<TermsItem> terms) {
         Set<TermsType> agreed = EnumSet.noneOf(TermsType.class);

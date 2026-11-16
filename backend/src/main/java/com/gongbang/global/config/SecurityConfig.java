@@ -2,6 +2,7 @@ package com.gongbang.global.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gongbang.auth.jwt.JwtAuthenticationFilter;
+import com.gongbang.auth.oauth.OAuthLoginHandlers;
 import com.gongbang.global.common.ApiResponse;
 import com.gongbang.global.error.ErrorCode;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,7 +31,8 @@ public class SecurityConfig {
     private final ObjectMapper objectMapper;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, OAuthLoginHandlers oAuthLoginHandlers)
+            throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -38,6 +40,11 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // AUTH-12: 토큰이 있으면 로그인 회원을 넣는다 (공개 API에서도)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // AUTH-10: GET /oauth2/authorization/{kakao|google} → 끝나면 프론트 /oauth/callback 으로
+                .oauth2Login(oauth -> oauth
+                        .loginPage("/login")
+                        .successHandler(oAuthLoginHandlers)
+                        .failureHandler(oAuthLoginHandlers))
                 .exceptionHandling(ex -> ex
                         // 로그인이 필요한데 토큰이 없거나 만료 → 401 UNAUTHORIZED (컨트롤러 앞에서)
                         .authenticationEntryPoint((request, response, e) ->
@@ -53,7 +60,8 @@ public class SecurityConfig {
                                 "/api/contests", "/api/contests/*", "/api/categories",
                                 "/api/search/**", "/api/posts", "/api/posts/**",
                                 "/api/members/*/profile", "/api/members/check-nickname",
-                                "/api/auth/find-email").permitAll()
+                                "/api/auth/find-email", "/api/auth/oauth/providers",
+                                "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/email/send-code", "/api/auth/email/verify",
                                 "/api/auth/signup", "/api/auth/login", "/api/auth/token/refresh",

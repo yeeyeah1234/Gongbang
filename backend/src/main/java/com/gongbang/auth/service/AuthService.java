@@ -229,6 +229,30 @@ public class AuthService {
         refreshTokenRepository.revokeAll(memberId, LocalDateTime.now());
     }
 
+    /** AUTH-10 ④: 이미 가입한 카카오·구글 계정이면 바로 로그인 */
+    @Transactional
+    public LoginResult loginSocial(Long memberId) {
+        Member member = memberService.getActiveMember(memberId);
+        member.loggedIn(LocalDateTime.now());
+        return issue(member, false);
+    }
+
+    /** AUTH-10 ⑤: 소셜 가입 완료 → 환영 알림·가입 완료 메일 → 바로 로그인 */
+    @Transactional
+    public LoginResult completeSocialSignup(Long memberId) {
+        Member member = memberService.getActiveMember(memberId);
+        emailOutboxService.enqueueSignupComplete(member);
+        notificationService.send(
+                member.getId(),
+                NotificationType.WELCOME,
+                null,
+                null,
+                null,
+                member.getNickname() + "님, 환영해요! 프로필을 채우면 팀 초대를 더 많이 받아요",
+                "/mypage/profile");
+        return issue(member, false);
+    }
+
     private void checkWithdrawn(Member member) {
         if (member.isWithdrawn()) {
             long daysLeft =

@@ -16,11 +16,7 @@ import { PasswordRules } from '../../features/auth/components/PasswordRules'
 import { StepIndicator } from '../../features/auth/components/StepIndicator'
 import { TERMS_VERSION, TermsModal } from '../../features/auth/components/TermsModal'
 import { WithdrawnAccountModal } from '../../features/auth/components/WithdrawnAccountModal'
-import {
-  isEmailFormatValid,
-  isNicknameFormatValid,
-  isPasswordValid,
-} from '../../features/auth/passwordRules'
+import { isNicknameFormatValid, isPasswordValid } from '../../features/auth/passwordRules'
 import { safeRedirect } from '../../features/auth/redirect'
 import { loadLoginMember } from '../../features/auth/session'
 import { useAuthStore } from '../../features/auth/store'
@@ -82,20 +78,6 @@ export default function SignupPage() {
   const passwordMismatch = confirm.length > 0 && password !== confirm
   const nicknameOk = nicknameChecked !== null && nicknameChecked === nickname.trim()
   const step3Ready = isPasswordValid(password) && password === confirm && nicknameOk
-
-  // AUTH-07 ③ 프로필 완성도(%) — 관심 분야·희망 역할·학교·전공·학년·소개 6칸 기준 (가입 단계 표시용)
-  const completion = Math.round(
-    ([
-      interests.length > 0,
-      roles.length > 0,
-      school.trim(),
-      major.trim(),
-      grade,
-      bio.trim(),
-    ].filter(Boolean).length /
-      6) *
-      100,
-  )
 
   const toggle = (list: string[], value: string) =>
     list.includes(value) ? list.filter((v) => v !== value) : [...list, value]
@@ -275,20 +257,23 @@ export default function SignupPage() {
               setEmailGuide(null)
             }}
           />
-          {isEmailFormatValid(email) && (
-            <EmailCodeField
-              key={`${email}-${newSignupConfirmed}`}
-              email={email}
-              purpose="SIGNUP"
-              newSignup={newSignupConfirmed}
-              verified={verificationToken !== null}
-              onSendError={(code, message) => setEmailGuide({ code, message })}
-              onVerified={setVerificationToken}
-            />
-          )}
+          <EmailCodeField
+            key={`${email}-${newSignupConfirmed}`}
+            email={email}
+            purpose="SIGNUP"
+            newSignup={newSignupConfirmed}
+            verified={verificationToken !== null}
+            onSendError={(code, message) => setEmailGuide({ code, message })}
+            onVerified={setVerificationToken}
+          />
           {emailGuide && emailGuide.code !== 'ACCOUNT_WITHDRAWN' && (
             <div className="rounded-input bg-bg px-4 py-3 text-small" role="alert">
               <p className="text-danger">{emailGuide.message}</p>
+              {emailGuide.code === 'SOCIAL_EMAIL_REGISTERED' && (
+                <div className="mt-2 flex gap-4 font-bold text-primary">
+                  <Link to="/login">간편 로그인하러 가기</Link>
+                </div>
+              )}
               {emailGuide.code === 'EMAIL_DUPLICATED' && (
                 <div className="mt-2 flex gap-4 font-bold text-primary">
                   <Link to="/login">로그인</Link>
@@ -337,11 +322,14 @@ export default function SignupPage() {
             successText={confirm && !passwordMismatch ? '비밀번호가 일치해요' : undefined}
           />
           <div>
-            <div className="flex items-end gap-3">
+            {/* 라벨은 따로 두고 버튼을 입력칸 윗선에 맞춘다 → 아래 안내 문구가 생겨도 버튼이 움직이지 않는다 */}
+            <label htmlFor="signup-nickname" className="mb-2 block text-body font-bold text-text">
+              닉네임
+            </label>
+            <div className="flex items-start gap-3">
               <div className="flex-1">
                 <Input
                   id="signup-nickname"
-                  label="닉네임"
                   placeholder="2~10자 한글·영문·숫자"
                   value={nickname}
                   maxLength={10}
@@ -357,7 +345,7 @@ export default function SignupPage() {
               <Button
                 variant="outline"
                 size="lg"
-                className="mb-0 h-14 text-body"
+                className="h-14 shrink-0 text-body"
                 loading={checking}
                 onClick={handleCheckNickname}
                 disabled={!nickname.trim()}
@@ -385,15 +373,6 @@ export default function SignupPage() {
 
       {step === 4 && (
         <div className="mt-8 flex flex-col gap-6">
-          <div className="flex items-center gap-4 rounded-input bg-bg px-4 py-3">
-            <span className="text-small font-bold text-text">프로필 완성도 {completion}%</span>
-            <progress
-              aria-label="프로필 완성도"
-              value={completion}
-              max={100}
-              className="h-2 flex-1 appearance-none overflow-hidden rounded-full [&::-moz-progress-bar]:rounded-full [&::-moz-progress-bar]:bg-primary [&::-webkit-progress-bar]:bg-surface-sub [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary"
-            />
-          </div>
           <fieldset>
             <legend className="mb-3 text-body font-bold text-text">
               관심 분야 <span className="font-normal text-text-sub">(필수)</span>

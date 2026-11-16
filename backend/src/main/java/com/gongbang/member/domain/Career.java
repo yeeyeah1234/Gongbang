@@ -43,6 +43,10 @@ public class Career {
     @Column(name = "description", length = 200)
     private String description;
 
+    /** 관련 링크 (선택, V12) */
+    @Column(name = "link_url", length = 500)
+    private String linkUrl;
+
     public Career(Long memberId) {
         this.memberId = memberId;
     }
@@ -52,11 +56,13 @@ public class Career {
             String role,
             LocalDate startDate,
             LocalDate endDate,
-            String description) {
+            String description,
+            String linkUrl) {
         this.organization = organization;
         this.role = role;
         this.startDate = startDate;
         this.endDate = endDate;
         this.description = description;
+        this.linkUrl = linkUrl;
     }
 }

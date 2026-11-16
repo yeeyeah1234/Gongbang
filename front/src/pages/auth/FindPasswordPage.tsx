@@ -10,7 +10,7 @@ import { AuthCard } from '../../features/auth/components/AuthCard'
 import { EmailCodeField } from '../../features/auth/components/EmailCodeField'
 import { PasswordInput } from '../../features/auth/components/PasswordInput'
 import { PasswordRules } from '../../features/auth/components/PasswordRules'
-import { isEmailFormatValid, isPasswordValid } from '../../features/auth/passwordRules'
+import { isPasswordValid } from '../../features/auth/passwordRules'
 
 // AUTH-02 ②~⑥ 비밀번호 찾기 / Figma 03-1(이메일 인증) · 03-2(새 비밀번호)
 export default function FindPasswordPage() {
@@ -101,15 +101,13 @@ export default function FindPasswordPage() {
             setGuide(null)
           }}
         />
-        {isEmailFormatValid(email) && (
-          <EmailCodeField
-            key={email}
-            email={email}
-            purpose="RESET"
-            onSendError={(code, message) => setGuide({ code, message })}
-            onVerified={(t) => setToken(t)}
-          />
-        )}
+        <EmailCodeField
+          key={email}
+          email={email}
+          purpose="RESET"
+          onSendError={(code, message) => setGuide({ code, message })}
+          onVerified={(t) => setToken(t)}
+        />
         {guide && (
           <div className="rounded-input bg-bg px-4 py-3 text-small text-text" role="alert">
             <p>{guide.message}</p>

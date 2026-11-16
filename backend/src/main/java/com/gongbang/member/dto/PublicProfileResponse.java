@@ -26,7 +26,11 @@ public record PublicProfileResponse(
         List<PublicAward> awards) {
 
     public record PublicCareer(
-            String organization, String role, LocalDate startDate, LocalDate endDate) {}
+            String organization,
+            String role,
+            LocalDate startDate,
+            LocalDate endDate,
+            String linkUrl) {}
 
     public record PublicCertificate(
             String name, String issuer, LocalDate acquiredDate, boolean verified) {}
@@ -58,7 +62,8 @@ public record PublicProfileResponse(
                                                 c.getOrganization(),
                                                 c.getRole(),
                                                 c.getStartDate(),
-                                                c.getEndDate()))
+                                                c.getEndDate(),
+                                                c.getLinkUrl()))
                         .toList(),
                 certificates.stream()
                         .map(

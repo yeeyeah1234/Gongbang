@@ -84,13 +84,24 @@ export function CareerModal({ open, item, onClose, onSaved }: ModalBaseProps<Car
   const [endDate, setEndDate] = useState(item?.endDate ?? '')
   const [ongoing, setOngoing] = useState(item ? item.endDate === null : false)
   const [description, setDescription] = useState(item?.description ?? '')
+  const [linkUrl, setLinkUrl] = useState(item?.linkUrl ?? '')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
+  // 관련 링크는 선택. 넣었다면 http:// 또는 https://로 시작해야 한다 (서버 UrlPolicy와 같은 규칙)
+  const linkError =
+    linkUrl.trim() && !/^https?:\/\//i.test(linkUrl.trim())
+      ? 'http:// 또는 https://로 시작하는 주소를 넣어 주세요'
+      : null
   const periodError =
     !ongoing && startDate && endDate && endDate < startDate ? '종료일은 시작일 이후여야 해요' : null
   const ready =
-    organization.trim() && role.trim() && startDate && (ongoing || endDate) && !periodError
+    organization.trim() &&
+    role.trim() &&
+    startDate &&
+    (ongoing || endDate) &&
+    !periodError &&
+    !linkError
 
   const save = async () => {
     setSaving(true)
@@ -101,6 +112,7 @@ export function CareerModal({ open, item, onClose, onSaved }: ModalBaseProps<Car
       startDate,
       endDate: ongoing ? null : endDate,
       description: description.trim() || null,
+      linkUrl: linkUrl.trim() || null,
     }
     try {
       if (item) await updateHistory('careers', item.careerId, input)
@@ -189,6 +201,17 @@ export function CareerModal({ open, item, onClose, onSaved }: ModalBaseProps<Car
             {description.length} / 200
           </span>
         </div>
+        <Input
+          id="career-link"
+          label="관련 링크 (선택)"
+          type="url"
+          placeholder="https://"
+          maxLength={500}
+          value={linkUrl}
+          onChange={(e) => setLinkUrl(e.target.value)}
+          errorText={linkError ?? undefined}
+          helperText="회사·동아리 페이지, 활동 결과물 등"
+        />
         {error && <p className="text-small text-danger">{error}</p>}
       </div>
     </Modal>

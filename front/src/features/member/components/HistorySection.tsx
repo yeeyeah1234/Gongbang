@@ -5,6 +5,8 @@ interface HistoryRow {
   key: number
   title: ReactNode
   sub: string
+  // 경력 관련 링크 (선택). 새 창으로 연다
+  link?: string | null
   onEdit?: () => void
   onDelete?: () => void
 }
@@ -45,6 +47,16 @@ export function HistorySection({
                   {row.title}
                 </p>
                 <p className="mt-1 text-caption text-text-sub">{row.sub}</p>
+                {row.link && (
+                  <a
+                    href={row.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 block truncate text-caption text-primary underline"
+                  >
+                    {row.link}
+                  </a>
+                )}
               </div>
               {(row.onEdit || row.onDelete) && (
                 <div className="flex shrink-0 gap-2 text-caption text-text-sub">

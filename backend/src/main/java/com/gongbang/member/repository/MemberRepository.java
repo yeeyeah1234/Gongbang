@@ -16,6 +16,10 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByNickname(String nickname);
 
+    Optional<Member> findByKakaoId(String kakaoId);
+
+    Optional<Member> findByGoogleId(String googleId);
+
     boolean existsByNickname(String nickname);
 
     List<Member> findByStatusAndWithdrawnAtBefore(MemberStatus status, LocalDateTime before);

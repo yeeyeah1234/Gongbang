@@ -83,6 +83,19 @@ export default function PublicProfilePage() {
                 <span className="text-text-sub">
                   ({formatMonth(c.startDate)} – {c.endDate ? formatMonth(c.endDate) : '현재'})
                 </span>
+                {c.linkUrl && (
+                  <>
+                    {' '}
+                    <a
+                      href={c.linkUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline"
+                    >
+                      관련 링크
+                    </a>
+                  </>
+                )}
               </p>
             ))
           )}

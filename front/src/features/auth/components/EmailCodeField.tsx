@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { getApiError } from '../../../api/errors'
 import { sendCode, verifyCode } from '../api'
+import { isEmailFormatValid } from '../passwordRules'
 import type { VerificationPurpose } from '../types'
 
 interface EmailCodeFieldProps {
@@ -41,6 +42,7 @@ export function EmailCodeField({
   const [sending, setSending] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [devCode, setDevCode] = useState<string | null>(null)
 
   useEffect(() => {
     if (!sent || verified) return
@@ -57,7 +59,9 @@ export function EmailCodeField({
     try {
       const res = await sendCode(email.trim(), purpose, newSignup)
       setSent(true)
-      setCode('')
+      // 로컬 개발(메일 서버 없음)에서는 서버가 준 번호를 미리 채워 준다
+      setDevCode(res.devCode ?? null)
+      setCode(res.devCode ?? '')
       setNow(Date.now())
       setExpiresAt(new Date(res.expiresAt).getTime())
       setResendAt(new Date(res.resendAvailableAt).getTime())
@@ -102,66 +106,74 @@ export function EmailCodeField({
     return <p className="mt-2 text-small text-success">인증되었어요</p>
   }
 
+  // Figma 03-1·05: [인증번호 받기] 버튼과 인증번호 칸은 처음부터 보이고, 받기 전에는 칸만 잠겨 있다
+  const emailOk = isEmailFormatValid(email)
+
   return (
     <div className="flex flex-col">
-      {!sent ? (
-        <Button
-          variant="outline"
-          onClick={send}
-          loading={sending}
-          disabled={!email.trim()}
-          className="self-start"
-        >
-          인증번호 받기
-        </Button>
-      ) : (
+      <Button
+        variant="outline"
+        size="lg"
+        className="w-full text-body"
+        onClick={send}
+        loading={sending}
+        disabled={!emailOk || (sent && resendWait > 0)}
+      >
+        {!sent
+          ? '인증번호 받기'
+          : resendWait > 0
+            ? `재발송 (${resendWait}초 뒤)`
+            : '인증번호 재발송'}
+      </Button>
+      {!emailOk && email.trim() && (
+        <p className="mt-2 text-small text-text-sub">이메일 주소를 끝까지 입력해 주세요</p>
+      )}
+
+      <label
+        htmlFor={`code-${purpose}`}
+        className="mt-6 mb-2 flex items-center justify-between text-body font-bold text-text"
+      >
+        인증번호
+        {sent && (
+          <span className="text-small font-bold text-danger" aria-live="polite">
+            남은 시간 {mmss(remaining)}
+          </span>
+        )}
+      </label>
+      <input
+        id={`code-${purpose}`}
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={6}
+        value={code}
+        disabled={!sent}
+        onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+        placeholder={sent ? '6자리 숫자' : '[인증번호 받기]를 먼저 눌러 주세요'}
+        className={[
+          'h-14 w-full rounded-input bg-surface px-4 text-body tracking-[0.3em] placeholder:tracking-normal placeholder:text-text-disabled focus:outline-none disabled:border disabled:border-line disabled:bg-surface-sub',
+          error
+            ? 'border-2 border-danger'
+            : 'border border-line-input focus:border-2 focus:border-primary',
+        ].join(' ')}
+      />
+      {devCode && (
+        <p className="mt-2 text-small text-text-sub" role="status">
+          개발 환경이라 메일 대신 인증번호를 보여 드려요: <b className="text-text">{devCode}</b>
+        </p>
+      )}
+      {error && <p className="mt-2 text-small text-danger">{error}</p>}
+      <Button
+        variant="outline"
+        size="lg"
+        className="mt-3 w-full text-body"
+        onClick={verify}
+        loading={verifying}
+        disabled={!sent || code.length !== 6}
+      >
+        인증하기
+      </Button>
+      {sent && (
         <>
-          <label
-            htmlFor={`code-${purpose}`}
-            className="mb-2 flex items-center justify-between text-body font-bold text-text"
-          >
-            인증번호
-            <span className="text-small font-bold text-danger" aria-live="polite">
-              {mmss(remaining)}
-            </span>
-          </label>
-          <div className="flex gap-3">
-            <input
-              id={`code-${purpose}`}
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="6자리 숫자"
-              className={[
-                'h-14 min-w-0 flex-1 rounded-input bg-surface px-4 text-body tracking-[0.3em] placeholder:tracking-normal placeholder:text-text-disabled focus:outline-none',
-                error
-                  ? 'border-2 border-danger'
-                  : 'border border-line-input focus:border-2 focus:border-primary',
-              ].join(' ')}
-            />
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={send}
-              disabled={resendWait > 0}
-              loading={sending}
-              className="h-14 text-body"
-            >
-              {resendWait > 0 ? `재발송 ${resendWait}초` : '재발송'}
-            </Button>
-          </div>
-          {error && <p className="mt-2 text-small text-danger">{error}</p>}
-          <Button
-            variant="primary"
-            className="mt-4 w-full"
-            onClick={verify}
-            loading={verifying}
-            disabled={code.length !== 6}
-          >
-            인증하기
-          </Button>
           <button
             type="button"
             onClick={() => setHelpOpen((v) => !v)}
@@ -178,7 +190,6 @@ export function EmailCodeField({
           )}
         </>
       )}
-      {!sent && error && <p className="mt-2 text-small text-danger">{error}</p>}
     </div>
   )
 }

@@ -21,10 +21,9 @@ public record MyProfileResponse(
         List<String> desiredRoles,
         List<String> skillTags,
         String portfolioUrl,
-        int profileCompletion,
         LocalDateTime createdAt) {
 
-    public static MyProfileResponse of(Member m, List<String> interestCodes, int completion) {
+    public static MyProfileResponse of(Member m, List<String> interestCodes) {
         return new MyProfileResponse(
                 m.getId(),
                 m.getEmail(),
@@ -40,7 +39,6 @@ public record MyProfileResponse(
                 m.getDesiredRoles().stream().map(DesiredRole::name).toList(),
                 List.copyOf(m.getSkillTags()),
                 m.getPortfolioUrl(),
-                completion,
                 m.getCreatedAt());
     }
 }

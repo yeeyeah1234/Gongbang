@@ -2,3 +2,10 @@
 CLAUDE.md
 AGENTS.md
 STYLE_GUIDE.md
+
+# 개인 메일 계정 (인증번호 메일)
+backend/mail.properties
+mail.properties
+
+# 프로필 사진 업로드 폴더
+uploads/

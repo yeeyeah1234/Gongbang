@@ -13,6 +13,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +39,10 @@ public class EmailVerificationService {
     private final JwtProvider jwtProvider;
     private final EmailOutboxService emailOutboxService;
     private final MemberService memberService;
+
+    /** 메일 서버가 없을 때 인증번호를 응답에 실어 화면에 보여 줄지 (로컬 개발용) */
+    @Value("${app.mail-dev-code:true}")
+    private boolean devCodeEnabled;
 
     @Transactional
     public SendCodeResponse sendCode(
@@ -76,12 +81,17 @@ public class EmailVerificationService {
                                 passwordEncoder.encode(code),
                                 now,
                                 CODE_VALID_MINUTES));
+        LocalDateTime resendAt = now.plusSeconds(RESEND_SECONDS);
+        if (devCodeEnabled && !emailOutboxService.isMailConfigured()) {
+            // 로컬 개발: 메일 서버가 없으면 메일 대신 화면에 인증번호를 보여 준다 (배포 때는 MAIL_DEV_CODE=false)
+            return new SendCodeResponse(verification.getExpiresAt(), resendAt, code);
+        }
         // 인증번호는 3분짜리라 대기열에 넣고 바로 보낸다. 실패하면 AUTH-05 ④ 문구
         boolean sent = emailOutboxService.sendVerificationCodeNow(email, code);
         if (!sent) {
             throw new BusinessException(ErrorCode.MAIL_SEND_FAILED);
         }
-        return new SendCodeResponse(verification.getExpiresAt(), now.plusSeconds(RESEND_SECONDS));
+        return new SendCodeResponse(verification.getExpiresAt(), resendAt, null);
     }
 
     /** 맞으면 다음 단계에 쓸 verificationToken (가입 30분, 나머지 10분) */

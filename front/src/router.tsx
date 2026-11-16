@@ -8,6 +8,8 @@ import { RequireLogin } from './features/auth/RequireLogin'
 import FindEmailPage from './pages/auth/FindEmailPage'
 import FindPasswordPage from './pages/auth/FindPasswordPage'
 import LoginPage from './pages/auth/LoginPage'
+import OAuthCallbackPage from './pages/auth/OAuthCallbackPage'
+import SocialSignupPage from './pages/auth/SocialSignupPage'
 import RestorePage from './pages/auth/RestorePage'
 import SignupPage from './pages/auth/SignupPage'
 import AccountSettingsPage from './pages/mypage/AccountSettingsPage'
@@ -32,6 +34,9 @@ export const router = createBrowserRouter([
       { path: '/find-email', element: <FindEmailPage /> },
       { path: '/find-password', element: <FindPasswordPage /> },
       { path: '/restore', element: <RestorePage /> },
+      // AUTH-10 간편 로그인: 백엔드가 돌려보내는 곳, 처음 온 계정의 추가 정보 입력
+      { path: '/oauth/callback', element: <OAuthCallbackPage /> },
+      { path: '/signup/social', element: <SocialSignupPage /> },
       // MY-05 공개 프로필
       { path: '/members/:memberId', element: <PublicProfilePage /> },
       {
