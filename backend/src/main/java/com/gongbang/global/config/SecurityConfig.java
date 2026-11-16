@@ -60,7 +60,8 @@ public class SecurityConfig {
                                 "/api/contests", "/api/contests/*", "/api/categories",
                                 "/api/search/**", "/api/posts", "/api/posts/**",
                                 "/api/members/*/profile", "/api/members/check-nickname",
-                                "/api/auth/find-email", "/api/auth/oauth/providers").permitAll()
+                                "/api/auth/find-email", "/api/auth/oauth/providers",
+                                "/uploads/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/auth/email/send-code", "/api/auth/email/verify",
                                 "/api/auth/signup", "/api/auth/login", "/api/auth/token/refresh",

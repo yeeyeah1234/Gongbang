@@ -14,7 +14,6 @@ export interface MyProfile {
   desiredRoles: string[]
   skillTags: string[]
   portfolioUrl: string | null
-  profileCompletion: number
   createdAt: string
 }
 
@@ -41,6 +40,8 @@ export interface Career {
   startDate: string
   endDate: string | null
   description: string | null
+  // 관련 링크 (선택)
+  linkUrl: string | null
 }
 export type CareerInput = Omit<Career, 'careerId'>
 
@@ -79,7 +80,13 @@ export interface PublicProfile {
   desiredRoles: string[]
   skillTags: string[]
   portfolioUrl: string | null
-  careers: { organization: string; role: string; startDate: string; endDate: string | null }[]
+  careers: {
+    organization: string
+    role: string
+    startDate: string
+    endDate: string | null
+    linkUrl: string | null
+  }[]
   certificates: { name: string; issuer: string; acquiredDate: string; verified: boolean }[]
   awards: { contestName: string; awardName: string; awardedDate: string; verified: boolean }[]
 }

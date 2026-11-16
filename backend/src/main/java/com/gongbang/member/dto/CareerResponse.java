@@ -9,7 +9,8 @@ public record CareerResponse(
         String role,
         LocalDate startDate,
         LocalDate endDate,
-        String description) {
+        String description,
+        String linkUrl) {
 
     public static CareerResponse from(Career c) {
         return new CareerResponse(
@@ -18,6 +19,7 @@ public record CareerResponse(
                 c.getRole(),
                 c.getStartDate(),
                 c.getEndDate(),
-                c.getDescription());
+                c.getDescription(),
+                c.getLinkUrl());
     }
 }

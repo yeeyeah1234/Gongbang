@@ -51,7 +51,7 @@ public class Member {
     @Column(name = "kakao_id", length = 50, unique = true)
     private String kakaoId;
 
-    /** AUTH-10 구글 로그인 (V10). 완전 삭제 시 NULL */
+    /** AUTH-10 구글 로그인 (V11). 완전 삭제 시 NULL */
     @Column(name = "google_id", length = 50, unique = true)
     private String googleId;
 
@@ -209,6 +209,11 @@ public class Member {
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         resetLoginFail();
+    }
+
+    /** MY-01 ③ 프로필 사진만 바꾼다 (ProfileImageService) */
+    public void changeProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
     }
 
     public void updateProfile(

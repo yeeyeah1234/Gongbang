@@ -79,7 +79,8 @@ public class HistoryService {
                 request.role().trim(),
                 request.startDate(),
                 request.endDate(),
-                request.description());
+                request.description(),
+                UrlPolicy.validateOrNull(request.linkUrl()));
     }
 
     // ---------- MY-08 ----------

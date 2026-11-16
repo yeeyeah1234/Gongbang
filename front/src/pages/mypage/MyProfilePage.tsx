@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker } from 'react-router'
 import { getErrorMessage } from '../../api/errors'
 import { Button } from '../../components/ui/Button'
@@ -19,7 +19,6 @@ import {
 import { HistorySection } from '../../features/member/components/HistorySection'
 import { LeaveConfirmModal } from '../../features/member/components/LeaveConfirmModal'
 import { MyPageLayout } from '../../features/member/components/MyPageLayout'
-import { ProfileCompletionBar } from '../../features/member/components/ProfileCompletionBar'
 import { ProfilePhoto } from '../../features/member/components/ProfilePhoto'
 import { PublicProfileCard } from '../../features/member/components/PublicProfileCard'
 import { VerifyBadge } from '../../features/member/components/VerifyBadge'
@@ -33,6 +32,7 @@ import {
   gradeLabel,
   roleLabel,
 } from '../../features/member/constants'
+import { uploadProfileImage } from '../../features/member/api'
 import {
   useDeleteHistory,
   useHistory,
@@ -85,9 +85,6 @@ export default function MyProfilePage() {
     )
   }
 
-  const hint =
-    (certificates.data?.length ?? 0) === 0 ? '자격증을 추가하면 완성도가 올라가요' : undefined
-
   return (
     <MyPageLayout
       breadcrumb={editing ? '마이페이지 / 내 프로필 / 수정' : '마이페이지 / 내 프로필'}
@@ -105,9 +102,7 @@ export default function MyProfilePage() {
         )
       }
     >
-      <ProfileCompletionBar value={profile.profileCompletion} hint={hint} />
-
-      <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         {editing ? (
           <ProfileEditCard
             profile={profile}
@@ -128,6 +123,7 @@ export default function MyProfilePage() {
               key: c.careerId,
               title: `${c.organization} · ${c.role}`,
               sub: `${formatMonth(c.startDate)} – ${c.endDate ? formatMonth(c.endDate) : '현재'}${c.description ? ` · ${c.description}` : ''}`,
+              link: c.linkUrl,
               onEdit: () => setHistoryModal({ kind: 'career', item: c }),
               onDelete: () =>
                 setDeleteTarget({ title: '경력', run: () => deleteCareer.mutate(c.careerId) }),
@@ -354,6 +350,19 @@ function ProfileEditCard({
   const [tagInput, setTagInput] = useState('')
   const [portfolioUrl, setPortfolioUrl] = useState(profile.portfolioUrl ?? '')
   const [removePhoto, setRemovePhoto] = useState(false)
+  // MY-01 ③ 새로 고른 사진: [저장]을 누를 때 올린다. 고르면 바로 미리 보기
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const photoInput = useRef<HTMLInputElement>(null)
+  const photoPreview = useMemo(
+    () => (photoFile ? URL.createObjectURL(photoFile) : null),
+    [photoFile],
+  )
+  useEffect(() => {
+    return () => {
+      if (photoPreview) URL.revokeObjectURL(photoPreview)
+    }
+  }, [photoPreview])
   const [error, setError] = useState<string | null>(null)
 
   const dirty =
@@ -364,6 +373,7 @@ function ProfileEditCard({
     bio !== (profile.bio ?? '') ||
     portfolioUrl !== (profile.portfolioUrl ?? '') ||
     removePhoto ||
+    photoFile !== null ||
     interests.join() !== profile.interestCategoryCodes.join() ||
     roles.join() !== profile.desiredRoles.join() ||
     skillTags.join() !== profile.skillTags.join()
@@ -409,8 +419,33 @@ function ProfileEditCard({
     setTagInput('')
   }
 
-  const save = () => {
+  const pickPhoto = (file: File | undefined) => {
+    if (!file) return
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      toast.show('JPG 또는 PNG 사진만 올릴 수 있어요')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.show('사진은 5MB 이하만 올릴 수 있어요')
+      return
+    }
+    setPhotoFile(file)
+    setRemovePhoto(false)
+  }
+
+  const save = async () => {
     setError(null)
+    if (photoFile) {
+      setUploading(true)
+      try {
+        await uploadProfileImage(photoFile)
+      } catch (e) {
+        setError(getErrorMessage(e))
+        setUploading(false)
+        return
+      }
+      setUploading(false)
+    }
     update.mutate(
       {
         // ④ 닉네임을 바꾸지 않았으면 보내지 않는다
@@ -447,9 +482,9 @@ function ProfileEditCard({
           <Button
             variant="primary"
             size="sm"
-            loading={update.isPending}
+            loading={uploading || update.isPending}
             disabled={!nicknameOk || interests.length === 0}
-            onClick={save}
+            onClick={() => void save()}
           >
             저장
           </Button>
@@ -457,19 +492,34 @@ function ProfileEditCard({
       </header>
 
       <div className="mt-6 flex items-center gap-4">
-        <ProfilePhoto url={removePhoto ? null : profile.profileImageUrl} name={nickname} />
+        <ProfilePhoto
+          url={photoPreview ?? (removePhoto ? null : profile.profileImageUrl)}
+          name={nickname}
+        />
         <div>
           <div className="flex gap-2">
-            {/* TODO(확인 필요): 사진 올리기는 파일 업로드 모듈(uploaded_file, 담당 미정)이 생기면 연결 */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => toast.show('사진 올리기는 준비 중이에요')}
-            >
+            <input
+              ref={photoInput}
+              type="file"
+              accept="image/jpeg,image/png"
+              className="hidden"
+              onChange={(e) => {
+                pickPhoto(e.target.files?.[0])
+                e.target.value = '' // 같은 파일을 다시 골라도 바뀌게
+              }}
+            />
+            <Button variant="outline" size="sm" onClick={() => photoInput.current?.click()}>
               사진 변경
             </Button>
-            {profile.profileImageUrl && !removePhoto && (
-              <Button variant="text" size="sm" onClick={() => setRemovePhoto(true)}>
+            {(photoFile || (profile.profileImageUrl && !removePhoto)) && (
+              <Button
+                variant="text"
+                size="sm"
+                onClick={() => {
+                  setPhotoFile(null)
+                  setRemovePhoto(true)
+                }}
+              >
                 삭제
               </Button>
             )}
@@ -479,35 +529,40 @@ function ProfileEditCard({
       </div>
 
       <div className="mt-6 flex flex-col gap-4">
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <Input
-              id="edit-nickname"
-              label="닉네임"
-              maxLength={10}
-              value={nickname}
-              onChange={(e) => {
-                setNickname(e.target.value)
-                setNicknameError(null)
-              }}
-              errorText={nicknameError ?? undefined}
-              successText={
-                nickname.trim() !== profile.nickname && nicknameOk
-                  ? '사용할 수 있는 닉네임이에요'
-                  : undefined
-              }
-            />
+        <div>
+          {/* 라벨은 따로 두고 버튼을 입력칸 윗선에 맞춘다 → 아래 안내 문구가 생겨도 버튼이 움직이지 않는다 */}
+          <label htmlFor="edit-nickname" className="mb-2 block text-body font-bold text-text">
+            닉네임
+          </label>
+          <div className="flex items-start gap-2">
+            <div className="flex-1">
+              <Input
+                id="edit-nickname"
+                maxLength={10}
+                value={nickname}
+                onChange={(e) => {
+                  setNickname(e.target.value)
+                  setNicknameError(null)
+                }}
+                errorText={nicknameError ?? undefined}
+                successText={
+                  nickname.trim() !== profile.nickname && nicknameOk
+                    ? '사용할 수 있는 닉네임이에요'
+                    : undefined
+                }
+              />
+            </div>
+            {nickname.trim() !== profile.nickname && (
+              <Button
+                variant="outline"
+                size="lg"
+                className="h-14 shrink-0 text-body"
+                onClick={handleCheckNickname}
+              >
+                중복 확인
+              </Button>
+            )}
           </div>
-          {nickname.trim() !== profile.nickname && (
-            <Button
-              variant="outline"
-              size="lg"
-              className="h-14 text-body"
-              onClick={handleCheckNickname}
-            >
-              중복 확인
-            </Button>
-          )}
         </div>
         <Input
           id="edit-email"

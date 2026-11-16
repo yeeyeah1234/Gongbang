@@ -251,7 +251,7 @@ public class MemberService {
     public MyProfileResponse getMyProfile(Long memberId) {
         Member member = getActiveMember(memberId);
         return MyProfileResponse.of(
-                member, categoryCodes(member.getInterestCategoryIds()), completion(member));
+                member, categoryCodes(member.getInterestCategoryIds()));
     }
 
     @Transactional
@@ -313,7 +313,7 @@ public class MemberService {
         }
         memberRepository.flush();
         return MyProfileResponse.of(
-                member, categoryCodes(member.getInterestCategoryIds()), completion(member));
+                member, categoryCodes(member.getInterestCategoryIds()));
     }
 
     /** MY-05: 이메일·가입 방식·실명·증빙 파일은 넣지 않는다 (AGENTS 9) */
@@ -350,15 +350,6 @@ public class MemberService {
     }
 
     // ---------- 내부 ----------
-
-    int completion(Member member) {
-        Long id = member.getId();
-        return ProfileCompletion.calculate(
-                member,
-                careerRepository.countByMemberId(id),
-                certificateRepository.findByMemberIdOrderByAcquiredDateDescIdDesc(id).size(),
-                awardRepository.findByMemberIdOrderByAwardedDateDescIdDesc(id).size());
-    }
 
     private void validateTerms(List<TermsItem> terms) {
         Set<TermsType> agreed = EnumSet.noneOf(TermsType.class);

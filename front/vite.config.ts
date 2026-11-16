@@ -12,6 +12,8 @@ export default defineConfig({
       // AUTH-10 간편 로그인 시작·콜백은 백엔드(Spring Security)가 받는다
       '/oauth2': 'http://localhost:8080',
       '/login/oauth2': 'http://localhost:8080',
+      // MY-01 올린 프로필 사진
+      '/uploads': 'http://localhost:8080',
     },
   },
 })
