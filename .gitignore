@@ -2,3 +2,7 @@
 CLAUDE.md
 AGENTS.md
 STYLE_GUIDE.md
+
+# 개인 메일 계정 (인증번호 메일)
+backend/mail.properties
+mail.properties

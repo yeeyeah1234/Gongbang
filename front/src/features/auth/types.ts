@@ -19,6 +19,8 @@ export interface TermsItem {
 export interface SendCodeResponse {
   expiresAt: string
   resendAvailableAt: string
+  // 메일 서버가 없는 로컬 개발에서만 온다
+  devCode?: string | null
 }
 
 export interface LoginResponse {

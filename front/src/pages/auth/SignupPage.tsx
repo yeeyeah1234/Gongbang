@@ -16,11 +16,7 @@ import { PasswordRules } from '../../features/auth/components/PasswordRules'
 import { StepIndicator } from '../../features/auth/components/StepIndicator'
 import { TERMS_VERSION, TermsModal } from '../../features/auth/components/TermsModal'
 import { WithdrawnAccountModal } from '../../features/auth/components/WithdrawnAccountModal'
-import {
-  isEmailFormatValid,
-  isNicknameFormatValid,
-  isPasswordValid,
-} from '../../features/auth/passwordRules'
+import { isNicknameFormatValid, isPasswordValid } from '../../features/auth/passwordRules'
 import { safeRedirect } from '../../features/auth/redirect'
 import { loadLoginMember } from '../../features/auth/session'
 import { useAuthStore } from '../../features/auth/store'
@@ -275,17 +271,15 @@ export default function SignupPage() {
               setEmailGuide(null)
             }}
           />
-          {isEmailFormatValid(email) && (
-            <EmailCodeField
-              key={`${email}-${newSignupConfirmed}`}
-              email={email}
-              purpose="SIGNUP"
-              newSignup={newSignupConfirmed}
-              verified={verificationToken !== null}
-              onSendError={(code, message) => setEmailGuide({ code, message })}
-              onVerified={setVerificationToken}
-            />
-          )}
+          <EmailCodeField
+            key={`${email}-${newSignupConfirmed}`}
+            email={email}
+            purpose="SIGNUP"
+            newSignup={newSignupConfirmed}
+            verified={verificationToken !== null}
+            onSendError={(code, message) => setEmailGuide({ code, message })}
+            onVerified={setVerificationToken}
+          />
           {emailGuide && emailGuide.code !== 'ACCOUNT_WITHDRAWN' && (
             <div className="rounded-input bg-bg px-4 py-3 text-small" role="alert">
               <p className="text-danger">{emailGuide.message}</p>
