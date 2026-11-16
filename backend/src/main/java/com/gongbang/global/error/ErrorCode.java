@@ -21,6 +21,8 @@ public enum ErrorCode {
     // PST-003 ④ 문구
     TARGET_BELOW_CURRENT(
             HttpStatus.BAD_REQUEST, "TARGET_BELOW_CURRENT", "현재 확정된 팀원 수보다 적게 설정할 수 없습니다"),
+    // TODO(확인 필요): 기능정의서 문구를 찾지 못해 임시로 정함 (AGENTS.md 5번 팀 이름 1~20자, WS-01)
+    TEAM_NAME_INVALID(HttpStatus.BAD_REQUEST, "TEAM_NAME_INVALID", "팀 이름은 1~20자로 입력해 주세요"),
 
     // ---- 정진우 (AUTH·MY·NOTI) 400 ----
     // AUTH-05 ③ 문구. 남은 횟수는 메시지에 넣는다

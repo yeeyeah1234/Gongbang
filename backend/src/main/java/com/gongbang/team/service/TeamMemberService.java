@@ -1,0 +1,55 @@
+package com.gongbang.team.service;
+
+import com.gongbang.global.error.ErrorCode;
+import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.team.domain.TeamRole;
+import com.gongbang.team.repository.TeamMemberRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** 팀원·팀장 확인 (모든 담당자가 부른다). 팀원 여부의 기준은 team_member 하나다 (AGENTS.md 6). */
+@Service
+@RequiredArgsConstructor
+public class TeamMemberService {
+
+    private final TeamMemberRepository teamMemberRepository;
+
+    /** 현재 팀원인지 (left_at IS NULL). */
+    @Transactional(readOnly = true)
+    public boolean isActiveMember(Long teamId, Long memberId) {
+        return teamMemberRepository.existsByTeamIdAndMemberIdAndLeftAtIsNull(teamId, memberId);
+    }
+
+    /** 현재 팀원이면서 팀장인지. */
+    @Transactional(readOnly = true)
+    public boolean isLeader(Long teamId, Long memberId) {
+        return teamMemberRepository.existsByTeamIdAndMemberIdAndRoleAndLeftAtIsNull(
+                teamId, memberId, TeamRole.LEADER);
+    }
+
+    /**
+     * 이 팀에서 나간 기록(left_at IS NOT NULL)이 하나라도 있는지. leave_type은 보지 않으므로 강제 퇴장(KICKED)도 포함한다 (PST-006
+     * ⑨). 지금 다시 팀원인지는 따지지 않는다.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasLeft(Long teamId, Long memberId) {
+        return teamMemberRepository.existsByTeamIdAndMemberIdAndLeftAtIsNotNull(teamId, memberId);
+    }
+
+    /** 현재 팀원이 아니면 403 NOT_TEAM_MEMBER. */
+    @Transactional(readOnly = true)
+    public void requireMember(Long teamId, Long memberId) {
+        if (!isActiveMember(teamId, memberId)) {
+            throw new BusinessException(ErrorCode.NOT_TEAM_MEMBER);
+        }
+    }
+
+    /** 현재 팀장이 아니면 403 NOT_TEAM_LEADER. */
+    @Transactional(readOnly = true)
+    public void requireLeader(Long teamId, Long memberId) {
+        if (!isLeader(teamId, memberId)) {
+            throw new BusinessException(ErrorCode.NOT_TEAM_LEADER);
+        }
+    }
+}
