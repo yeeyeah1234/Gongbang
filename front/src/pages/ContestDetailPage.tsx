@@ -7,7 +7,13 @@ import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Toast } from '../components/ui/Toast'
 import { DDayBadge, DefaultThumbnail } from '../features/contest/components/ContestCard'
-import { useContestDetail, useIsLoggedIn, useToggleBookmark } from '../features/contest/hooks'
+import {
+  contestKeys,
+  useContestDetail,
+  useIsLoggedIn,
+  useToggleBookmark,
+  useViewer,
+} from '../features/contest/hooks'
 import { sanitizeDescription } from '../features/contest/sanitizeDescription'
 import type { ContestDetail } from '../features/contest/types'
 import { useTimedToast } from '../hooks/useTimedToast'
@@ -66,6 +72,7 @@ export default function ContestDetailPage() {
   const { data: contest, isPending, isError, error } = useContestDetail(contestId)
   const isLoggedIn = useIsLoggedIn()
   const toggleBookmark = useToggleBookmark()
+  const { viewer } = useViewer()
   const queryClient = useQueryClient()
   const toast = useTimedToast()
   const [loginModalOpen, setLoginModalOpen] = useState(false)
@@ -94,8 +101,9 @@ export default function ContestDetailPage() {
       { contestId: contest.contestId, isBookmarked: contest.isBookmarked },
       {
         onSuccess: (result) =>
-          queryClient.setQueryData<ContestDetail>(['contest-detail', contest.contestId], (old) =>
-            old ? { ...old, isBookmarked: result.isBookmarked } : old,
+          queryClient.setQueryData<ContestDetail>(
+            contestKeys.detail(contest.contestId, viewer),
+            (old) => (old ? { ...old, isBookmarked: result.isBookmarked } : old),
           ),
       },
     )

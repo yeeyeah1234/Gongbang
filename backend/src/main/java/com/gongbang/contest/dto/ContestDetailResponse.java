@@ -22,6 +22,7 @@ public record ContestDetailResponse(
         int viewCount,
         boolean isBookmarked) {
 
+    /** isBookmarked는 false로 만들고, 로그인 회원이면 service가 {@link #withBookmark}로 채운다 (MAIN-02 ④). */
     public static ContestDetailResponse of(Contest contest, LocalDate today) {
         LocalDate deadline = contest.getEndDate();
         return new ContestDetailResponse(
@@ -39,7 +40,25 @@ public record ContestDetailResponse(
                 contest.getSourceUrl(),
                 contest.getHomepageUrl(),
                 contest.getViewCount(),
-                // TODO(확인 필요): 북마크(MY-03, 정진우)·로그인 사용자 조회가 생기면 실제 값으로 바꾼다
                 false);
+    }
+
+    public ContestDetailResponse withBookmark(boolean bookmarked) {
+        return new ContestDetailResponse(
+                contestId,
+                title,
+                host,
+                categoryCode,
+                categoryName,
+                thumbnailUrl,
+                startDate,
+                deadline,
+                dDay,
+                isClosed,
+                description,
+                sourceUrl,
+                homepageUrl,
+                viewCount,
+                bookmarked);
     }
 }
