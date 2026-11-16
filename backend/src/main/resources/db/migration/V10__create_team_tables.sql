@@ -1,6 +1,7 @@
 -- WS-01: 팀과 팀원 (DB 명세서 team·team_member). 공통 테이블, 담당 이상현 (팀 합의).
 -- ID는 contest·category와 같이 BIGINT UNSIGNED. 팀은 삭제하지 않는다 (AGENTS.md 6).
--- TODO(확인 필요): recruit_post·member 테이블 생기면 V9 이후 마이그레이션으로 FK 추가
+-- TODO(확인 필요): member는 V9에 이미 있지만 테스트 데이터 준비 부담 때문에 이번엔 FK를 넣지 않는다.
+--   recruit_post·member FK는 다음 빈 번호 마이그레이션으로 추가한다
 --   (team.post_id → recruit_post.id, team_member.member_id → member.id)
 CREATE TABLE team (
     id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

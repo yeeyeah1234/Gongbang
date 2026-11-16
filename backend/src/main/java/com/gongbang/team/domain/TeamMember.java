@@ -36,7 +36,7 @@ public class TeamMember {
     @JoinColumn(name = "team_id", nullable = false)
     private Team team;
 
-    // TODO(확인 필요): member 테이블(정진우)이 생기면 FK를 추가한다. 지금은 ID만 둔다.
+    // TODO(확인 필요): member는 V9에 이미 있지만 이번엔 FK를 넣지 않는다. 다음 빈 번호 마이그레이션에서 추가한다.
     @Column(name = "member_id", nullable = false)
     private Long memberId;
 
