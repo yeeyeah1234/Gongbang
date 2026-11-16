@@ -104,6 +104,14 @@ public class MemberService {
                             if (member.isWithdrawn()) {
                                 throw withdrawn(member);
                             }
+                            if (member.getLoginType() != LoginType.EMAIL) {
+                                // ⑥ 카카오·구글로 가입된 이메일 → 그 방식으로 로그인 안내
+                                String provider =
+                                        member.getLoginType() == LoginType.KAKAO ? "카카오" : "구글";
+                                throw new BusinessException(
+                                        ErrorCode.SOCIAL_EMAIL_REGISTERED,
+                                        provider + "로 가입된 이메일이에요. " + provider + "로 로그인해 주세요");
+                            }
                             throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
                         });
     }

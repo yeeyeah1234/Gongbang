@@ -21,6 +21,10 @@ export default function OAuthCallbackPage() {
   const errorCode = params.get('error')
   const provider = (params.get('provider') ?? 'kakao') as OAuthProvider
   const label = PROVIDER_LABEL[provider] ?? '간편'
+  // ⑦ 같은 이메일로 먼저 가입한 방식: email / kakao / google
+  const existing = params.get('existing') ?? 'email'
+  const existingLabel =
+    existing === 'email' ? '이메일' : (PROVIDER_LABEL[existing as OAuthProvider] ?? '다른 방법')
   const [failed, setFailed] = useState<string | null>(null)
   const started = useRef(false)
 
@@ -51,7 +55,8 @@ export default function OAuthCallbackPage() {
   // ⑦⑧ 안내
   let message: string | null = failed
   if (!code) {
-    if (errorCode === 'EMAIL_REGISTERED') message = '이미 이메일로 가입된 계정이에요'
+    if (errorCode === 'EMAIL_REGISTERED')
+      message = `이미 ${existingLabel}로 가입된 계정이에요. ${existingLabel}로 로그인해 주세요`
     else if (errorCode === 'WITHDRAWN') message = '탈퇴 신청한 계정이에요'
     else message = `${label} 로그인을 완료하지 못했어요. 다시 시도해 주세요`
   }
@@ -71,7 +76,7 @@ export default function OAuthCallbackPage() {
       </p>
       <Link to="/login" className="mt-6 block">
         <Button variant="primary" size="lg" className="w-full">
-          {errorCode === 'EMAIL_REGISTERED' ? '이메일로 로그인' : '로그인 화면으로'}
+          {errorCode === 'EMAIL_REGISTERED' ? `${existingLabel}로 로그인` : '로그인 화면으로'}
         </Button>
       </Link>
     </AuthCard>

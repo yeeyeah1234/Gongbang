@@ -283,6 +283,11 @@ export default function SignupPage() {
           {emailGuide && emailGuide.code !== 'ACCOUNT_WITHDRAWN' && (
             <div className="rounded-input bg-bg px-4 py-3 text-small" role="alert">
               <p className="text-danger">{emailGuide.message}</p>
+              {emailGuide.code === 'SOCIAL_EMAIL_REGISTERED' && (
+                <div className="mt-2 flex gap-4 font-bold text-primary">
+                  <Link to="/login">간편 로그인하러 가기</Link>
+                </div>
+              )}
               {emailGuide.code === 'EMAIL_DUPLICATED' && (
                 <div className="mt-2 flex gap-4 font-bold text-primary">
                   <Link to="/login">로그인</Link>

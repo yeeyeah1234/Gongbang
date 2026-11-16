@@ -56,9 +56,14 @@ public class OAuthService {
             }
             return "code=" + codeStore.save(new OAuthPending(member.getId(), loginType, providerId, email));
         }
-        // ⑦ 같은 이메일이 이미 다른 방식으로 가입돼 있으면 그 방식으로 안내
-        if (email != null && memberService.findByEmail(email).isPresent()) {
-            return "error=EMAIL_REGISTERED&provider=" + registrationId;
+        // ⑦ 같은 이메일이 이미 다른 방식(이메일·카카오·구글)으로 가입돼 있으면 계정을 합치지 않고 그 방식으로 안내
+        Optional<Member> sameEmail =
+                email == null ? Optional.empty() : memberService.findByEmail(email);
+        if (sameEmail.isPresent()) {
+            return "error=EMAIL_REGISTERED&provider="
+                    + registrationId
+                    + "&existing="
+                    + sameEmail.get().getLoginType().name().toLowerCase();
         }
         // ⑤ 처음이면 추가 정보 입력으로
         return "code=" + codeStore.save(new OAuthPending(null, loginType, providerId, email));
