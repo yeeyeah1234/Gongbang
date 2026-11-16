@@ -51,6 +51,10 @@ public enum ErrorCode {
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-08 ③)
     PROOF_REQUIRED(HttpStatus.BAD_REQUEST, "PROOF_REQUIRED", "증빙 파일을 올려 주세요"),
 
+    // AUTH-10 ③: 1회용 키가 없거나 1분이 지남 (문구는 ⑧과 같은 뜻으로 임시)
+    OAUTH_CODE_INVALID(
+            HttpStatus.BAD_REQUEST, "OAUTH_CODE_INVALID", "간편 로그인을 완료하지 못했어요. 다시 시도해 주세요"),
+
     // 401 Unauthorized
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요하거나 만료되었습니다."),
     INVALID_INTERNAL_KEY(HttpStatus.UNAUTHORIZED, "INVALID_INTERNAL_KEY", "내부 키가 올바르지 않습니다."),

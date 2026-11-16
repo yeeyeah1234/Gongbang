@@ -32,6 +32,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     // NOTI-06 메일 발송 (AGENTS 2-2: Spring Mail SMTP + email_outbox)
     implementation 'org.springframework.boot:spring-boot-starter-mail'
+    // AUTH-10 카카오·구글 로그인 (AGENTS 2-2: Spring Security OAuth2 Client)
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
     // AUTH-01 로그인 토큰 (AGENTS 2-2 JWT 라이브러리: 정진우 결정 jjwt)
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'

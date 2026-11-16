@@ -6,6 +6,7 @@ import com.gongbang.auth.dto.TermsItem;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.DesiredRole;
+import com.gongbang.member.domain.LoginType;
 import com.gongbang.member.domain.Member;
 import com.gongbang.member.domain.MemberStatus;
 import com.gongbang.member.domain.TermsAgreement;
@@ -175,6 +176,46 @@ public class MemberService {
             throw new BusinessException(ErrorCode.NICKNAME_DUPLICATED);
         }
         for (TermsItem item : request.terms()) {
+            termsAgreementRepository.save(
+                    new TermsAgreement(member.getId(), item.type(), item.version(), item.agreed()));
+        }
+        return member;
+    }
+
+    /** AUTH-10 ④: 이미 가입한 카카오·구글 계정 찾기 (탈퇴 대기 계정 포함) */
+    @Transactional(readOnly = true)
+    public Optional<Member> findBySocialId(LoginType loginType, String providerId) {
+        return loginType == LoginType.GOOGLE
+                ? memberRepository.findByGoogleId(providerId)
+                : memberRepository.findByKakaoId(providerId);
+    }
+
+    /** AUTH-10 ⑤: 추가 정보(필수 약관 + 닉네임 + 관심 분야)를 받아 가입 */
+    @Transactional
+    public Member createSocialMember(
+            LoginType loginType,
+            String providerId,
+            String email,
+            String rawNickname,
+            List<TermsItem> terms,
+            List<String> interestCategoryCodes) {
+        validateTerms(terms);
+        String nickname = NicknamePolicy.validate(rawNickname);
+        if (findBySocialId(loginType, providerId).isPresent()
+                || memberRepository.findByEmail(email).isPresent()) {
+            throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
+        }
+        if (memberRepository.existsByNickname(nickname)) {
+            throw new BusinessException(ErrorCode.NICKNAME_DUPLICATED);
+        }
+        Member member = Member.createSocialMember(loginType, providerId, email, nickname);
+        member.replaceInterests(resolveCategoryIds(interestCategoryCodes));
+        try {
+            memberRepository.saveAndFlush(member);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.NICKNAME_DUPLICATED);
+        }
+        for (TermsItem item : terms) {
             termsAgreementRepository.save(
                     new TermsAgreement(member.getId(), item.type(), item.version(), item.agreed()));
         }

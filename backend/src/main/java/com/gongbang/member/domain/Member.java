@@ -51,6 +51,10 @@ public class Member {
     @Column(name = "kakao_id", length = 50, unique = true)
     private String kakaoId;
 
+    /** AUTH-10 구글 로그인 (V10). 완전 삭제 시 NULL */
+    @Column(name = "google_id", length = 50, unique = true)
+    private String googleId;
+
     @Column(name = "nickname", length = 10, unique = true)
     private String nickname;
 
@@ -121,6 +125,21 @@ public class Member {
         member.passwordHash = passwordHash;
         member.nickname = nickname;
         member.loginType = LoginType.EMAIL;
+        return member;
+    }
+
+    /** AUTH-10 ⑤: 카카오·구글로 처음 가입 (비밀번호 없음) */
+    public static Member createSocialMember(
+            LoginType loginType, String providerId, String email, String nickname) {
+        Member member = new Member();
+        member.email = email;
+        member.nickname = nickname;
+        member.loginType = loginType;
+        if (loginType == LoginType.GOOGLE) {
+            member.googleId = providerId;
+        } else {
+            member.kakaoId = providerId;
+        }
         return member;
     }
 
@@ -243,6 +262,7 @@ public class Member {
         email = null;
         passwordHash = null;
         kakaoId = null;
+        googleId = null;
         nickname = null;
         profileImageUrl = null;
         bio = null;

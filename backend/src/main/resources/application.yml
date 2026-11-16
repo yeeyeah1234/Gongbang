@@ -60,6 +60,18 @@ app:
     access-minutes: 30
     refresh-days: 1
     remember-me-days: 30
+  # AUTH-10 간편 로그인. 키는 환경 변수로만 (비어 있으면 그 버튼은 「준비 중」)
+  # 각 개발자 콘솔에 등록할 Redirect URI: {백엔드 주소}/login/oauth2/code/kakao , .../google
+  oauth:
+    redirect-uri-template: ${OAUTH_REDIRECT_URI_TEMPLATE:}
+    kakao:
+      client-id: ${KAKAO_CLIENT_ID:}
+      client-secret: ${KAKAO_CLIENT_SECRET:}
+      # 이메일을 받으려면 account_email (카카오 비즈 앱 전환 필요, AUTH-10 비고). 비우면 이메일은 직접 입력·인증
+      scope: ${KAKAO_SCOPE:}
+    google:
+      client-id: ${GOOGLE_CLIENT_ID:}
+      client-secret: ${GOOGLE_CLIENT_SECRET:}
   # MY-08 실명 AES 암호화 키 (16·24·32바이트)
   crypto:
     real-name-key: ${REAL_NAME_KEY:}

@@ -10,6 +10,7 @@ import { login } from '../../features/auth/api'
 import { AuthCard } from '../../features/auth/components/AuthCard'
 import { EmailCodeField } from '../../features/auth/components/EmailCodeField'
 import { PasswordInput } from '../../features/auth/components/PasswordInput'
+import { SocialLoginButtons } from '../../features/auth/components/SocialLoginButtons'
 import { WithdrawnAccountModal } from '../../features/auth/components/WithdrawnAccountModal'
 import { safeRedirect } from '../../features/auth/redirect'
 import { loadLoginMember } from '../../features/auth/session'
@@ -203,25 +204,8 @@ export default function LoginPage() {
             또는
             <span className="h-px flex-1 bg-divider" />
           </div>
-          {/* AUTH-10(2차) 카카오 */}
-          <Button
-            variant="kakao"
-            size="lg"
-            className="w-full"
-            onClick={() => toast.show('카카오 로그인은 준비 중이에요')}
-          >
-            카카오로 계속하기
-          </Button>
-          {/* Figma 01-1 구글 버튼. 자리만 두고 기능은 나중에 붙인다 (11/17 정진우).
-              TODO(확인 필요): 기능정의서 AUTH-10은 「구글·네이버는 하지 않음」이라 붙이기 전에 기능정의서 수정 */}
-          <Button
-            variant="outline"
-            size="lg"
-            className="mt-3 w-full"
-            onClick={() => toast.show('구글 로그인은 준비 중이에요')}
-          >
-            구글로 계속하기
-          </Button>
+          {/* AUTH-10 카카오·구글 (11/17 정진우: 구글도 함. 기능정의서 AUTH-10 문구 수정 필요) */}
+          <SocialLoginButtons redirectTo={redirectTo} onUnavailable={toast.show} />
           <p className="mt-6 text-center text-small text-text-sub">
             아직 회원이 아니신가요?{' '}
             <Link
