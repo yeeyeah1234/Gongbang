@@ -2,6 +2,7 @@ package com.gongbang.member.repository;
 
 import com.gongbang.member.domain.Bookmark;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,13 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Bookmark.Key
     long countByMemberId(Long memberId);
 
     void deleteByMemberId(Long memberId);
+
+    /** MAIN-06·MAIN-02: 주어진 공모전 중 이 회원이 북마크한 공모전 id */
+    @Query(
+            "select b.contestId from Bookmark b"
+                    + " where b.memberId = :memberId and b.contestId in :contestIds")
+    List<Long> findBookmarkedContestIds(
+            @Param("memberId") Long memberId, @Param("contestIds") Collection<Long> contestIds);
 
     @Query(value = "select count(*) from contest where id = :contestId", nativeQuery = true)
     long countContest(@Param("contestId") Long contestId);
