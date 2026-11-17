@@ -1,13 +1,16 @@
 package com.gongbang.contest.service;
 
+import com.gongbang.contest.domain.Contest;
 import com.gongbang.contest.dto.ContestDetailResponse;
 import com.gongbang.contest.dto.ContestDetailView;
 import com.gongbang.contest.repository.ContestRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.LinkedHashSet;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,5 +49,11 @@ public class ContestDetailService {
                         .map(contest -> ContestDetailResponse.of(contest, now.toLocalDate()))
                         .orElseThrow(() -> new BusinessException(ErrorCode.CONTEST_NOT_FOUND));
         return new ContestDetailView(detail, ContestViewCookie.build(viewedToday, now));
+    }
+
+    /** 다른 도메인용: 공모전 접수 마감일. 조회수는 올리지 않는다 (PST-002 작성 검증). 없는 공모전이면 빈 값. */
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> findEndDate(Long contestId) {
+        return contestRepository.findById(contestId).map(Contest::getEndDate);
     }
 }
