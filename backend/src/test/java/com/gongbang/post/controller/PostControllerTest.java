@@ -16,6 +16,7 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.GlobalExceptionHandler;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.MemberRole;
+import com.gongbang.post.dto.PostCompleteResponse;
 import com.gongbang.post.dto.PostCreateRequest;
 import com.gongbang.post.dto.PostCreateResponse;
 import com.gongbang.post.dto.PostUpdateRequest;
@@ -152,6 +153,18 @@ class PostControllerTest {
                 .andExpect(jsonPath("$.data").doesNotExist());
 
         verify(postCommandService).delete(MEMBER_ID, 10L);
+    }
+
+    @Test
+    @DisplayName("모집 완료: 경로의 글 ID를 넘기고 { autoRejectedCount }를 돌려준다 (REC-006)")
+    void 모집_완료() throws Exception {
+        login();
+        given(postCommandService.complete(MEMBER_ID, 10L)).willReturn(new PostCompleteResponse(2));
+
+        mockMvc.perform(patch("/api/posts/10/complete"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.autoRejectedCount").value(2));
     }
 
     @Test
