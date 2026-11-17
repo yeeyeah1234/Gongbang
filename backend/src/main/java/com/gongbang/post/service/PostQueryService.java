@@ -38,6 +38,14 @@ public class PostQueryService {
     private final RecruitPostRepository recruitPostRepository;
     private final ContestLookupService contestLookupService;
 
+    /** 다른 도메인(지원자 목록 REC-003 등)용: 삭제되지 않은 모집글. 없거나 삭제됐으면 404 POST_NOT_FOUND. 잠그지 않는다. */
+    public RecruitPost getActivePost(Long postId) {
+        return recruitPostRepository
+                .findById(postId)
+                .filter(post -> post.getDeletedAt() == null)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+    }
+
     /** PST-001 모집글 목록. 비회원도 본다 (⑤). 삭제된 글은 빠진다. */
     public PageResponse<PostListItemResponse> getPosts(int page, int size) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
