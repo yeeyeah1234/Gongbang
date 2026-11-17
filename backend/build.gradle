@@ -30,6 +30,15 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // NOTI-06 메일 발송 (AGENTS 2-2: Spring Mail SMTP + email_outbox)
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    // AUTH-10 카카오·구글 로그인 (AGENTS 2-2: Spring Security OAuth2 Client)
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // AUTH-01 로그인 토큰 (AGENTS 2-2 JWT 라이브러리: 정진우 결정 jjwt)
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
     // Database & Migration
     runtimeOnly 'com.mysql:mysql-connector-j'
@@ -72,6 +81,8 @@ clean.doLast {
 // Spotless code formatting (Java: Spotless)
 spotless {
     java {
+        // build/generated/querydsl의 Q클래스(자동 생성, 빌드마다 새로 만듦)는 검사하지 않는다
+        target 'src/**/*.java'
         googleJavaFormat().aosp()
         removeUnusedImports()
         trimTrailingWhitespace()
