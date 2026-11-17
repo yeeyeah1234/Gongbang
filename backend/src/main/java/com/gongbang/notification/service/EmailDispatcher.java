@@ -35,6 +35,9 @@ public class EmailDispatcher {
     @Value("${spring.mail.host:}")
     private String mailHost;
 
+    @Value("${spring.mail.port:587}")
+    private int mailPort;
+
     @Value("${spring.mail.username:}")
     private String mailUsername;
 
@@ -81,15 +84,22 @@ public class EmailDispatcher {
         }
     }
 
-    /** 서버가 켜질 때 메일 설정을 못 찾았으면 바로 알린다 (mail.properties 위치 확인용) */
+    /**
+     * 서버가 켜질 때 메일 설정을 못 찾았으면 바로 알린다.
+     *
+     * <p>설정 위치: 테스트 서버는 systemd(gongbang-backend@blue/green)가 읽는
+     * /srv/gongbang/deploy/backend.env의 MAIL_* 환경 변수, 내 컴퓨터는 backend/mail.properties.
+     * 메일 계정 주소는 로그에 남기지 않는다 (AGENTS 9).
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void warnIfMailNotConfigured() {
         if (isMailConfigured()) {
-            log.info("메일 발송 준비됨: {}", mailUsername);
+            log.info("메일 발송 준비됨: {}:{}", mailHost, mailPort);
         } else {
             log.warn(
-                    "메일 설정을 찾지 못했어요 — 인증번호 메일이 안 갑니다. backend/mail.properties 또는"
-                            + " ~/.gongbang/mail.properties 를 확인하세요 (지금 폴더: {})",
+                    "메일 설정을 찾지 못했어요 — 인증번호 메일이 안 갑니다. 서버는 deploy/backend.env의"
+                            + " MAIL_HOST·MAIL_USERNAME·MAIL_PASSWORD, 내 컴퓨터는 backend/mail.properties 를"
+                            + " 확인하세요 (지금 폴더: {})",
                     System.getProperty("user.dir"));
         }
     }
