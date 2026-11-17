@@ -13,6 +13,7 @@ import com.gongbang.application.repository.ApplicationRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.service.PostCommandService;
+import com.gongbang.post.service.PostQueryService;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,13 +35,15 @@ class ApplicationCancelServiceTest {
 
     @Mock private ApplicationRepository applicationRepository;
     @Mock private PostCommandService postCommandService;
+    @Mock private PostQueryService postQueryService;
 
     private ApplicationCommandService applicationCommandService;
 
     @BeforeEach
     void setUp() {
         applicationCommandService =
-                new ApplicationCommandService(applicationRepository, postCommandService);
+                new ApplicationCommandService(
+                        applicationRepository, postCommandService, postQueryService);
     }
 
     private Application givenApplication(ApplicationStatus status) {
