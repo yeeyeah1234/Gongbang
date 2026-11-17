@@ -14,9 +14,12 @@ import com.gongbang.contest.dto.ContestDetailView;
 import com.gongbang.contest.repository.ContestRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.BookmarkService;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,11 +35,13 @@ class ContestDetailServiceTest {
 
     @Mock private ContestRepository contestRepository;
 
+    @Mock private BookmarkService bookmarkService;
+
     private ContestDetailService contestDetailService;
 
     @BeforeEach
     void setUp() {
-        contestDetailService = new ContestDetailService(contestRepository);
+        contestDetailService = new ContestDetailService(contestRepository, bookmarkService);
     }
 
     private void givenContest(Long id, int viewCount) {
@@ -58,7 +63,7 @@ class ContestDetailServiceTest {
         BusinessException e =
                 assertThrows(
                         BusinessException.class,
-                        () -> contestDetailService.getContest(99L, null, NOW));
+                        () -> contestDetailService.getContest(99L, null, null, NOW));
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.CONTEST_NOT_FOUND);
         verify(contestRepository, never()).findWithCategoryById(99L);
@@ -70,7 +75,7 @@ class ContestDetailServiceTest {
         given(contestRepository.increaseViewCount(1L)).willReturn(1);
         givenContest(1L, 8);
 
-        ContestDetailView view = contestDetailService.getContest(1L, "5", NOW);
+        ContestDetailView view = contestDetailService.getContest(1L, "5", null, NOW);
 
         verify(contestRepository).increaseViewCount(1L);
         assertThat(view.detail().viewCount()).isEqualTo(8);
@@ -82,10 +87,31 @@ class ContestDetailServiceTest {
     void 오늘_이미_본_공모전이면_조회수를_올리지_않는다() {
         givenContest(1L, 8);
 
-        ContestDetailView view = contestDetailService.getContest(1L, "5.1", NOW);
+        ContestDetailView view = contestDetailService.getContest(1L, "5.1", null, NOW);
 
         verify(contestRepository, never()).increaseViewCount(anyLong());
         assertThat(view.detail().viewCount()).isEqualTo(8);
         assertThat(view.viewedCookie().getValue()).isEqualTo("5.1");
+    }
+
+    @Test
+    @DisplayName("로그인 회원이 북마크한 공모전이면 상세에 isBookmarked=true")
+    void 북마크한_공모전이면_상세에_표시한다() {
+        givenContest(1L, 8);
+        given(bookmarkService.findBookmarkedContestIds(7L, List.of(1L))).willReturn(Set.of(1L));
+
+        ContestDetailView view = contestDetailService.getContest(1L, "1", 7L, NOW);
+
+        assertThat(view.detail().isBookmarked()).isTrue();
+    }
+
+    @Test
+    @DisplayName("북마크하지 않았거나 비로그인이면 상세에 isBookmarked=false")
+    void 북마크하지_않았으면_상세에_false() {
+        givenContest(1L, 8);
+
+        ContestDetailView view = contestDetailService.getContest(1L, "1", null, NOW);
+
+        assertThat(view.detail().isBookmarked()).isFalse();
     }
 }

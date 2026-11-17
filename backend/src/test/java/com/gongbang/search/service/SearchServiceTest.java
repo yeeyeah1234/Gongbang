@@ -2,6 +2,7 @@ package com.gongbang.search.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -41,7 +42,9 @@ class SearchServiceTest {
             BusinessException e =
                     assertThrows(
                             BusinessException.class,
-                            () -> searchService.search(keyword, "all", "accuracy", false, 0, 20));
+                            () ->
+                                    searchService.search(
+                                            keyword, "all", "accuracy", false, 0, 20, null));
             assertThat(e.getErrorCode()).isEqualTo(ErrorCode.KEYWORD_TOO_SHORT);
         }
     }
@@ -52,30 +55,33 @@ class SearchServiceTest {
         BusinessException e =
                 assertThrows(
                         BusinessException.class,
-                        () -> searchService.search("공모전", "member", "accuracy", false, 0, 20));
+                        () ->
+                                searchService.search(
+                                        "공모전", "member", "accuracy", false, 0, 20, null));
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
     }
 
     @Test
-    @DisplayName("공모전 검색에는 앞뒤 공백을 지운 검색어를 넘긴다")
+    @DisplayName("공모전 검색에는 앞뒤 공백을 지운 검색어와 로그인 회원 id를 넘긴다")
     void 공백을_지운_검색어로_공모전을_찾는다() {
-        given(contestQueryService.searchContests("청년 공모전", "latest", true, 1, 10))
+        given(contestQueryService.searchContests("청년 공모전", "latest", true, 1, 10, 7L))
                 .willReturn(PageResponse.of(List.of(), 1, 10, 0));
 
-        SearchResponse result = searchService.search("  청년 공모전  ", "contest", "latest", true, 1, 10);
+        SearchResponse result =
+                searchService.search("  청년 공모전  ", "contest", "latest", true, 1, 10, 7L);
 
-        verify(contestQueryService).searchContests("청년 공모전", "latest", true, 1, 10);
+        verify(contestQueryService).searchContests("청년 공모전", "latest", true, 1, 10, 7L);
         assertThat(result.posts().items()).isEmpty();
     }
 
     @Test
     @DisplayName("커뮤니티 탭이면 공모전은 찾지 않고 빈 목록을 준다")
     void 커뮤니티_탭은_공모전을_찾지_않는다() {
-        SearchResponse result = searchService.search("공모전", "post", "accuracy", false, 0, 20);
+        SearchResponse result = searchService.search("공모전", "post", "accuracy", false, 0, 20, null);
 
         verify(contestQueryService, never())
-                .searchContests(anyString(), anyString(), anyBoolean(), anyInt(), anyInt());
+                .searchContests(anyString(), anyString(), anyBoolean(), anyInt(), anyInt(), any());
         assertThat(result.contests().items()).isEmpty();
         assertThat(result.contests().hasNext()).isFalse();
     }

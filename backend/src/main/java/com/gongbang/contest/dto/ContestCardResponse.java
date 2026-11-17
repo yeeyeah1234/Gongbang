@@ -17,7 +17,10 @@ public record ContestCardResponse(
         boolean isClosed,
         boolean isBookmarked) {
 
-    /** dDay는 마감 당일 0, 마감이 지나면 음수. isClosed는 마감일이 오늘보다 앞일 때 true. */
+    /**
+     * dDay는 마감 당일 0, 마감이 지나면 음수. isClosed는 마감일이 오늘보다 앞일 때 true. isBookmarked는 false로 만들고, 로그인 회원이면
+     * service가 {@link #withBookmark}로 채운다 (MAIN-06 ③).
+     */
     public static ContestCardResponse of(Contest contest, LocalDate today) {
         LocalDate deadline = contest.getEndDate();
         return new ContestCardResponse(
@@ -30,7 +33,20 @@ public record ContestCardResponse(
                 deadline,
                 (int) ChronoUnit.DAYS.between(today, deadline),
                 deadline.isBefore(today),
-                // TODO(확인 필요): 북마크(MY-03, 정진우)·로그인 사용자 조회가 생기면 실제 값으로 바꾼다
                 false);
+    }
+
+    public ContestCardResponse withBookmark(boolean bookmarked) {
+        return new ContestCardResponse(
+                contestId,
+                title,
+                host,
+                categoryCode,
+                categoryName,
+                thumbnailUrl,
+                deadline,
+                dDay,
+                isClosed,
+                bookmarked);
     }
 }

@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.gongbang.contest.domain.Category;
@@ -22,8 +23,10 @@ import com.gongbang.contest.repository.ContestQueryRepository;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.BookmarkService;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,11 +42,15 @@ class ContestQueryServiceTest {
 
     @Mock private CategoryRepository categoryRepository;
 
+    @Mock private BookmarkService bookmarkService;
+
     private ContestQueryService contestQueryService;
 
     @BeforeEach
     void setUp() {
-        contestQueryService = new ContestQueryService(contestQueryRepository, categoryRepository);
+        contestQueryService =
+                new ContestQueryService(
+                        contestQueryRepository, categoryRepository, bookmarkService);
     }
 
     private Contest contestWithDeadline(LocalDate deadline) {
@@ -64,7 +71,7 @@ class ContestQueryServiceTest {
                         BusinessException.class,
                         () ->
                                 contestQueryService.getContests(
-                                        "active", "popular", null, null, 0, 20));
+                                        "active", "popular", null, null, 0, 20, null));
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_SORT);
     }
@@ -77,7 +84,7 @@ class ContestQueryServiceTest {
                         BusinessException.class,
                         () ->
                                 contestQueryService.getContests(
-                                        "closed", "latest", null, null, 0, 20));
+                                        "closed", "latest", null, null, 0, 20, null));
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
     }
@@ -97,7 +104,8 @@ class ContestQueryServiceTest {
                                             null,
                                             null,
                                             pageAndSize[0],
-                                            pageAndSize[1]));
+                                            pageAndSize[1],
+                                            null));
             assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         }
     }
@@ -108,7 +116,7 @@ class ContestQueryServiceTest {
         given(contestQueryRepository.findContests(any(), any(), anyLong(), anyInt()))
                 .willReturn(List.of());
 
-        contestQueryService.getContests("all", "deadline", " IT_SW ", "   ", 2, 10);
+        contestQueryService.getContests("all", "deadline", " IT_SW ", "   ", 2, 10, null);
 
         ArgumentCaptor<ContestSearchCondition> captor =
                 ArgumentCaptor.forClass(ContestSearchCondition.class);
@@ -128,9 +136,9 @@ class ContestQueryServiceTest {
         given(contestQueryRepository.countContests(any(), any())).willReturn(45L);
 
         PageResponse<ContestCardResponse> second =
-                contestQueryService.getContests("active", "latest", null, null, 1, 20);
+                contestQueryService.getContests("active", "latest", null, null, 1, 20, null);
         PageResponse<ContestCardResponse> last =
-                contestQueryService.getContests("active", "latest", null, null, 2, 20);
+                contestQueryService.getContests("active", "latest", null, null, 2, 20, null);
 
         assertThat(second.hasNext()).isTrue();
         assertThat(last.hasNext()).isFalse();
@@ -169,7 +177,9 @@ class ContestQueryServiceTest {
         BusinessException e =
                 assertThrows(
                         BusinessException.class,
-                        () -> contestQueryService.searchContests("공모전", "views", false, 0, 20));
+                        () ->
+                                contestQueryService.searchContests(
+                                        "공모전", "views", false, 0, 20, null));
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_SORT);
     }
@@ -177,15 +187,13 @@ class ContestQueryServiceTest {
     @Test
     @DisplayName("통합 검색은 기본으로 진행 중만, 「마감된 공모전 포함」이면 마감된 것까지 찾는다")
     void 마감된_공모전_포함_여부() {
-        given(
-                        contestQueryRepository.searchContests(
-                                any(), any(), any(), anyLong(), anyInt()))
+        given(contestQueryRepository.searchContests(any(), any(), any(), anyLong(), anyInt()))
                 .willReturn(List.of());
         ArgumentCaptor<ContestSearchCondition> captor =
                 ArgumentCaptor.forClass(ContestSearchCondition.class);
 
-        contestQueryService.searchContests("공모전", "accuracy", false, 0, 20);
-        contestQueryService.searchContests("공모전", "accuracy", true, 0, 20);
+        contestQueryService.searchContests("공모전", "accuracy", false, 0, 20, null);
+        contestQueryService.searchContests("공모전", "accuracy", true, 0, 20, null);
 
         verify(contestQueryRepository, org.mockito.Mockito.times(2))
                 .searchContests(
@@ -194,5 +202,61 @@ class ContestQueryServiceTest {
                 .extracting(ContestSearchCondition::status)
                 .containsExactly(ContestStatus.ACTIVE, ContestStatus.ALL);
         assertThat(captor.getValue().keyword()).isEqualTo("공모전");
+    }
+
+    private Contest contestWithId(long id) {
+        Contest contest = contestWithDeadline(LocalDate.now().plusDays(30));
+        given(contest.getId()).willReturn(id);
+        return contest;
+    }
+
+    @Test
+    @DisplayName("로그인 회원이면 그 페이지 카드 중 북마크한 공모전만 isBookmarked=true")
+    void 로그인_회원이면_북마크한_공모전만_표시한다() {
+        List<Contest> contests = List.of(contestWithId(1L), contestWithId(2L), contestWithId(3L));
+        given(contestQueryRepository.findContests(any(), any(), anyLong(), anyInt()))
+                .willReturn(contests);
+        given(bookmarkService.findBookmarkedContestIds(7L, List.of(1L, 2L, 3L)))
+                .willReturn(Set.of(2L));
+
+        PageResponse<ContestCardResponse> result =
+                contestQueryService.getContests("active", "latest", null, null, 0, 20, 7L);
+
+        assertThat(result.items())
+                .extracting(ContestCardResponse::contestId, ContestCardResponse::isBookmarked)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(1L, false),
+                        org.assertj.core.groups.Tuple.tuple(2L, true),
+                        org.assertj.core.groups.Tuple.tuple(3L, false));
+    }
+
+    @Test
+    @DisplayName("비로그인이면 북마크를 조회하지 않고 모두 isBookmarked=false")
+    void 비로그인이면_북마크를_조회하지_않는다() {
+        List<Contest> contests = List.of(contestWithId(1L));
+        given(contestQueryRepository.findContests(any(), any(), anyLong(), anyInt()))
+                .willReturn(contests);
+
+        PageResponse<ContestCardResponse> result =
+                contestQueryService.getContests("active", "latest", null, null, 0, 20, null);
+
+        assertThat(result.items())
+                .extracting(ContestCardResponse::isBookmarked)
+                .containsOnly(false);
+        verify(bookmarkService, never()).findBookmarkedContestIds(any(), any());
+    }
+
+    @Test
+    @DisplayName("통합 검색 공모전 카드도 로그인 회원의 북마크를 표시한다")
+    void 검색_결과에도_북마크를_표시한다() {
+        List<Contest> contests = List.of(contestWithId(5L));
+        given(contestQueryRepository.searchContests(any(), any(), any(), anyLong(), anyInt()))
+                .willReturn(contests);
+        given(bookmarkService.findBookmarkedContestIds(7L, List.of(5L))).willReturn(Set.of(5L));
+
+        PageResponse<ContestCardResponse> result =
+                contestQueryService.searchContests("공모전", "accuracy", false, 0, 20, 7L);
+
+        assertThat(result.items().get(0).isBookmarked()).isTrue();
     }
 }

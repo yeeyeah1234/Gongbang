@@ -30,7 +30,8 @@ public class SearchService {
             String sort,
             boolean includeClosed,
             int page,
-            int size) {
+            int size,
+            Long memberId) {
         String trimmed = keyword == null ? "" : keyword.trim();
         if (trimmed.length() < MIN_KEYWORD_LENGTH) {
             throw new BusinessException(ErrorCode.KEYWORD_TOO_SHORT);
@@ -40,7 +41,7 @@ public class SearchService {
         PageResponse<ContestCardResponse> contests =
                 searchType.includesContests()
                         ? contestQueryService.searchContests(
-                                trimmed, sort, includeClosed, page, size)
+                                trimmed, sort, includeClosed, page, size, memberId)
                         : PageResponse.of(List.of(), page, size, 0);
 
         // TODO(확인 필요): 모집글 제목·본문, 작성자 닉네임 검색(SRCH-05 ①)은 모집글(김수형)·회원(정진우) 도메인이 생기면

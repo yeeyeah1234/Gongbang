@@ -8,6 +8,8 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.Bookmark;
 import com.gongbang.member.repository.BookmarkRepository;
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -52,5 +54,18 @@ public class BookmarkService {
         // 공모전 카드 모양은 최규선 contest 도메인 service로 만든다 (AGENTS 3)
         List<ContestCardResponse> cards = contestCardService.getCardsByIds(ids, true);
         return PageResponse.of(cards, page, size, bookmarkRepository.countByMemberId(memberId));
+    }
+
+    /**
+     * MAIN-06·MAIN-02: 공모전 목록·상세·검색 카드에 「내가 북마크했는지」를 표시할 때 최규선 contest 도메인이 부른다 (AGENTS 3).
+     * 비로그인(memberId null)이거나 id 목록이 null·비어 있으면 빈 값. ContestCardService에서는 부르지 않는다
+     * (BookmarkService가 ContestCardService를 써서 순환 의존이 됨).
+     */
+    @Transactional(readOnly = true)
+    public Set<Long> findBookmarkedContestIds(Long memberId, Collection<Long> contestIds) {
+        if (memberId == null || contestIds == null || contestIds.isEmpty()) {
+            return Set.of();
+        }
+        return new HashSet<>(bookmarkRepository.findBookmarkedContestIds(memberId, contestIds));
     }
 }
