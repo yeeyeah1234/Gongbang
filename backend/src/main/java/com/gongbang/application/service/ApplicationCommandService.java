@@ -12,6 +12,7 @@ import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.post.service.PostCommandService;
+import com.gongbang.post.service.PostMembershipService;
 import com.gongbang.post.service.PostQueryService;
 import com.gongbang.post.service.RecruitNotifier;
 import com.gongbang.post.service.TeamJoinService;
@@ -37,6 +38,7 @@ public class ApplicationCommandService {
     private final PostQueryService postQueryService;
     private final TeamJoinService teamJoinService;
     private final RecruitNotifier recruitNotifier;
+    private final PostMembershipService postMembershipService;
 
     /**
      * REC-001 지원하기. 「대기」 지원을 만든다 (②). 모집 시작일 전에도 지원할 수 있고 종료일 당일까지 받는다 (11/10·11/13 결정). 모집완료
@@ -62,8 +64,10 @@ public class ApplicationCommandService {
         if (applicationRepository.existsByPostIdAndApplicantId(postId, memberId)) {
             throw new BusinessException(ErrorCode.ALREADY_APPLIED);
         }
-        // TODO(확인 필요): 팀원(team_member, 공통)이 생기면 이 글 팀의 현재 팀원(초대로 들어온 회원 포함)은
-        // 409 ALREADY_TEAM_MEMBER로 막는다 (③).
+        // ③: 지원 기록 없이 초대로 들어온 현재 팀원도 막는다. 나간 팀원은 지원 기록이 없으면 다시 지원할 수 있다.
+        if (postMembershipService.isActiveMember(postId, memberId)) {
+            throw new BusinessException(ErrorCode.ALREADY_TEAM_MEMBER);
+        }
 
         Application saved;
         try {

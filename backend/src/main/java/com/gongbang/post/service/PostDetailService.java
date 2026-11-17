@@ -34,6 +34,7 @@ public class PostDetailService {
     private final RecruitPostRepository recruitPostRepository;
     private final ContestLookupService contestLookupService;
     private final ApplicationQueryService applicationQueryService;
+    private final PostMembershipService postMembershipService;
 
     /**
      * PST-005 모집글 상세. 없거나 삭제된 글이면 404 POST_NOT_FOUND (PST-004 ⑤).
@@ -106,8 +107,11 @@ public class PostDetailService {
         return recruitPostRepository.insertViewIfAbsent(postId, viewerId, now) == 1;
     }
 
-    /** PST-006 버튼 분기용 상태. */
-    private static MyStatus myStatus(
+    /**
+     * PST-006 버튼 분기용 상태. 팀원 여부가 지원 상태보다 앞선다: 현재 팀원이면 ACCEPTED(⑤, 초대로 들어온 회원과 재초대로 다시 들어온 회원 포함), 나간
+     * 기록만 있으면 LEFT(⑨, 강제 퇴장 포함). 둘 다 아니면 지원 상태를 본다 (11/10·11/13 결정).
+     */
+    private MyStatus myStatus(
             RecruitPost post, Long viewerId, Optional<MyApplication> myApplication) {
         if (viewerId == null) {
             return MyStatus.NONE;
@@ -115,15 +119,23 @@ public class PostDetailService {
         if (Objects.equals(post.getAuthorId(), viewerId)) {
             return MyStatus.AUTHOR;
         }
-        // TODO(확인 필요): 팀원(team_member, 공통)이 생기면 ACCEPTED는 활성 팀원 행 기준으로, LEFT는 나간 기록만
-        // 있는 회원으로 판단한다 (11/10 결정). 지금은 지원 상태만 본다.
+        switch (postMembershipService.membership(post.getId(), viewerId)) {
+            case ACTIVE:
+                return MyStatus.ACCEPTED;
+            case LEFT:
+                return MyStatus.LEFT;
+            case NONE:
+                break;
+        }
         return myApplication
                 .map(
                         application ->
                                 switch (application.status()) {
                                     case PENDING -> MyStatus.PENDING;
                                     case REJECTED -> MyStatus.REJECTED;
-                                    case ACCEPTED -> MyStatus.ACCEPTED;
+                                        // 수락된 지원은 팀원 행이 함께 생기므로 위에서 ACCEPTED·LEFT로 갈린다. 팀원 행이 없으면
+                                        // 팀에 없는 것으로 본다.
+                                    case ACCEPTED -> MyStatus.NONE;
                                         // 삭제된 글의 지원이라 상세를 열 일이 없다
                                     case CLOSED -> MyStatus.NONE;
                                 })

@@ -13,6 +13,7 @@ import com.gongbang.application.repository.ApplicationRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.service.PostCommandService;
+import com.gongbang.post.service.PostMembershipService;
 import com.gongbang.post.service.PostQueryService;
 import com.gongbang.post.service.RecruitNotifier;
 import com.gongbang.post.service.TeamJoinService;
@@ -40,6 +41,7 @@ class ApplicationCancelServiceTest {
     @Mock private PostQueryService postQueryService;
     @Mock private TeamJoinService teamJoinService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private PostMembershipService postMembershipService;
 
     private ApplicationCommandService applicationCommandService;
 
@@ -51,7 +53,8 @@ class ApplicationCancelServiceTest {
                         postCommandService,
                         postQueryService,
                         teamJoinService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        postMembershipService);
     }
 
     private Application givenApplication(ApplicationStatus status) {

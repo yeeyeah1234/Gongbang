@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.gongbang.application.domain.Application;
 import com.gongbang.application.domain.ApplicationStatus;
@@ -16,6 +17,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.service.PostCommandService;
+import com.gongbang.post.service.PostMembershipService;
 import com.gongbang.post.service.PostQueryService;
 import com.gongbang.post.service.RecruitNotifier;
 import com.gongbang.post.service.TeamJoinService;
@@ -44,6 +46,7 @@ class ApplicationCommandServiceTest {
     @Mock private PostQueryService postQueryService;
     @Mock private TeamJoinService teamJoinService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private PostMembershipService postMembershipService;
 
     private ApplicationCommandService applicationCommandService;
 
@@ -55,7 +58,8 @@ class ApplicationCommandServiceTest {
                         postCommandService,
                         postQueryService,
                         teamJoinService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        postMembershipService);
     }
 
     /** 모집 기간 start~end, 상태 status인 글을 잠금 조회로 돌려준다. */
@@ -117,6 +121,17 @@ class ApplicationCommandServiceTest {
 
         assertThat(errorOf(AUTHOR_ID)).isEqualTo(ErrorCode.CANNOT_APPLY_OWN_POST);
         verify(applicationRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("이 글 팀의 현재 팀원(초대로 들어온 회원 포함)이면 409 ALREADY_TEAM_MEMBER (③)")
+    void 현재_팀원이면_409() {
+        givenRecruiting();
+        given(postMembershipService.isActiveMember(POST_ID, MEMBER_ID)).willReturn(true);
+
+        assertThat(errorOf(MEMBER_ID)).isEqualTo(ErrorCode.ALREADY_TEAM_MEMBER);
+        verify(applicationRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(recruitNotifier);
     }
 
     @Test

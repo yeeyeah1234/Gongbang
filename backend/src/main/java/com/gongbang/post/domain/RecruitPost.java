@@ -147,6 +147,17 @@ public class RecruitPost {
         this.currentCount++;
     }
 
+    /**
+     * INT-006 ④⑤: 확정 팀원이 한 명 나갔다(나가기·강제 퇴장·탈퇴). 모집완료 상태는 그대로 둔다. 부르는 쪽이 이 행을 잠근 뒤 부른다. 작성자(팀장)는 나갈
+     * 수 없으므로 1 아래로는 내려가지 않는다.
+     */
+    public void removeConfirmedMember() {
+        if (currentCount <= 1) {
+            throw new IllegalStateException("확정 인원은 작성자를 포함해 1명 아래로 내려갈 수 없습니다: postId=" + id);
+        }
+        this.currentCount--;
+    }
+
     /** REC-006 모집완료. 되돌리지 않는다 (REC-007). */
     public void complete(LocalDateTime now) {
         this.status = PostStatus.COMPLETED;
