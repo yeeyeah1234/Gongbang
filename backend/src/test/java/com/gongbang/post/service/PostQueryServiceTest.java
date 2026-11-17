@@ -3,8 +3,11 @@ package com.gongbang.post.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.gongbang.contest.dto.ContestSummary;
@@ -12,6 +15,7 @@ import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
@@ -43,12 +47,16 @@ class PostQueryServiceTest {
 
     @Mock private RecruitPostRepository recruitPostRepository;
     @Mock private ContestLookupService contestLookupService;
+    @Mock private MemberService memberService;
 
     private PostQueryService postQueryService;
 
     @BeforeEach
     void setUp() {
-        postQueryService = new PostQueryService(recruitPostRepository, contestLookupService);
+        postQueryService =
+                new PostQueryService(recruitPostRepository, contestLookupService, memberService);
+        // 닉네임을 보지 않는 테스트용 기본값
+        lenient().when(memberService.displayName(anyLong())).thenReturn("닉네임");
     }
 
     private static RecruitPost contestPost(Long postId, Long contestId) {
@@ -108,6 +116,21 @@ class PostQueryServiceTest {
         assertThat(external.contest().categoryName()).isEqualTo("기타");
         assertThat(external.contest().isExternal()).isTrue();
         assertThat(external.contest().deadline()).isEqualTo(DEADLINE);
+    }
+
+    @Test
+    @DisplayName("작성자 닉네임을 채우고, 같은 작성자는 한 번만 읽는다 (②, 탈퇴 회원은 「탈퇴한 사용자」)")
+    void 작성자_닉네임을_채운다() {
+        givenPage(List.of(contestPost(3L, 3L), contestPost(2L, 3L), externalPost(1L, 5L)), 3);
+        given(memberService.displayName(7L)).willReturn("김팀장");
+        given(memberService.displayName(8L)).willReturn("탈퇴한 사용자");
+
+        PageResponse<PostListItemResponse> result = postQueryService.getPosts(0, 20);
+
+        assertThat(result.items())
+                .extracting(item -> item.author().nickname())
+                .containsExactly("김팀장", "김팀장", "탈퇴한 사용자");
+        verify(memberService, times(1)).displayName(7L);
     }
 
     @Test
