@@ -28,10 +28,60 @@ public enum ErrorCode {
             HttpStatus.BAD_REQUEST,
             "TARGET_EQUALS_CURRENT",
             "현재 확정된 팀원 수와 같게 설정할 수 없습니다. 모집을 마치려면 「모집 완료」를 눌러 주세요"),
+    // TODO(확인 필요): 기능정의서 문구를 찾지 못해 임시로 정함 (AGENTS.md 5번 팀 이름 1~20자, WS-01)
+    TEAM_NAME_INVALID(HttpStatus.BAD_REQUEST, "TEAM_NAME_INVALID", "팀 이름은 1~20자로 입력해 주세요"),
+
+    // ---- 정진우 (AUTH·MY·NOTI) 400 ----
+    // AUTH-05 ③ 문구. 남은 횟수는 메시지에 넣는다
+    CODE_MISMATCH(HttpStatus.BAD_REQUEST, "CODE_MISMATCH", "인증번호가 맞지 않아요"),
+    // AUTH-05 ③ 문구
+    CODE_EXPIRED(HttpStatus.BAD_REQUEST, "CODE_EXPIRED", "인증 시간이 지났어요. 인증번호를 다시 받아 주세요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-06 ③)
+    NICKNAME_INVALID(HttpStatus.BAD_REQUEST, "NICKNAME_INVALID", "닉네임은 2~10자 한글·영문·숫자로 입력해 주세요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-06 ④)
+    NICKNAME_FORBIDDEN(HttpStatus.BAD_REQUEST, "NICKNAME_FORBIDDEN", "쓸 수 없는 단어가 들어 있어요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-04 ②)
+    TERMS_REQUIRED(HttpStatus.BAD_REQUEST, "TERMS_REQUIRED", "필수 약관에 동의해 주세요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-02 ③, AUTH-05 ⑤)
+    TOKEN_EXPIRED(HttpStatus.BAD_REQUEST, "TOKEN_EXPIRED", "인증 시간이 지났어요. 처음부터 다시 진행해 주세요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-06 ①)
+    PASSWORD_POLICY(
+            HttpStatus.BAD_REQUEST, "PASSWORD_POLICY", "비밀번호는 8~20자, 영문·숫자·특수문자를 각 1개 이상 넣어 주세요"),
+    // AUTH-02 ④, MY-04 ② 문구
+    SAME_AS_OLD_PASSWORD(HttpStatus.BAD_REQUEST, "SAME_AS_OLD_PASSWORD", "지금 쓰는 비밀번호와 다르게 정해 주세요"),
+    // MY-04 ③ 문구 (틀린 횟수는 메시지에 넣는다)
+    PASSWORD_MISMATCH(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH", "현재 비밀번호가 맞지 않아요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-11 ②)
+    CONFIRM_TEXT_MISMATCH(HttpStatus.BAD_REQUEST, "CONFIRM_TEXT_MISMATCH", "「탈퇴합니다」를 정확히 입력해 주세요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-01 ③)
+    SKILL_TAG_LIMIT(HttpStatus.BAD_REQUEST, "SKILL_TAG_LIMIT", "기술 태그는 10개까지 넣을 수 있어요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-08 ②, MY-09 ②)
+    FUTURE_DATE(HttpStatus.BAD_REQUEST, "FUTURE_DATE", "오늘 이후 날짜는 고를 수 없어요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-08 ③)
+    PROOF_REQUIRED(HttpStatus.BAD_REQUEST, "PROOF_REQUIRED", "증빙 파일을 올려 주세요"),
+
+    // AUTH-10 ③: 1회용 키가 없거나 1분이 지남 (문구는 ⑧과 같은 뜻으로 임시)
+    OAUTH_CODE_INVALID(
+            HttpStatus.BAD_REQUEST, "OAUTH_CODE_INVALID", "간편 로그인을 완료하지 못했어요. 다시 시도해 주세요"),
 
     // 401 Unauthorized
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요하거나 만료되었습니다."),
     INVALID_INTERNAL_KEY(HttpStatus.UNAUTHORIZED, "INVALID_INTERNAL_KEY", "내부 키가 올바르지 않습니다."),
+    // AUTH-01 ② 문구 (틀린 횟수는 메시지에 넣는다)
+    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "LOGIN_FAILED", "이메일 또는 비밀번호가 맞지 않아요"),
+
+    // ---- 정진우 403 ----
+    // AUTH-01 ③ 문구
+    EXTRA_VERIFICATION_REQUIRED(
+            HttpStatus.FORBIDDEN,
+            "EXTRA_VERIFICATION_REQUIRED",
+            "로그인을 5번 실패했어요. 가입한 이메일로 보낸 인증번호를 입력해 주세요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-01 ④)
+    ACCOUNT_LOCKED(HttpStatus.FORBIDDEN, "ACCOUNT_LOCKED", "로그인 시도가 반복돼 30분 동안 로그인할 수 없어요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AGENTS 9)
+    NOT_ADMIN(HttpStatus.FORBIDDEN, "NOT_ADMIN", "운영자만 할 수 있어요"),
+    // TODO(확인 필요): API 명세서에 「403」만 있고 코드가 없어 임시로 정함 (MY-07·08·09, NOTI-01)
+    NOT_OWNER(HttpStatus.FORBIDDEN, "NOT_OWNER", "본인 것만 바꿀 수 있어요"),
 
     // 403 Forbidden
     NOT_TEAM_MEMBER(HttpStatus.FORBIDDEN, "NOT_TEAM_MEMBER", "팀원만 접근할 수 있습니다."),
@@ -49,6 +99,42 @@ public enum ErrorCode {
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "삭제되었거나 없는 모집글이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (API 명세서 MAIN-02)
     CONTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTEST_NOT_FOUND", "존재하지 않는 공모전입니다."),
+
+    // ---- 정진우 404 ----
+    // AUTH-01 ②, AUTH-02 ⑥ 문구
+    EMAIL_NOT_FOUND(HttpStatus.NOT_FOUND, "EMAIL_NOT_FOUND", "가입되지 않은 이메일이에요"),
+    // AUTH-02 ① 문구 (공개 프로필 404도 이 코드)
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "MEMBER_NOT_FOUND", "입력한 닉네임으로 가입된 계정이 없어요"),
+    // TODO(확인 필요): API 명세서에 「404」만 있고 코드가 없어 임시로 정함 (MY-07·08·09, NOTI-01·07)
+    RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "RESOURCE_NOT_FOUND", "없거나 삭제된 항목이에요"),
+
+    // ---- 정진우 409 ----
+    // AUTH-05 ⑥ 문구
+    EMAIL_DUPLICATED(HttpStatus.CONFLICT, "EMAIL_DUPLICATED", "이미 가입된 이메일이에요"),
+    // AUTH-05 ⑥: 카카오·구글로 가입된 이메일로 이메일 가입을 시도 → 그 방식으로 로그인 안내
+    SOCIAL_EMAIL_REGISTERED(
+            HttpStatus.CONFLICT, "SOCIAL_EMAIL_REGISTERED", "간편 로그인으로 가입된 이메일이에요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-06 ③)
+    NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "NICKNAME_DUPLICATED", "이미 쓰고 있는 닉네임이에요"),
+    // AUTH-05 ③: 5번 틀리면 그 번호는 무효 (문구는 임시)
+    CODE_LOCKED(HttpStatus.CONFLICT, "CODE_LOCKED", "인증번호를 5번 틀렸어요. 인증번호를 다시 받아 주세요"),
+    // AUTH-01 ⑤, MY-11 ⑤ 문구 (남은 날은 메시지에 넣는다)
+    ACCOUNT_WITHDRAWN(HttpStatus.CONFLICT, "ACCOUNT_WITHDRAWN", "탈퇴 신청한 계정이에요"),
+    // MY-11 ③ 문구
+    LEADER_CANNOT_WITHDRAW(HttpStatus.CONFLICT, "LEADER_CANNOT_WITHDRAW", "팀장인 채팅방을 먼저 정리해 주세요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-07 ④)
+    CAREER_LIMIT(HttpStatus.CONFLICT, "CAREER_LIMIT", "경력은 20개까지 넣을 수 있어요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-08 ③)
+    ALREADY_PENDING(HttpStatus.CONFLICT, "ALREADY_PENDING", "이미 인증을 확인하고 있어요"),
+
+    // ---- 정진우 410 ----
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (MY-11 ①)
+    RESTORE_EXPIRED(HttpStatus.GONE, "RESTORE_EXPIRED", "복원 기한(30일)이 지나 복원할 수 없어요"),
+
+    // ---- 정진우 503 ----
+    // AUTH-05 ④ 문구
+    MAIL_SEND_FAILED(
+            HttpStatus.SERVICE_UNAVAILABLE, "MAIL_SEND_FAILED", "메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요"),
 
     // 409 Conflict
     ALREADY_APPLIED(HttpStatus.CONFLICT, "ALREADY_APPLIED", "이미 지원한 모집글입니다."),

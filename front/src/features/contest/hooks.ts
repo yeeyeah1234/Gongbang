@@ -1,10 +1,11 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useIsLoggedIn as useAuthIsLoggedIn } from '../auth/store'
 import { fetchCategories, fetchContest, fetchContests, updateBookmark } from './api'
 import type { ContestSort } from './types'
 
-// TODO(확인 필요): 인증 모듈(정진우)의 로그인 사용자 조회가 생기면 그 값으로 바꾼다. 지금은 항상 비로그인.
+// 인증 모듈(정진우)의 로그인 사용자 조회로 바꿨다 (11/16). 원래 자리는 그대로 두고 그 값을 돌려준다.
 export function useIsLoggedIn() {
-  return false
+  return useAuthIsLoggedIn()
 }
 
 // MAIN-01 ③: 한 번에 20개씩

@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useIsLoggedIn } from '../../features/contest/hooks'
+import { loginPathWithRedirect } from '../../features/auth/redirect'
+import { UserMenu } from '../../features/auth/components/UserMenu'
+import { NotificationBell } from '../../features/notification/components/NotificationBell'
 import { useTimedToast } from '../../hooks/useTimedToast'
 import { Button } from '../ui/Button'
 import { Modal } from '../ui/Modal'
@@ -136,9 +139,20 @@ export function Gnb() {
             {/* GNB-02 ①: 비로그인은 [로그인] 버튼
               TODO(확인 필요): GNB-02 ③④ 닉네임 드롭다운·GNB-03 로그아웃은 인증 모듈(정진우, AUTH-01·11)과 함께 만든다 */}
             {!isLoggedIn && (
-              <Button variant="outline" size="sm" onClick={() => navigate(LOGIN_PATH)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(loginPathWithRedirect(pathname === '/' ? '' : pathname))}
+              >
                 로그인
               </Button>
+            )}
+            {/* AUTH-01 ⑦: 로그인 후 [로그인] → 알림 종 + [닉네임 ▾] (정진우 NOTI-03·MY-06 ③·AUTH-11) */}
+            {isLoggedIn && (
+              <>
+                <NotificationBell onError={toast.show} />
+                <UserMenu />
+              </>
             )}
           </div>
         </div>
@@ -156,7 +170,8 @@ export function Gnb() {
               setLoginModalOpen(false)
               // TODO(확인 필요): 로그인 후 워크스페이스(/workspaces)로 돌아오게 한다 (이상현 제안).
               // 돌아갈 주소를 넘기는 방식은 로그인 화면(정진우, AUTH-01)이 정해지면 맞춘다
-              navigate(LOGIN_PATH)
+              // → 11/16 정진우: /login?redirect=/workspaces 로 넘긴다
+              navigate(loginPathWithRedirect('/workspaces') || LOGIN_PATH)
             }}
           >
             로그인
