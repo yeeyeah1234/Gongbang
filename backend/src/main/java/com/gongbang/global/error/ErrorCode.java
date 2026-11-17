@@ -16,11 +16,18 @@ public enum ErrorCode {
     KEYWORD_TOO_SHORT(HttpStatus.BAD_REQUEST, "KEYWORD_TOO_SHORT", "검색어는 2글자 이상 입력해주세요"),
     // PST-002 ⑥ 문구
     CONTEST_REQUIRED(HttpStatus.BAD_REQUEST, "CONTEST_REQUIRED", "공모전을 선택해 주세요"),
+    // PST-002 ②⑥ 문구
+    CONTEST_ENDED(HttpStatus.BAD_REQUEST, "CONTEST_ENDED", "이미 마감된 공모전이에요"),
     // PST-002 ⑥ 문구 (서버 기간 오류)
     INVALID_PERIOD(HttpStatus.BAD_REQUEST, "INVALID_PERIOD", "모집 기간을 다시 확인해 주세요"),
     // PST-003 ④ 문구
     TARGET_BELOW_CURRENT(
             HttpStatus.BAD_REQUEST, "TARGET_BELOW_CURRENT", "현재 확정된 팀원 수보다 적게 설정할 수 없습니다"),
+    // PST-003 ④ 문구 (모집중인 글, 11/13 결정)
+    TARGET_EQUALS_CURRENT(
+            HttpStatus.BAD_REQUEST,
+            "TARGET_EQUALS_CURRENT",
+            "현재 확정된 팀원 수와 같게 설정할 수 없습니다. 모집을 마치려면 「모집 완료」를 눌러 주세요"),
     // TODO(확인 필요): 기능정의서 문구를 찾지 못해 임시로 정함 (AGENTS.md 5번 팀 이름 1~20자, WS-01)
     TEAM_NAME_INVALID(HttpStatus.BAD_REQUEST, "TEAM_NAME_INVALID", "팀 이름은 1~20자로 입력해 주세요"),
 

@@ -1,5 +1,6 @@
 package com.gongbang.contest.service;
 
+import com.gongbang.contest.domain.Category;
 import com.gongbang.contest.domain.ContestSearchSort;
 import com.gongbang.contest.domain.ContestSort;
 import com.gongbang.contest.domain.ContestStatus;
@@ -14,6 +15,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -99,5 +101,10 @@ public class ContestQueryService {
         return categoryRepository.findAll(Sort.by("sortOrder")).stream()
                 .map(CategoryResponse::from)
                 .toList();
+    }
+
+    /** 다른 도메인용: 분야 코드로 분야 ID를 찾는다 (PST-002 외부 공모전 분야). 없는 코드면 빈 값. */
+    public Optional<Long> findCategoryId(String categoryCode) {
+        return categoryRepository.findByCode(categoryCode).map(Category::getId);
     }
 }
