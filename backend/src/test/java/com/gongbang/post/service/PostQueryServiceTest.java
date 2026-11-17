@@ -85,7 +85,9 @@ class PostQueryServiceTest {
         givenPage(List.of(contestPost(2L, 3L), externalPost(1L, 5L)), 2);
         given(contestLookupService.findSummaries(Set.of(3L)))
                 .willReturn(
-                        Map.of(3L, new ContestSummary(3L, "AI 챌린지", "IT/소프트웨어", DEADLINE)));
+                        Map.of(
+                                3L,
+                                new ContestSummary(3L, "AI 챌린지", "IT/소프트웨어", DEADLINE, null)));
         given(contestLookupService.findCategoryNames(Set.of(5L)))
                 .willReturn(Map.of(5L, "기타"));
 
