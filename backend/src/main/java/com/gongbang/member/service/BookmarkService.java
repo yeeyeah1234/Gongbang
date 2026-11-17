@@ -58,11 +58,12 @@ public class BookmarkService {
 
     /**
      * MAIN-06·MAIN-02: 공모전 목록·상세·검색 카드에 「내가 북마크했는지」를 표시할 때 최규선 contest 도메인이 부른다 (AGENTS 3).
-     * 비로그인(memberId null)이거나 id가 없으면 빈 값.
+     * 비로그인(memberId null)이거나 id 목록이 null·비어 있으면 빈 값. ContestCardService에서는 부르지 않는다
+     * (BookmarkService가 ContestCardService를 써서 순환 의존이 됨).
      */
     @Transactional(readOnly = true)
     public Set<Long> findBookmarkedContestIds(Long memberId, Collection<Long> contestIds) {
-        if (memberId == null || contestIds.isEmpty()) {
+        if (memberId == null || contestIds == null || contestIds.isEmpty()) {
             return Set.of();
         }
         return new HashSet<>(bookmarkRepository.findBookmarkedContestIds(memberId, contestIds));
