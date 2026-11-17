@@ -43,6 +43,7 @@ class PostUpdateServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private RecruitNotifier recruitNotifier;
 
     private PostCommandService postCommandService;
 
@@ -54,7 +55,8 @@ class PostUpdateServiceTest {
                         contestDetailService,
                         contestQueryService,
                         postDetailService,
-                        applicationCloseService);
+                        applicationCloseService,
+                        recruitNotifier);
     }
 
     /** 확정 인원 currentCount명, 목표 4명, 모집 기간 오늘~12/1인 서비스 공모전 글. */

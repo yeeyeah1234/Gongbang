@@ -97,6 +97,12 @@ class ApplicationRejectServiceTest {
         assertThat(application.getRejectType()).isEqualTo(RejectType.MANUAL);
         assertThat(application.getProcessedAt()).isEqualTo(NOW);
         verify(applicationRepository, never()).delete(application);
+        // ④, INT-003 ③: 지원자에게 거절 알림 (보낸 사람은 작성자)
+        verify(recruitNotifier)
+                .rejected(
+                        org.mockito.ArgumentMatchers.argThat(post -> POST_ID.equals(post.getId())),
+                        org.mockito.ArgumentMatchers.eq(APPLICANT_ID),
+                        org.mockito.ArgumentMatchers.eq(AUTHOR_ID));
     }
 
     @Test

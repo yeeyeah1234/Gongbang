@@ -103,6 +103,11 @@ class ApplicationCommandServiceTest {
         assertThat(captor.getValue().getPostId()).isEqualTo(POST_ID);
         assertThat(captor.getValue().getApplicantId()).isEqualTo(MEMBER_ID);
         assertThat(captor.getValue().getStatus()).isEqualTo(ApplicationStatus.PENDING);
+        // ⑤, INT-003 ①: 작성자에게 새 지원 알림
+        verify(recruitNotifier)
+                .newApplication(
+                        org.mockito.ArgumentMatchers.argThat(post -> POST_ID.equals(post.getId())),
+                        org.mockito.ArgumentMatchers.eq(MEMBER_ID));
     }
 
     @Test

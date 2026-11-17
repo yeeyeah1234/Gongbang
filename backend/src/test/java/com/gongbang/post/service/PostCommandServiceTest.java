@@ -43,6 +43,7 @@ class PostCommandServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private RecruitNotifier recruitNotifier;
 
     private PostCommandService postCommandService;
 
@@ -54,7 +55,8 @@ class PostCommandServiceTest {
                         contestDetailService,
                         contestQueryService,
                         postDetailService,
-                        applicationCloseService);
+                        applicationCloseService,
+                        recruitNotifier);
     }
 
     private static PostCreateRequest contestRequest(

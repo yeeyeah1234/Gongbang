@@ -47,6 +47,7 @@ public class PostCommandService {
     private final ContestQueryService contestQueryService;
     private final PostDetailService postDetailService;
     private final ApplicationCloseService applicationCloseService;
+    private final RecruitNotifier recruitNotifier;
 
     /**
      * PST-002 모집글 작성. 작성자가 확정 인원 1명인 「모집중」 글을 만든다. 팀은 첫 수락 때 만든다 (INT-006).
@@ -198,8 +199,9 @@ public class PostCommandService {
         post.delete(now);
         List<Long> closedApplicantIds =
                 applicationCloseService.closePendingApplications(postId, now);
-        // TODO(확인 필요): NotificationService(정진우)가 생기면 closedApplicantIds에게 POST_DELETED 알림
-        // 「‘제목’ 모집글이 삭제되었어요」(이동: 모집글 목록)을 보낸다 (④, INT-003 ④).
+        // ④, INT-003 ④: 대기 중이던 지원자에게 삭제 알림
+        closedApplicantIds.forEach(
+                applicantId -> recruitNotifier.postDeleted(post, applicantId, memberId));
         // TODO(확인 필요): 팀 초대(team_invitation, 김건우·김수형)가 생기면 이 글의 PENDING 초대를 CANCELED로 바꾼다 (④).
     }
 
