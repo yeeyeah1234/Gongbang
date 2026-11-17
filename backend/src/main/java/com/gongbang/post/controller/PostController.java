@@ -3,6 +3,7 @@ package com.gongbang.post.controller;
 import com.gongbang.auth.domain.LoginMember;
 import com.gongbang.global.common.ApiResponse;
 import com.gongbang.global.common.PageResponse;
+import com.gongbang.post.dto.PostCompleteResponse;
 import com.gongbang.post.dto.PostCreateRequest;
 import com.gongbang.post.dto.PostCreateResponse;
 import com.gongbang.post.dto.PostDetailResponse;
@@ -69,5 +70,12 @@ public class PostController {
             @AuthenticationPrincipal LoginMember me, @PathVariable Long postId) {
         postCommandService.delete(me.getMemberId(), postId);
         return ApiResponse.success();
+    }
+
+    /** REC-006: 작성자. 수동 모집 완료, 남은 대기 지원은 자동 거절. */
+    @PatchMapping("/api/posts/{postId}/complete")
+    public ApiResponse<PostCompleteResponse> complete(
+            @AuthenticationPrincipal LoginMember me, @PathVariable Long postId) {
+        return ApiResponse.success(postCommandService.complete(me.getMemberId(), postId));
     }
 }

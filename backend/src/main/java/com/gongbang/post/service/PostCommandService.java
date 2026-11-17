@@ -8,6 +8,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
+import com.gongbang.post.dto.PostCompleteResponse;
 import com.gongbang.post.dto.PostCreateRequest;
 import com.gongbang.post.dto.PostCreateResponse;
 import com.gongbang.post.dto.PostDetailResponse;
@@ -203,6 +204,30 @@ public class PostCommandService {
         closedApplicantIds.forEach(
                 applicantId -> recruitNotifier.postDeleted(post, applicantId, memberId));
         // TODO(확인 필요): 팀 초대(team_invitation, 김건우·김수형)가 생기면 이 글의 PENDING 초대를 CANCELED로 바꾼다 (④).
+    }
+
+    /**
+     * REC-006 ② 수동 모집 완료. 작성자만 할 수 있고(403 NOT_POST_AUTHOR), 이미 모집완료면 409 POST_COMPLETED. 정원이 안 찼는지
+     * 묻는 확인 모달은 화면에서 띄운다. 수락과 겹치지 않게 모집글 행을 잠근 뒤 처리한다.
+     *
+     * <p>③ 완료 뒤 새 지원·수락은 지원·수락 쪽에서 모집중이 아니면 막는다. ④ 남은 대기 지원은 자동 거절하고 거절 알림을 보낸다(보낸 사람 없음, 자동 완료와
+     * 같음). ⑤ 팀·채팅방은 손대지 않는다.
+     */
+    public PostCompleteResponse complete(Long memberId, Long postId) {
+        return complete(memberId, postId, LocalDateTime.now(KST));
+    }
+
+    PostCompleteResponse complete(Long memberId, Long postId, LocalDateTime now) {
+        RecruitPost post = lockOwnPost(memberId, postId);
+        if (!post.isRecruiting()) {
+            throw new BusinessException(ErrorCode.POST_COMPLETED);
+        }
+        post.complete(now);
+        List<Long> rejectedApplicantIds =
+                applicationCloseService.autoRejectPendingApplications(postId, now);
+        rejectedApplicantIds.forEach(
+                applicantId -> recruitNotifier.rejected(post, applicantId, null));
+        return new PostCompleteResponse(rejectedApplicantIds.size());
     }
 
     /**
