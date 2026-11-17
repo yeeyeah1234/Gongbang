@@ -72,8 +72,7 @@ public class ApplicationCommandService {
             // 위 확인과 저장 사이에 같은 지원이 먼저 들어온 경우 (UQ post_id, applicant_id)
             throw new BusinessException(ErrorCode.ALREADY_APPLIED);
         }
-        // TODO(확인 필요): NotificationService(정진우)가 생기면 작성자에게 APPLY_NEW 알림을 보낸다 (⑤, INT-003 ①).
-        // 문구 「‘닉네임’님이 ‘제목’에 지원했어요」, 누르면 지원자 관리 모달.
+        recruitNotifier.newApplication(post, memberId); // ⑤, INT-003 ①
         return new ApplicationCreateResponse(saved.getId());
     }
 
@@ -162,7 +161,6 @@ public class ApplicationCommandService {
             throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
         }
         application.reject(RejectType.MANUAL, now);
-        // TODO(확인 필요): NotificationService(정진우)가 생기면 지원자에게 APPLY_REJECTED 알림을 보낸다 (④, INT-003 ③).
-        // 문구 「‘제목’ 지원이 거절되었어요」, 누르면 모집글 상세.
+        recruitNotifier.rejected(post, application.getApplicantId(), memberId); // ④, INT-003 ③
     }
 }

@@ -16,6 +16,7 @@ import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.repository.RecruitPostRepository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,7 @@ class PostDeleteServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private RecruitNotifier recruitNotifier;
 
     private PostCommandService postCommandService;
 
@@ -49,7 +51,8 @@ class PostDeleteServiceTest {
                         contestDetailService,
                         contestQueryService,
                         postDetailService,
-                        applicationCloseService);
+                        applicationCloseService,
+                        recruitNotifier);
     }
 
     private RecruitPost givenPost() {
@@ -87,6 +90,19 @@ class PostDeleteServiceTest {
         postCommandService.delete(AUTHOR_ID, POST_ID, NOW);
 
         verify(applicationCloseService).closePendingApplications(POST_ID, NOW);
+    }
+
+    @Test
+    @DisplayName("종료된 대기 지원의 지원자마다 삭제 알림을 보낸다 (④, INT-003 ④)")
+    void 종료된_지원자에게_삭제_알림을_보낸다() {
+        RecruitPost post = givenPost();
+        given(applicationCloseService.closePendingApplications(POST_ID, NOW))
+                .willReturn(List.of(20L, 21L));
+
+        postCommandService.delete(AUTHOR_ID, POST_ID, NOW);
+
+        verify(recruitNotifier).postDeleted(post, 20L, AUTHOR_ID);
+        verify(recruitNotifier).postDeleted(post, 21L, AUTHOR_ID);
     }
 
     @Test

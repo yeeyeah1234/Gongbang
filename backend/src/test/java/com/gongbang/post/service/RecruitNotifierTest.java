@@ -1,7 +1,9 @@
 package com.gongbang.post.service;
 
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
+import com.gongbang.member.service.MemberService;
 import com.gongbang.notification.domain.NotificationType;
 import com.gongbang.notification.service.NotificationService;
 import com.gongbang.post.domain.RecruitPost;
@@ -19,13 +21,14 @@ import org.springframework.test.util.ReflectionTestUtils;
 class RecruitNotifierTest {
 
     @Mock private NotificationService notificationService;
+    @Mock private MemberService memberService;
 
     private RecruitNotifier recruitNotifier;
     private RecruitPost post;
 
     @BeforeEach
     void setUp() {
-        recruitNotifier = new RecruitNotifier(notificationService);
+        recruitNotifier = new RecruitNotifier(notificationService, memberService);
         LocalDate start = LocalDate.of(2026, 11, 17);
         post = RecruitPost.withContest(7L, 3L, "AI 팀원 모집", "내용", 4, start, start, null);
         ReflectionTestUtils.setField(post, "id", 10L);
@@ -61,5 +64,39 @@ class RecruitNotifierTest {
                         10L,
                         "‘AI 팀원 모집’ 지원이 거절되었어요",
                         "/posts/10");
+    }
+
+    @Test
+    @DisplayName("새 지원 알림: 작성자에게 「‘닉네임’님이 ‘제목’에 지원했어요」, 누르면 지원자 관리 모달")
+    void 새_지원_알림() {
+        given(memberService.displayName(20L)).willReturn("지원자");
+
+        recruitNotifier.newApplication(post, 20L);
+
+        verify(notificationService)
+                .send(
+                        7L,
+                        NotificationType.APPLY_NEW,
+                        20L,
+                        "POST",
+                        10L,
+                        "‘지원자’님이 ‘AI 팀원 모집’에 지원했어요",
+                        "/posts/10?applicants=open");
+    }
+
+    @Test
+    @DisplayName("삭제 알림: 「‘제목’ 모집글이 삭제되었어요」, 누르면 모집글 목록")
+    void 삭제_알림() {
+        recruitNotifier.postDeleted(post, 21L, 7L);
+
+        verify(notificationService)
+                .send(
+                        21L,
+                        NotificationType.POST_DELETED,
+                        7L,
+                        "POST",
+                        10L,
+                        "‘AI 팀원 모집’ 모집글이 삭제되었어요",
+                        "/posts");
     }
 }
