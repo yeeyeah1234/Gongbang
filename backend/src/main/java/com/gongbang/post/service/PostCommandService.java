@@ -15,6 +15,7 @@ import com.gongbang.post.repository.RecruitPostRepository;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -145,14 +146,7 @@ public class PostCommandService {
 
     PostDetailResponse update(
             Long memberId, Long postId, PostUpdateRequest request, LocalDate today) {
-        RecruitPost post =
-                recruitPostRepository
-                        .findByIdForUpdate(postId)
-                        .filter(found -> found.getDeletedAt() == null)
-                        .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-        if (!post.getAuthorId().equals(memberId)) {
-            throw new BusinessException(ErrorCode.NOT_POST_AUTHOR);
-        }
+        RecruitPost post = lockOwnPost(memberId, postId);
 
         String title =
                 request.title() == null
@@ -184,6 +178,35 @@ public class PostCommandService {
 
         post.update(title, content, targetCount, startDate, endDate, relatedUrl);
         return postDetailService.describe(post, memberId, today);
+    }
+
+    /**
+     * PST-004 모집글 삭제. 작성자만 할 수 있고(403 NOT_POST_AUTHOR), 팀원이 있는 글도 소프트 삭제한다 (④). 수락과 겹치지
+     * 않게 모집글 행을 잠근 뒤 처리한다.
+     */
+    public void delete(Long memberId, Long postId) {
+        delete(memberId, postId, LocalDateTime.now(KST));
+    }
+
+    void delete(Long memberId, Long postId, LocalDateTime now) {
+        RecruitPost post = lockOwnPost(memberId, postId);
+        post.delete(now);
+        // TODO(확인 필요): 지원(application, REC-001)이 생기면 대기 중인 지원을 CLOSED(processed_at = now)로 바꾸고
+        // 그 지원자에게 POST_DELETED 알림 「‘제목’ 모집글이 삭제되었어요」(이동: 모집글 목록)을 보낸다 (④, INT-003 ④).
+        // TODO(확인 필요): 팀 초대(team_invitation, 김건우·김수형)가 생기면 이 글의 PENDING 초대를 CANCELED로 바꾼다 (④).
+    }
+
+    /** 모집글 행을 잠그고, 없거나 삭제된 글이면 404, 작성자가 아니면 403. */
+    private RecruitPost lockOwnPost(Long memberId, Long postId) {
+        RecruitPost post =
+                recruitPostRepository
+                        .findByIdForUpdate(postId)
+                        .filter(found -> found.getDeletedAt() == null)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+        if (!post.getAuthorId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.NOT_POST_AUTHOR);
+        }
+        return post;
     }
 
     /** PST-003 ④: 확정 인원보다 적게는 안 되고, 모집중인 글은 같게도 안 된다 (11/13 결정). */

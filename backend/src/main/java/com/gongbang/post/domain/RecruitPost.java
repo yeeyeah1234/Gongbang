@@ -128,6 +128,11 @@ public class RecruitPost {
         this.relatedUrl = relatedUrl;
     }
 
+    /** PST-004 소프트 삭제. 팀과 워크스페이스는 그대로 남고, 공모전 정보는 이 글에서 계속 읽는다 (④). */
+    public void delete(LocalDateTime now) {
+        this.deletedAt = now;
+    }
+
     /** PST-002: 서비스 공모전으로 작성. */
     public static RecruitPost withContest(
             Long authorId,
