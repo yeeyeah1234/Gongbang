@@ -18,6 +18,7 @@ import MyPostsPage from './pages/mypage/MyPostsPage'
 import MyProfilePage from './pages/mypage/MyProfilePage'
 import PublicProfilePage from './pages/mypage/PublicProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
+import PostListPage from './pages/posts/PostListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 
 export const router = createBrowserRouter([
@@ -28,6 +29,8 @@ export const router = createBrowserRouter([
       { path: '/', element: <HomePage /> },
       { path: '/contests/:contestId', element: <ContestDetailPage /> },
       { path: '/search', element: <SearchPage /> },
+      // PST-001 커뮤니티 모집글 목록 (비회원도 본다)
+      { path: '/posts', element: <PostListPage /> },
       // 정진우 AUTH (로그인 화면 경로 /login, 돌아갈 주소는 ?redirect=)
       { path: '/login', element: <LoginPage /> },
       { path: '/signup', element: <SignupPage /> },
