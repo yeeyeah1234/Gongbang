@@ -5,6 +5,7 @@ import static org.mockito.BDDMockito.given;
 
 import com.gongbang.application.domain.Application;
 import com.gongbang.application.domain.ApplicationStatus;
+import com.gongbang.application.domain.RejectType;
 import com.gongbang.application.repository.ApplicationRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -62,5 +63,29 @@ class ApplicationCloseServiceTest {
                 .willReturn(List.of());
 
         assertThat(applicationCloseService.closePendingApplications(POST_ID, NOW)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("모집완료 때 잠근 대기 지원을 모두 자동 거절(AUTO)하고 지원자 ID를 돌려준다 (REC-006 ④)")
+    void 대기_지원을_모두_자동_거절한다() {
+        Application first = Application.pending(POST_ID, 20L);
+        Application second = Application.pending(POST_ID, 21L);
+        given(
+                        applicationRepository.findByPostIdAndStatusForUpdate(
+                                POST_ID, ApplicationStatus.PENDING))
+                .willReturn(List.of(first, second));
+
+        List<Long> applicantIds =
+                applicationCloseService.autoRejectPendingApplications(POST_ID, NOW);
+
+        assertThat(applicantIds).containsExactly(20L, 21L);
+        assertThat(List.of(first, second))
+                .allSatisfy(
+                        application -> {
+                            assertThat(application.getStatus())
+                                    .isEqualTo(ApplicationStatus.REJECTED);
+                            assertThat(application.getRejectType()).isEqualTo(RejectType.AUTO);
+                            assertThat(application.getProcessedAt()).isEqualTo(NOW);
+                        });
     }
 }

@@ -3,20 +3,25 @@ package com.gongbang.application.service;
 import com.gongbang.application.domain.Application;
 import com.gongbang.application.domain.ApplicationStatus;
 import com.gongbang.application.domain.RejectType;
+import com.gongbang.application.dto.ApplicationAcceptResponse;
 import com.gongbang.application.dto.ApplicationCreateResponse;
 import com.gongbang.application.repository.ApplicationRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
+import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.post.service.PostCommandService;
 import com.gongbang.post.service.PostQueryService;
+import com.gongbang.post.service.RecruitNotifier;
+import com.gongbang.post.service.TeamJoinService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** 지원하기·취소·수락·거절. */
@@ -30,6 +35,8 @@ public class ApplicationCommandService {
     private final ApplicationRepository applicationRepository;
     private final PostCommandService postCommandService;
     private final PostQueryService postQueryService;
+    private final TeamJoinService teamJoinService;
+    private final RecruitNotifier recruitNotifier;
 
     /**
      * REC-001 지원하기. 「대기」 지원을 만든다 (②). 모집 시작일 전에도 지원할 수 있고 종료일 당일까지 받는다 (11/10·11/13 결정). 모집완료
@@ -88,6 +95,48 @@ public class ApplicationCommandService {
             throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
         }
         applicationRepository.delete(application);
+    }
+
+    /**
+     * REC-004 지원자 수락. 작성자만, 대기 지원만 수락한다 (①). 지원을 수락으로 바꾸고 확정 팀원으로 등록하며 모집 인원을 1 올린다 (②, INT-005 공통
+     * 처리). 정원이 찼으면 409 POST_FULL (③). 정원에 닿으면 자동 모집완료 (⑤). 지원자에게 수락 알림 (⑥).
+     *
+     * <p>잠금 순서는 모집글 → 지원 (수정·삭제·REC-001과 같음). 한 자리 남은 상태에서 수락이 동시에 들어와도 모집글 행 잠금 때문에 하나씩 처리되어 하나만
+     * 성공한다 (④).
+     *
+     * <p>READ COMMITTED로 실행한다. MySQL 기본(REPEATABLE READ)에서는 잠금 전에 읽은 순간(모집글 ID 조회)으로 읽기 시점이 고정되어,
+     * 잠금을 기다리는 사이 앞선 수락이 만든 팀·팀원을 보지 못하고 팀을 또 만들거나 같은 색 번호를 고른다 (MySQL 동시 수락 테스트에서 확인).
+     *
+     * @param memberId 로그인 회원 ID (인증 모듈에서 받는다)
+     */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public ApplicationAcceptResponse accept(Long memberId, Long applicationId) {
+        return accept(memberId, applicationId, LocalDateTime.now(KST));
+    }
+
+    ApplicationAcceptResponse accept(Long memberId, Long applicationId, LocalDateTime now) {
+        // 지원 엔티티를 먼저 읽어 두면 뒤의 잠금 조회가 그 옛 값을 돌려주므로, 잠그기 전에는 모집글 ID만 값으로 읽는다
+        Long postId =
+                applicationRepository
+                        .findPostIdById(applicationId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
+        RecruitPost post = postCommandService.lockPost(postId);
+        if (!post.getAuthorId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.NOT_POST_AUTHOR);
+        }
+        Application application =
+                applicationRepository
+                        .findByIdForUpdate(applicationId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.APPLICATION_NOT_FOUND));
+        if (!application.isPending()) {
+            throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
+        }
+
+        // 자동 모집완료 때 남은 대기 지원을 거절하는데, 이 지원은 그 대상에서 빠지도록 먼저 수락으로 바꾼다
+        application.accept(now);
+        TeamJoinResult result = teamJoinService.join(postId, application.getApplicantId(), now);
+        recruitNotifier.accepted(post, application.getApplicantId(), memberId);
+        return ApplicationAcceptResponse.from(result);
     }
 
     /**

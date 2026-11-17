@@ -133,6 +133,26 @@ public class RecruitPost {
         this.deletedAt = now;
     }
 
+    public boolean isRecruiting() {
+        return status == PostStatus.RECRUITING;
+    }
+
+    /** 확정 인원이 목표 인원에 닿았는지 (REC-004 ③). */
+    public boolean isFull() {
+        return currentCount >= targetCount;
+    }
+
+    /** REC-004 ②, INT-005 ①: 확정 팀원이 한 명 늘었다. 부르는 쪽이 이 행을 잠근 뒤 정원을 확인하고 부른다. */
+    public void addConfirmedMember() {
+        this.currentCount++;
+    }
+
+    /** REC-006 모집완료. 되돌리지 않는다 (REC-007). */
+    public void complete(LocalDateTime now) {
+        this.status = PostStatus.COMPLETED;
+        this.completedAt = now;
+    }
+
     /** PST-002: 서비스 공모전으로 작성. */
     public static RecruitPost withContest(
             Long authorId,
