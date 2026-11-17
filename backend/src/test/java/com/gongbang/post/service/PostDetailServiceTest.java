@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -20,6 +21,7 @@ import com.gongbang.post.domain.MyStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.PostDetailResponse;
 import com.gongbang.post.repository.RecruitPostRepository;
+import com.gongbang.post.service.PostMembershipService.Membership;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -45,6 +47,7 @@ class PostDetailServiceTest {
     @Mock private RecruitPostRepository recruitPostRepository;
     @Mock private ContestLookupService contestLookupService;
     @Mock private ApplicationQueryService applicationQueryService;
+    @Mock private PostMembershipService postMembershipService;
 
     private PostDetailService postDetailService;
 
@@ -52,7 +55,14 @@ class PostDetailServiceTest {
     void setUp() {
         postDetailService =
                 new PostDetailService(
-                        recruitPostRepository, contestLookupService, applicationQueryService);
+                        recruitPostRepository,
+                        contestLookupService,
+                        applicationQueryService,
+                        postMembershipService);
+        // 기본은 팀과 관계없는 회원 (팀원·나간 팀원 경우는 각 테스트에서 바꾼다)
+        lenient()
+                .when(postMembershipService.membership(anyLong(), anyLong()))
+                .thenReturn(Membership.NONE);
     }
 
     private void givenViewedBefore(Long viewerId) {
@@ -85,6 +95,56 @@ class PostDetailServiceTest {
 
         assertThat(postDetailService.getPost(POST_ID, VIEWER_ID, NOW).myStatus())
                 .isEqualTo(MyStatus.REJECTED);
+    }
+
+    @Test
+    @DisplayName("현재 팀원은 myStatus ACCEPTED (⑤). 지원 기록 없이 초대로 들어온 회원도 같다")
+    void 현재_팀원은_ACCEPTED() {
+        givenContestPost(5);
+        givenViewedBefore(VIEWER_ID);
+        given(postMembershipService.membership(POST_ID, VIEWER_ID)).willReturn(Membership.ACTIVE);
+        given(applicationQueryService.findMyApplication(POST_ID, VIEWER_ID))
+                .willReturn(Optional.empty());
+
+        assertThat(postDetailService.getPost(POST_ID, VIEWER_ID, NOW).myStatus())
+                .isEqualTo(MyStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("수락된 지원이 있어도 팀에서 나갔으면(강제 퇴장 포함) myStatus LEFT (⑨)")
+    void 나간_팀원은_LEFT() {
+        givenContestPost(5);
+        givenViewedBefore(VIEWER_ID);
+        given(postMembershipService.membership(POST_ID, VIEWER_ID)).willReturn(Membership.LEFT);
+        given(applicationQueryService.findMyApplication(POST_ID, VIEWER_ID))
+                .willReturn(Optional.of(new MyApplication(57L, ApplicationStatus.ACCEPTED)));
+
+        assertThat(postDetailService.getPost(POST_ID, VIEWER_ID, NOW).myStatus())
+                .isEqualTo(MyStatus.LEFT);
+    }
+
+    @Test
+    @DisplayName("거절된 뒤 초대로 들어온 회원은 지원 상태보다 팀원 여부가 앞서 ACCEPTED")
+    void 거절_뒤_초대로_들어오면_ACCEPTED() {
+        givenContestPost(5);
+        givenViewedBefore(VIEWER_ID);
+        given(postMembershipService.membership(POST_ID, VIEWER_ID)).willReturn(Membership.ACTIVE);
+        given(applicationQueryService.findMyApplication(POST_ID, VIEWER_ID))
+                .willReturn(Optional.of(new MyApplication(56L, ApplicationStatus.REJECTED)));
+
+        assertThat(postDetailService.getPost(POST_ID, VIEWER_ID, NOW).myStatus())
+                .isEqualTo(MyStatus.ACCEPTED);
+    }
+
+    @Test
+    @DisplayName("작성자는 팀원 여부를 보지 않고 AUTHOR")
+    void 작성자는_팀원_여부를_보지_않는다() {
+        givenContestPost(5);
+        givenViewedBefore(AUTHOR_ID);
+
+        assertThat(postDetailService.getPost(POST_ID, AUTHOR_ID, NOW).myStatus())
+                .isEqualTo(MyStatus.AUTHOR);
+        verify(postMembershipService, never()).membership(any(), any());
     }
 
     @Test

@@ -19,6 +19,7 @@ import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.post.service.PostCommandService;
+import com.gongbang.post.service.PostMembershipService;
 import com.gongbang.post.service.PostQueryService;
 import com.gongbang.post.service.RecruitNotifier;
 import com.gongbang.post.service.TeamJoinService;
@@ -51,6 +52,7 @@ class ApplicationAcceptServiceTest {
     @Mock private PostQueryService postQueryService;
     @Mock private TeamJoinService teamJoinService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private PostMembershipService postMembershipService;
 
     private ApplicationCommandService applicationCommandService;
     private RecruitPost post;
@@ -63,7 +65,8 @@ class ApplicationAcceptServiceTest {
                         postCommandService,
                         postQueryService,
                         teamJoinService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        postMembershipService);
         LocalDate start = NOW.toLocalDate();
         post =
                 RecruitPost.withContest(

@@ -231,6 +231,24 @@ public class PostCommandService {
     }
 
     /**
+     * 팀 도메인용 (WS-09 팀 나가기·NET-06 강제 퇴장·MY-11 탈퇴): 확정 인원을 1 줄이고 줄어든 인원을 돌려준다 (INT-006 ④, NET-06 응답
+     * currentCount). 모집글 행을 잠근 뒤 줄여서 수락과 겹치지 않는다 (AGENTS.md 7). 모집완료 글은 모집중으로 되돌리지 않는다 (⑤,
+     * REC-007). 모집중인 글은 빈 자리만큼 다시 수락할 수 있다.
+     *
+     * <p>부르는 쪽 트랜잭션 안에서 team_member의 left_at을 기록하는 것과 같이 부른다. 잠금 순서는 recruit_post → team이므로 팀 행을
+     * 잠그기 전에 부른다. 삭제된 글의 팀도 남아 있으므로 삭제된 글이어도 줄인다 (PST-004 ④).
+     */
+    public int decreaseCurrentCount(Long postId) {
+        RecruitPost post =
+                recruitPostRepository
+                        .findByIdForUpdate(postId)
+                        .orElseThrow(
+                                () -> new IllegalStateException("팀의 모집글이 없습니다: postId=" + postId));
+        post.removeConfirmedMember();
+        return post.getCurrentCount();
+    }
+
+    /**
      * 다른 도메인(지원 REC-001 등)용: 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근다 (SELECT … FOR UPDATE). 없거나 삭제된 글이면 404
      * POST_NOT_FOUND. 잠금은 그 트랜잭션이 끝날 때 풀린다.
      */
