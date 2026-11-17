@@ -4,6 +4,7 @@ spring:
 
   # 내 컴퓨터 전용 메일 계정 파일 (깃에 안 올라감). backend/mail.properties 에 아이디·비밀번호만 적으면 인증번호가 메일로 간다
   # 서버를 어느 폴더에서 켜도 찾도록 backend 폴더·저장소 폴더·내 홈(~/.gongbang)을 모두 본다
+  # 테스트 서버는 이 파일을 쓰지 않는다: systemd(gongbang-backend@blue/green)가 /srv/gongbang/deploy/backend.env 의 MAIL_* 를 넣는다
   config:
     import: "optional:file:./mail.properties,optional:file:./backend/mail.properties,optional:file:./Gongbang/backend/mail.properties,optional:file:${user.home}/.gongbang/mail.properties"
 
@@ -39,6 +40,7 @@ spring:
     locale: ko_KR
 
   # NOTI-06 메일 (SMTP 값은 환경 변수로만. MAIL_HOST가 비어 있으면 보내지 못한다 → 인증번호는 app.mail-dev-code 참고)
+  # 테스트 서버: /srv/gongbang/deploy/backend.env (새 키가 필요하면 서버 관리자에게 요청). Gmail 앱 비밀번호는 공백 포함 그대로 따옴표로 감싸도 된다
   mail:
     host: ${MAIL_HOST:}
     port: ${MAIL_PORT:587}
