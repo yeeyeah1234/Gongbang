@@ -68,3 +68,104 @@ def test_상세_값이_비어있으면_목록_값으로_보완한다():
     assert payload["title"] == "목록 제목"
     assert payload["host"] == "목록 주최"
     assert payload["categoryCode"] == "ETC"
+
+
+# --- CRW-01 ⑩ 분야별 최소 수집 ---
+
+LABEL_OF = {
+    "IT_SW": "웹/모바일/IT",
+    "PLANNING": "기획/아이디어",
+    "DESIGN_ART": "디자인/캐릭터/웹툰",
+    "MARKETING": "광고/마케팅",
+    "ETC": "기타",
+}
+
+
+def _items(code, count, start):
+    return [
+        {"ix": str(start + i), "title": f"{code}{i}", "host": "", "categories": [LABEL_OF[code]], "dday": 5}
+        for i in range(count)
+    ]
+
+
+def _enough_except(*short_codes):
+    """short_codes를 뺀 분야는 MIN_PER_CATEGORY개씩 있는 기본 목록"""
+    items = []
+    for n, code in enumerate(LABEL_OF):
+        if code not in short_codes:
+            items += _items(code, main.MIN_PER_CATEGORY, start=1000 * (n + 1))
+    return items
+
+
+def _patch_filter_pages(monkeypatch, pages):
+    """pages: {(cidx, page): [목록 항목]}. 가져간 (page, cidx)를 기록한다."""
+    fetched = []
+
+    def fake_fetch(page, cidx=None):
+        fetched.append((cidx, page))
+        return (cidx, page)
+
+    monkeypatch.setattr(main.wevity_client, "fetch_list_page", fake_fetch)
+    monkeypatch.setattr(main.wevity_client, "parse_list_page", lambda key: pages.get(key, []))
+    return fetched
+
+
+def test_모든_분야가_충분하면_분야_필터_목록을_가져오지_않는다(monkeypatch):
+    fetched = _patch_filter_pages(monkeypatch, {})
+    base = _enough_except()
+
+    assert main.fill_category_minimum(base) == base
+    assert fetched == []
+
+
+def test_모자란_분야만_분야_필터_목록에서_4개까지_채운다(monkeypatch):
+    fetched = _patch_filter_pages(monkeypatch, {(20, 1): _items("IT_SW", 10, start=1)})
+    base = _enough_except("IT_SW")
+
+    result = main.fill_category_minimum(base)
+
+    it_items = [i for i in result if i["categories"] == ["웹/모바일/IT"]]
+    assert len(it_items) == main.MIN_PER_CATEGORY
+    assert fetched == [(20, 1)]  # 첫 페이지에서 채웠으니 더 가져오지 않는다
+
+
+def test_분야_필터_목록의_다른_분야_공모전과_이미_있는_공모전은_넣지_않는다(monkeypatch):
+    already = _items("IT_SW", 1, start=1)  # ix=1은 기본 목록에 이미 있다
+    filter_page = (
+        _items("IT_SW", 1, start=1)  # 같은 ix → 건너뜀
+        + _items("PLANNING", 3, start=500)  # IT 필터에 섞인 기획 공모전 → 건너뜀
+        + _items("IT_SW", 5, start=10)
+    )
+    _patch_filter_pages(monkeypatch, {(20, 1): filter_page})
+    base = _enough_except("IT_SW") + already
+
+    result = main.fill_category_minimum(base)
+
+    ixs = [i["ix"] for i in result]
+    assert len(ixs) == len(set(ixs))
+    assert not {"500", "501", "502"} & set(ixs)  # 섞여 있던 기획 공모전은 들어가지 않았다
+    it_items = [i for i in result if i["categories"] == ["웹/모바일/IT"]]
+    assert len(it_items) == main.MIN_PER_CATEGORY
+
+
+def test_첫_필터에서_모자라면_다음_페이지와_다음_필터로_넘어간다(monkeypatch):
+    fetched = _patch_filter_pages(
+        monkeypatch,
+        {(20, 1): _items("IT_SW", 1, start=1), (21, 1): _items("IT_SW", 5, start=100)},
+    )
+    base = _enough_except("IT_SW")
+
+    result = main.fill_category_minimum(base)
+
+    assert len([i for i in result if i["categories"] == ["웹/모바일/IT"]]) == main.MIN_PER_CATEGORY
+    assert fetched == [(20, 1), (20, 2), (21, 1)]  # 20번 2페이지는 비어 있어 21번으로 넘어감
+
+
+def test_위비티에_모자라면_있는_만큼만_모은다(monkeypatch):
+    fetched = _patch_filter_pages(monkeypatch, {(2, 1): _items("MARKETING", 2, start=1)})
+    base = _enough_except("MARKETING")
+
+    result = main.fill_category_minimum(base)
+
+    assert len([i for i in result if i["categories"] == ["광고/마케팅"]]) == 2
+    assert fetched == [(2, 1), (2, 2)]  # 마케팅 필터는 하나뿐, 최대 페이지까지만 본다

@@ -25,6 +25,8 @@ def _detail():
 
 def _patch_common(monkeypatch):
     monkeypatch.setattr(main, "collect_list_items", lambda: [_item()])
+    # 분야 보충(CRW-01 ⑩)은 test_main.py에서 따로 확인한다. 여기서는 네트워크를 타지 않게 그대로 돌려준다.
+    monkeypatch.setattr(main, "fill_category_minimum", lambda items: items)
     monkeypatch.setattr(state_store, "load", lambda: {})
     saved = {}
     monkeypatch.setattr(state_store, "save", lambda state: saved.update(state))

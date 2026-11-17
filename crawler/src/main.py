@@ -7,7 +7,7 @@ import config
 import json_sink
 import state_store
 import wevity_client
-from category_map import map_categories_to_code
+from category_map import CODE_TO_WEVITY_CIDX, map_categories_to_code
 
 os.makedirs(os.path.dirname(config.LOG_FILE_PATH), exist_ok=True)
 logging.basicConfig(
@@ -22,6 +22,11 @@ log = logging.getLogger("crawler")
 
 # 포트폴리오용 서비스라 최신 공모전 일부만 모은다 (목록 1페이지 15건, 2페이지면 약 30건).
 MAX_PAGES = 2
+
+# CRW-01 ⑩: 우리 분야마다 진행 중 공모전을 이만큼은 모은다. 모자라면 위비티 분야 필터 목록에서 채운다.
+MIN_PER_CATEGORY = 4
+# 분야 필터 하나당 볼 최대 목록 페이지 수 (요청 수를 작게 유지, CRW-01 ⑤)
+FILL_MAX_PAGES_PER_FILTER = 2
 
 
 def _estimate_deadline(dday):
@@ -39,6 +44,48 @@ def collect_list_items():
             break
         items.extend(page_items)
         log.info("목록 %d페이지: %d건", page, len(page_items))
+    return items
+
+
+def fill_category_minimum(items):
+    """CRW-01 ⑩: 분야마다 MIN_PER_CATEGORY개가 안 되면 위비티 분야 필터 목록에서 더 모은다.
+
+    같은 공모전(ix)은 두 번 넣지 않고, 우리 분야로 바꿨을 때 그 분야인 것만 채운다
+    (위비티 분야 필터 목록에도 첫 분야가 다른 공모전이 섞여 있다). 위비티에 모자라면 있는 만큼만 모은다.
+    """
+    items = list(items)
+    seen_ix = {item["ix"] for item in items}
+    counts = {code: 0 for code in CODE_TO_WEVITY_CIDX}
+    for item in items:
+        code = map_categories_to_code(item["categories"])
+        counts[code] = counts.get(code, 0) + 1
+
+    for code, cidx_list in CODE_TO_WEVITY_CIDX.items():
+        if counts[code] >= MIN_PER_CATEGORY:
+            continue
+        before = counts[code]
+        for cidx in cidx_list:
+            for page in range(1, FILL_MAX_PAGES_PER_FILTER + 1):
+                if counts[code] >= MIN_PER_CATEGORY:
+                    break
+                page_items = wevity_client.parse_list_page(wevity_client.fetch_list_page(page, cidx))
+                if not page_items:
+                    break
+                for item in page_items:
+                    if counts[code] >= MIN_PER_CATEGORY:
+                        break
+                    if item["ix"] in seen_ix or map_categories_to_code(item["categories"]) != code:
+                        continue
+                    items.append(item)
+                    seen_ix.add(item["ix"])
+                    counts[code] += 1
+            if counts[code] >= MIN_PER_CATEGORY:
+                break
+
+        if counts[code] > before:
+            log.info("분야 보충: %s %d건 → %d건", code, before, counts[code])
+        if counts[code] < MIN_PER_CATEGORY:
+            log.warning("분야 보충: %s는 위비티에 진행 중 공모전이 %d건뿐", code, counts[code])
     return items
 
 
@@ -66,7 +113,7 @@ def main():
     updated = 0
     deadline_changed = 0
 
-    for item in collect_list_items():
+    for item in fill_category_minimum(collect_list_items()):
         source_url = wevity_client.build_source_url(item["ix"])
         cached_deadline = state.get(source_url, {}).get("deadline")
         estimated_deadline = _estimate_deadline(item["dday"])

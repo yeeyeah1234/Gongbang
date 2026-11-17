@@ -28,8 +28,10 @@ def build_source_url(ix):
     return f"{WEVITY_BASE_URL}?c=find&s=1&gub=1&gbn=view&ix={ix}"
 
 
-def fetch_list_page(page_number):
-    url = f"{WEVITY_BASE_URL}?c=find&s=1&gub=1&cidx=&gbn=list&gp={page_number}"
+def fetch_list_page(page_number, cidx=None):
+    # cidx: 위비티 분야 필터 번호 (CRW-01 ⑩ 분야별 최소 수집). None이면 전체 목록.
+    cidx_param = "" if cidx is None else cidx
+    url = f"{WEVITY_BASE_URL}?c=find&s=1&gub=1&cidx={cidx_param}&gbn=list&gp={page_number}"
     return _throttled_get(url)
 
 
