@@ -18,9 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * REC-003 지원자 관리 모달의 목록. 모집글 도메인을 부르므로 ApplicationQueryService(모집글 상세가 부름)와 나눠 순환을 막는다.
- */
+/** REC-003 지원자 관리 모달의 목록. 모집글 도메인을 부르므로 ApplicationQueryService(모집글 상세가 부름)와 나눠 순환을 막는다. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,7 +26,10 @@ public class ApplicantQueryService {
 
     // 지원자 관리 모달의 탭 (②). CLOSED는 삭제된 글의 지원이라 탭이 없다.
     static final Set<ApplicationStatus> TABS =
-            Set.of(ApplicationStatus.PENDING, ApplicationStatus.ACCEPTED, ApplicationStatus.REJECTED);
+            Set.of(
+                    ApplicationStatus.PENDING,
+                    ApplicationStatus.ACCEPTED,
+                    ApplicationStatus.REJECTED);
 
     private final ApplicationRepository applicationRepository;
     private final PostQueryService postQueryService;

@@ -138,8 +138,8 @@ public class PostCommandService {
     }
 
     /**
-     * PST-003 모집글 수정. 작성자만 할 수 있고(403 NOT_POST_AUTHOR), 모집중·모집완료 모두 고칠 수 있다 (①). 목표 인원은
-     * 수락과 겹치지 않게 모집글 행을 잠근 뒤 확정 인원과 비교한다 (④, AGENTS.md 7).
+     * PST-003 모집글 수정. 작성자만 할 수 있고(403 NOT_POST_AUTHOR), 모집중·모집완료 모두 고칠 수 있다 (①). 목표 인원은 수락과 겹치지 않게
+     * 모집글 행을 잠근 뒤 확정 인원과 비교한다 (④, AGENTS.md 7).
      *
      * @return 수정된 상세 (조회수는 올리지 않는다)
      */
@@ -169,7 +169,9 @@ public class PostCommandService {
                         ? post.getRecruitStartDate()
                         : request.recruitStartDate();
         LocalDate endDate =
-                request.recruitEndDate() == null ? post.getRecruitEndDate() : request.recruitEndDate();
+                request.recruitEndDate() == null
+                        ? post.getRecruitEndDate()
+                        : request.recruitEndDate();
         if (request.recruitStartDate() != null || request.recruitEndDate() != null) {
             // 이미 마감된 공모전의 글도 제목 등은 고칠 수 있어야 해서, 수정 때는 CONTEST_ENDED로 막지 않는다
             validatePeriod(startDate, endDate, contestDeadline(post));
@@ -184,8 +186,8 @@ public class PostCommandService {
     }
 
     /**
-     * PST-004 모집글 삭제. 작성자만 할 수 있고(403 NOT_POST_AUTHOR), 팀원이 있는 글도 소프트 삭제한다 (④). 수락과 겹치지
-     * 않게 모집글 행을 잠근 뒤 처리한다.
+     * PST-004 모집글 삭제. 작성자만 할 수 있고(403 NOT_POST_AUTHOR), 팀원이 있는 글도 소프트 삭제한다 (④). 수락과 겹치지 않게 모집글 행을
+     * 잠근 뒤 처리한다.
      */
     public void delete(Long memberId, Long postId) {
         delete(memberId, postId, LocalDateTime.now(KST));
@@ -202,8 +204,8 @@ public class PostCommandService {
     }
 
     /**
-     * 다른 도메인(지원 REC-001 등)용: 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근다 (SELECT … FOR UPDATE). 없거나 삭제된
-     * 글이면 404 POST_NOT_FOUND. 잠금은 그 트랜잭션이 끝날 때 풀린다.
+     * 다른 도메인(지원 REC-001 등)용: 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근다 (SELECT … FOR UPDATE). 없거나 삭제된 글이면 404
+     * POST_NOT_FOUND. 잠금은 그 트랜잭션이 끝날 때 풀린다.
      */
     public RecruitPost lockPost(Long postId) {
         return recruitPostRepository
@@ -253,7 +255,9 @@ public class PostCommandService {
     }
 
     private static int requireTargetCount(Integer targetCount) {
-        if (targetCount == null || targetCount < TARGET_COUNT_MIN || targetCount > TARGET_COUNT_MAX) {
+        if (targetCount == null
+                || targetCount < TARGET_COUNT_MIN
+                || targetCount > TARGET_COUNT_MAX) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
         return targetCount;

@@ -95,8 +95,7 @@ public class PostQueryService {
         return new AuthorInfo(post.getAuthorId(), null);
     }
 
-    private static Set<Long> collect(
-            List<RecruitPost> posts, Function<RecruitPost, Long> idOf) {
+    private static Set<Long> collect(List<RecruitPost> posts, Function<RecruitPost, Long> idOf) {
         return posts.stream().map(idOf).filter(Objects::nonNull).collect(Collectors.toSet());
     }
 }

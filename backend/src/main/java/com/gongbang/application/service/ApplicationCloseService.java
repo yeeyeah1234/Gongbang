@@ -10,8 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 모집글 도메인이 부르는 지원 정리. 다른 도메인 service를 부르지 않는다: ApplicationCommandService는 모집글 service를 부르므로,
- * 모집글 삭제가 그쪽을 부르면 순환이 생긴다.
+ * 모집글 도메인이 부르는 지원 정리. 다른 도메인 service를 부르지 않는다: ApplicationCommandService는 모집글 service를 부르므로, 모집글
+ * 삭제가 그쪽을 부르면 순환이 생긴다.
  */
 @Service
 @RequiredArgsConstructor

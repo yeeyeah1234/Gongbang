@@ -29,8 +29,8 @@ public record PostDetailResponse(
         Long myApplicationId) {
 
     /**
-     * 공모전 카드 (①). dDay는 마감 당일 0, 지나면 음수. url은 외부 공모전 링크(새 탭)이고 서비스 공모전이면 null(화면이
-     * contestId로 공모전 상세를 연다).
+     * 공모전 카드 (①). dDay는 마감 당일 0, 지나면 음수. url은 외부 공모전 링크(새 탭)이고 서비스 공모전이면 null(화면이 contestId로 공모전
+     * 상세를 연다).
      */
     public record ContestInfo(
             Long contestId,

@@ -47,8 +47,7 @@ class ApplicationCloseServiceTest {
         assertThat(List.of(first, second))
                 .allSatisfy(
                         application -> {
-                            assertThat(application.getStatus())
-                                    .isEqualTo(ApplicationStatus.CLOSED);
+                            assertThat(application.getStatus()).isEqualTo(ApplicationStatus.CLOSED);
                             assertThat(application.getProcessedAt()).isEqualTo(NOW);
                             assertThat(application.getRejectType()).isNull();
                         });

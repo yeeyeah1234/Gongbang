@@ -18,8 +18,7 @@ public interface RecruitPostRepository extends JpaRepository<RecruitPost, Long> 
     Page<RecruitPost> findByDeletedAtIsNull(Pageable pageable);
 
     /**
-     * 목표·확정 인원을 바꾸는 처리(PST-003 수정, REC-004 수락 등)에서 모집글 행을 잠근다 (SELECT … FOR UPDATE,
-     * AGENTS.md 7).
+     * 목표·확정 인원을 바꾸는 처리(PST-003 수정, REC-004 수락 등)에서 모집글 행을 잠근다 (SELECT … FOR UPDATE, AGENTS.md 7).
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from RecruitPost p where p.id = :postId")
