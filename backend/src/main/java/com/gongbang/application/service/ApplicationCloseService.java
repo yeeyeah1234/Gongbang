@@ -2,6 +2,7 @@ package com.gongbang.application.service;
 
 import com.gongbang.application.domain.Application;
 import com.gongbang.application.domain.ApplicationStatus;
+import com.gongbang.application.domain.RejectType;
 import com.gongbang.application.repository.ApplicationRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +31,19 @@ public class ApplicationCloseService {
                 applicationRepository.findByPostIdAndStatusForUpdate(
                         postId, ApplicationStatus.PENDING);
         pending.forEach(application -> application.close(now));
+        return pending.stream().map(Application::getApplicantId).toList();
+    }
+
+    /**
+     * REC-006 ④: 모집완료(자동·수동)로 남은 대기 지원을 모두 자동 거절(AUTO)한다. 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근 뒤 부른다.
+     *
+     * @return 거절된 지원의 지원자 ID (거절 알림용)
+     */
+    public List<Long> autoRejectPendingApplications(Long postId, LocalDateTime now) {
+        List<Application> pending =
+                applicationRepository.findByPostIdAndStatusForUpdate(
+                        postId, ApplicationStatus.PENDING);
+        pending.forEach(application -> application.reject(RejectType.AUTO, now));
         return pending.stream().map(Application::getApplicantId).toList();
     }
 }
