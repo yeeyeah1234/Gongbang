@@ -1,5 +1,6 @@
 package com.gongbang.post.service;
 
+import com.gongbang.application.service.ApplicationCloseService;
 import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
@@ -17,6 +18,7 @@ import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -44,6 +46,7 @@ public class PostCommandService {
     private final ContestDetailService contestDetailService;
     private final ContestQueryService contestQueryService;
     private final PostDetailService postDetailService;
+    private final ApplicationCloseService applicationCloseService;
 
     /**
      * PST-002 모집글 작성. 작성자가 확정 인원 1명인 「모집중」 글을 만든다. 팀은 첫 수락 때 만든다 (INT-006).
@@ -191,8 +194,10 @@ public class PostCommandService {
     void delete(Long memberId, Long postId, LocalDateTime now) {
         RecruitPost post = lockOwnPost(memberId, postId);
         post.delete(now);
-        // TODO(확인 필요): 지원(application, REC-001)이 생기면 대기 중인 지원을 CLOSED(processed_at = now)로 바꾸고
-        // 그 지원자에게 POST_DELETED 알림 「‘제목’ 모집글이 삭제되었어요」(이동: 모집글 목록)을 보낸다 (④, INT-003 ④).
+        List<Long> closedApplicantIds =
+                applicationCloseService.closePendingApplications(postId, now);
+        // TODO(확인 필요): NotificationService(정진우)가 생기면 closedApplicantIds에게 POST_DELETED 알림
+        // 「‘제목’ 모집글이 삭제되었어요」(이동: 모집글 목록)을 보낸다 (④, INT-003 ④).
         // TODO(확인 필요): 팀 초대(team_invitation, 김건우·김수형)가 생기면 이 글의 PENDING 초대를 CANCELED로 바꾼다 (④).
     }
 

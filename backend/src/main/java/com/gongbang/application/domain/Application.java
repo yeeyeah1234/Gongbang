@@ -62,6 +62,12 @@ public class Application {
         return status == ApplicationStatus.PENDING;
     }
 
+    /** PST-004 ④: 모집글이 삭제되어 대기 지원을 끝낸다. 대기 확인은 부르는 쪽이 한다. */
+    public void close(LocalDateTime now) {
+        this.status = ApplicationStatus.CLOSED;
+        this.processedAt = now;
+    }
+
     /** REC-005 거절(MANUAL), REC-006 ④ 자동 거절(AUTO). 대기 확인은 부르는 쪽이 한다. */
     public void reject(RejectType rejectType, LocalDateTime now) {
         this.status = ApplicationStatus.REJECTED;

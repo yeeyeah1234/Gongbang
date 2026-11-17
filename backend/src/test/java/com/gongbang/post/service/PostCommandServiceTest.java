@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.gongbang.application.service.ApplicationCloseService;
 import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
@@ -41,6 +42,7 @@ class PostCommandServiceTest {
     @Mock private ContestDetailService contestDetailService;
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
+    @Mock private ApplicationCloseService applicationCloseService;
 
     private PostCommandService postCommandService;
 
@@ -51,7 +53,8 @@ class PostCommandServiceTest {
                         recruitPostRepository,
                         contestDetailService,
                         contestQueryService,
-                        postDetailService);
+                        postDetailService,
+                        applicationCloseService);
     }
 
     private static PostCreateRequest contestRequest(

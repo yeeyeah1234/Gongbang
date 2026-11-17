@@ -3,7 +3,10 @@ package com.gongbang.post.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.gongbang.application.service.ApplicationCloseService;
 import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
@@ -34,6 +37,7 @@ class PostDeleteServiceTest {
     @Mock private ContestDetailService contestDetailService;
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
+    @Mock private ApplicationCloseService applicationCloseService;
 
     private PostCommandService postCommandService;
 
@@ -44,7 +48,8 @@ class PostDeleteServiceTest {
                         recruitPostRepository,
                         contestDetailService,
                         contestQueryService,
-                        postDetailService);
+                        postDetailService,
+                        applicationCloseService);
     }
 
     private RecruitPost givenPost() {
@@ -75,6 +80,16 @@ class PostDeleteServiceTest {
     }
 
     @Test
+    @DisplayName("지우면 같은 시각으로 이 글의 대기 지원을 모두 종료한다 (④)")
+    void 지우면_대기_지원을_종료한다() {
+        givenPost();
+
+        postCommandService.delete(AUTHOR_ID, POST_ID, NOW);
+
+        verify(applicationCloseService).closePendingApplications(POST_ID, NOW);
+    }
+
+    @Test
     @DisplayName("확정 팀원이 있는 모집완료 글도 소프트 삭제하고 인원·상태는 그대로 둔다")
     void 팀원이_있는_글도_소프트_삭제된다() {
         RecruitPost post = givenPost();
@@ -95,6 +110,7 @@ class PostDeleteServiceTest {
 
         assertThat(errorOf(99L)).isEqualTo(ErrorCode.NOT_POST_AUTHOR);
         assertThat(post.getDeletedAt()).isNull();
+        verifyNoInteractions(applicationCloseService);
     }
 
     @Test
