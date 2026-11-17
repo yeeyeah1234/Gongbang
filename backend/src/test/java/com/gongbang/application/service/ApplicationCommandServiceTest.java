@@ -17,6 +17,8 @@ import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.service.PostCommandService;
 import com.gongbang.post.service.PostQueryService;
+import com.gongbang.post.service.RecruitNotifier;
+import com.gongbang.post.service.TeamJoinService;
 import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +42,8 @@ class ApplicationCommandServiceTest {
     @Mock private ApplicationRepository applicationRepository;
     @Mock private PostCommandService postCommandService;
     @Mock private PostQueryService postQueryService;
+    @Mock private TeamJoinService teamJoinService;
+    @Mock private RecruitNotifier recruitNotifier;
 
     private ApplicationCommandService applicationCommandService;
 
@@ -47,7 +51,11 @@ class ApplicationCommandServiceTest {
     void setUp() {
         applicationCommandService =
                 new ApplicationCommandService(
-                        applicationRepository, postCommandService, postQueryService);
+                        applicationRepository,
+                        postCommandService,
+                        postQueryService,
+                        teamJoinService,
+                        recruitNotifier);
     }
 
     /** 모집 기간 start~end, 상태 status인 글을 잠금 조회로 돌려준다. */

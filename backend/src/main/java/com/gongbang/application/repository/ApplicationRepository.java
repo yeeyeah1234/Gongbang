@@ -17,6 +17,13 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     Optional<Application> findByPostIdAndApplicantId(Long postId, Long applicantId);
 
+    /**
+     * REC-004: 모집글을 먼저 잠그려고 지원의 모집글 ID만 값으로 읽는다. 엔티티를 읽지 않으므로 뒤의 잠금 조회(findByIdForUpdate)가 옛 값을
+     * 돌려주지 않는다.
+     */
+    @Query("select a.postId from Application a where a.id = :applicationId")
+    Optional<Long> findPostIdById(@Param("applicationId") Long applicationId);
+
     /** REC-003 ④: 한 탭의 지원자를 먼저 지원한 순으로 (같은 시각이면 먼저 들어온 행이 먼저). */
     List<Application> findByPostIdAndStatusOrderByCreatedAtAscIdAsc(
             Long postId, ApplicationStatus status);
