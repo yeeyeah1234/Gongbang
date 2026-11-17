@@ -124,7 +124,7 @@ public class PostDetailService {
                                     case PENDING -> MyStatus.PENDING;
                                     case REJECTED -> MyStatus.REJECTED;
                                     case ACCEPTED -> MyStatus.ACCEPTED;
-                                    // 삭제된 글의 지원이라 상세를 열 일이 없다
+                                        // 삭제된 글의 지원이라 상세를 열 일이 없다
                                     case CLOSED -> MyStatus.NONE;
                                 })
                 .orElse(MyStatus.NONE);

@@ -14,8 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 다른 도메인이 공모전·분야를 읽을 때 쓰는 조회 (AGENTS.md 3: 다른 도메인 repository를 직접 부르지 않음). 조회수는 올리지
- * 않는다. 없는 ID는 결과에서 빠진다.
+ * 다른 도메인이 공모전·분야를 읽을 때 쓰는 조회 (AGENTS.md 3: 다른 도메인 repository를 직접 부르지 않음). 조회수는 올리지 않는다. 없는 ID는 결과에서
+ * 빠진다.
  */
 @Service
 @RequiredArgsConstructor

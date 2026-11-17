@@ -149,8 +149,7 @@ class PostCommandServiceTest {
     @DisplayName("공모전을 고르지 않으면 400 CONTEST_REQUIRED")
     void 공모전이_없으면_CONTEST_REQUIRED() {
         PostCreateRequest request =
-                new PostCreateRequest(
-                        null, null, "제목", 4, TODAY, TODAY.plusDays(1), null, "내용");
+                new PostCreateRequest(null, null, "제목", 4, TODAY, TODAY.plusDays(1), null, "내용");
 
         assertThat(errorOf(request)).isEqualTo(ErrorCode.CONTEST_REQUIRED);
         verify(recruitPostRepository, never()).save(any());
@@ -207,8 +206,7 @@ class PostCommandServiceTest {
         givenContestDeadline(TODAY);
         givenSaveReturnsId(12L);
 
-        postCommandService.create(
-                AUTHOR_ID, contestRequest("제목", 4, TODAY, TODAY, null), TODAY);
+        postCommandService.create(AUTHOR_ID, contestRequest("제목", 4, TODAY, TODAY, null), TODAY);
 
         assertThat(savedPost().getRecruitEndDate()).isEqualTo(TODAY);
     }
@@ -227,8 +225,7 @@ class PostCommandServiceTest {
     @DisplayName("종료일이 공모전 마감일보다 뒤면 400 INVALID_PERIOD")
     void 종료일이_공모전_마감일보다_뒤면_INVALID_PERIOD() {
         givenContestDeadline(DEADLINE);
-        PostCreateRequest request =
-                contestRequest("제목", 4, TODAY, DEADLINE.plusDays(1), null);
+        PostCreateRequest request = contestRequest("제목", 4, TODAY, DEADLINE.plusDays(1), null);
 
         assertThat(errorOf(request)).isEqualTo(ErrorCode.INVALID_PERIOD);
     }

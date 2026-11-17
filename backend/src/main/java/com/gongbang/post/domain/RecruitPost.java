@@ -110,8 +110,8 @@ public class RecruitPost {
     }
 
     /**
-     * PST-003 수정. 연결된 공모전과 대표 이미지는 바꾸지 않는다 (②). 모집완료 글은 목표 인원을 늘려도 모집중으로 돌아가지
-     * 않는다 (⑤). 값 검증은 PostCommandService가 한다.
+     * PST-003 수정. 연결된 공모전과 대표 이미지는 바꾸지 않는다 (②). 모집완료 글은 목표 인원을 늘려도 모집중으로 돌아가지 않는다 (⑤). 값 검증은
+     * PostCommandService가 한다.
      */
     public void update(
             String title,

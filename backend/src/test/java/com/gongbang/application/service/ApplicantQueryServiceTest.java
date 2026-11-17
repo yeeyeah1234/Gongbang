@@ -121,8 +121,7 @@ class ApplicantQueryServiceTest {
                 applicantQueryService.getApplicants(AUTHOR_ID, POST_ID, "ACCEPTED");
 
         assertThat(response.items()).isEmpty();
-        assertThat(response.counts())
-                .isEqualTo(new ApplicantListResponse.Counts(0, 0, 0));
+        assertThat(response.counts()).isEqualTo(new ApplicantListResponse.Counts(0, 0, 0));
     }
 
     @Test
