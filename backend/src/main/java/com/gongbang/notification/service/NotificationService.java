@@ -51,11 +51,10 @@ public class NotificationService {
         if (actorId != null && actorId.equals(receiverId)) {
             return Optional.empty();
         }
-        Member receiver;
-        try {
-            receiver = memberService.getActiveMember(receiverId);
-        } catch (RuntimeException e) {
-            return Optional.empty(); // 탈퇴·삭제 회원
+        // 탈퇴·삭제 회원은 조용히 건너뛴다. 예외로 잡으면 부르는 쪽 트랜잭션 전체가 rollback-only가 된다
+        Member receiver = memberService.findActiveMember(receiverId).orElse(null);
+        if (receiver == null) {
+            return Optional.empty();
         }
         LocalDateTime now = LocalDateTime.now();
         boolean siteEnabled = true;

@@ -74,6 +74,12 @@ public class MemberService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
     }
 
+    /** 예외 없이 활동 중인 회원만 찾는다. 탈퇴·삭제면 빈 값 (부르는 쪽 트랜잭션을 rollback-only로 만들지 않음) */
+    @Transactional(readOnly = true)
+    public Optional<Member> findActiveMember(Long memberId) {
+        return memberRepository.findById(memberId).filter(Member::isActive);
+    }
+
     /** 화면 표시용 닉네임. 완전 삭제·탈퇴는 「탈퇴한 사용자」 (AGENTS 6, MY-11 ①) */
     @Transactional(readOnly = true)
     public String displayName(Long memberId) {
