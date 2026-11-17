@@ -40,8 +40,8 @@ public class EmailVerificationService {
     private final EmailOutboxService emailOutboxService;
     private final MemberService memberService;
 
-    /** 메일 서버가 없을 때 인증번호를 응답에 실어 화면에 보여 줄지 (로컬 개발용) */
-    @Value("${app.mail-dev-code:true}")
+    /** 메일 서버가 없을 때 인증번호를 응답에 실어 화면에 보여 줄지 (로컬 개발용, 기본 꺼짐) */
+    @Value("${app.mail-dev-code:false}")
     private boolean devCodeEnabled;
 
     @Transactional

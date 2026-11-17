@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -79,6 +81,19 @@ public class EmailDispatcher {
         }
     }
 
+    /** 서버가 켜질 때 메일 설정을 못 찾았으면 바로 알린다 (mail.properties 위치 확인용) */
+    @EventListener(ApplicationReadyEvent.class)
+    public void warnIfMailNotConfigured() {
+        if (isMailConfigured()) {
+            log.info("메일 발송 준비됨: {}", mailUsername);
+        } else {
+            log.warn(
+                    "메일 설정을 찾지 못했어요 — 인증번호 메일이 안 갑니다. backend/mail.properties 또는"
+                            + " ~/.gongbang/mail.properties 를 확인하세요 (지금 폴더: {})",
+                    System.getProperty("user.dir"));
+        }
+    }
+
     /** 메일 서버(MAIL_HOST)가 있어 실제로 보낼 수 있는지 */
     public boolean isMailConfigured() {
         boolean hostSet = mailHost != null && !mailHost.isBlank();
@@ -93,7 +108,8 @@ public class EmailDispatcher {
         JavaMailSender sender = mailSender.getIfAvailable();
         if (!isMailConfigured()) {
             // AUTH-05 ④: 메일을 보낼 수 없으면 보낸 척하지 않고 실패로 둔다 → 화면에 「메일을 보내지 못했어요」
-            log.warn("메일 설정(MAIL_HOST) 없음 — 메일 id={} 종류={} 발송 실패", mail.getId(), mail.getMailType());
+            log.warn(
+                    "메일 설정(MAIL_HOST) 없음 — 메일 id={} 종류={} 발송 실패", mail.getId(), mail.getMailType());
             mail.failed();
             return false;
         }
