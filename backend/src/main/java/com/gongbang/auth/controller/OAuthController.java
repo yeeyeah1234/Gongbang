@@ -54,7 +54,8 @@ public class OAuthController {
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(result))
                 .body(
                         ApiResponse.success(
-                                new OAuthTokenResponse(result.accessToken(), false, null, null, null)));
+                                new OAuthTokenResponse(
+                                        result.accessToken(), false, null, null, null)));
     }
 
     @PostMapping("/api/auth/oauth/signup")

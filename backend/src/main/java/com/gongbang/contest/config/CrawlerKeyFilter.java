@@ -16,9 +16,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * CRW-01, AGENTS.md 9장: /internal/contests/** 는 크롤러 키(CRAWLER_INTERNAL_KEY)가 맞을 때만 받는다.
- * 동기화 서버 키(SYNC_INTERNAL_KEY) 등 다른 내부 키로는 열리지 않는다. 키는 X-Crawler-Key 헤더로 받는다
- * (API 명세서 CRW-01 비고).
+ * CRW-01, AGENTS.md 9장: /internal/contests/** 는 크롤러 키(CRAWLER_INTERNAL_KEY)가 맞을 때만 받는다. 동기화 서버
+ * 키(SYNC_INTERNAL_KEY) 등 다른 내부 키로는 열리지 않는다. 키는 X-Crawler-Key 헤더로 받는다 (API 명세서 CRW-01 비고).
  */
 @Component
 @RequiredArgsConstructor

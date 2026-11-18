@@ -92,7 +92,10 @@ public class ProfileImageService {
         } catch (IOException e) {
             return null;
         }
-        if (read >= 3 && (head[0] & 0xFF) == 0xFF && (head[1] & 0xFF) == 0xD8 && (head[2] & 0xFF) == 0xFF) {
+        if (read >= 3
+                && (head[0] & 0xFF) == 0xFF
+                && (head[1] & 0xFF) == 0xD8
+                && (head[2] & 0xFF) == 0xFF) {
             return "jpg";
         }
         if (read >= 8

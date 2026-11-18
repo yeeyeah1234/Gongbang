@@ -1,0 +1,5 @@
+# git blame에서 건너뛸 커밋 (포맷만 바꾼 커밋)
+# 로컬 설정: git config blame.ignoreRevsFile .git-blame-ignore-revs (GitHub blame은 자동 적용)
+
+# 백엔드 코드 포맷 일괄 적용 (spotlessApply)
+1db771cf76ad189c3cce879352f0f0ee53df8823

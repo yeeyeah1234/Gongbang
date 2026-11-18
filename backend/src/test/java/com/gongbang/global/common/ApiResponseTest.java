@@ -21,7 +21,9 @@ class ApiResponseTest {
     @Test
     @DisplayName("실패 응답 생성 시 success=false, data=null, error 포함")
     void failureResponse() {
-        ApiResponse<Void> response = ApiResponse.failure(ErrorCode.POST_FULL.getCode(), ErrorCode.POST_FULL.getMessage());
+        ApiResponse<Void> response =
+                ApiResponse.failure(
+                        ErrorCode.POST_FULL.getCode(), ErrorCode.POST_FULL.getMessage());
 
         assertThat(response.isSuccess()).isFalse();
         assertThat(response.getData()).isNull();

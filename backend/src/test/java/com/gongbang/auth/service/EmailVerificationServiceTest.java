@@ -73,7 +73,8 @@ class EmailVerificationServiceTest {
         when(outbox.isMailConfigured()).thenReturn(true);
         when(outbox.sendVerificationCodeNow(eq("test@email.com"), anyString())).thenReturn(true);
 
-        SendCodeResponse res = service.sendCode("test@email.com", VerificationPurpose.SIGNUP, false);
+        SendCodeResponse res =
+                service.sendCode("test@email.com", VerificationPurpose.SIGNUP, false);
 
         assertThat(res.devCode()).isNull();
         verify(outbox).sendVerificationCodeNow(eq("test@email.com"), anyString());

@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 /**
  * AUTH-10 ③ 1회용 키: 1분 유효, 쓰면 삭제 (AGENTS 9 `oauth:code:{키}`).
  *
- * <p>TODO(확인 필요): AGENTS 2-2는 Redis TTL로 정했지만 아직 Redis가 없어 서버 메모리에 둔다 (RateLimiter와
- * 같음). 서버가 2대(blue/green)면 Redis로 바꿔야 한다.
+ * <p>TODO(확인 필요): AGENTS 2-2는 Redis TTL로 정했지만 아직 Redis가 없어 서버 메모리에 둔다 (RateLimiter와 같음). 서버가
+ * 2대(blue/green)면 Redis로 바꿔야 한다.
  */
 @Component
 public class OAuthCodeStore {

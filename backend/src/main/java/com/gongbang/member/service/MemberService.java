@@ -256,8 +256,7 @@ public class MemberService {
     @Transactional(readOnly = true)
     public MyProfileResponse getMyProfile(Long memberId) {
         Member member = getActiveMember(memberId);
-        return MyProfileResponse.of(
-                member, categoryCodes(member.getInterestCategoryIds()));
+        return MyProfileResponse.of(member, categoryCodes(member.getInterestCategoryIds()));
     }
 
     @Transactional
@@ -318,8 +317,7 @@ public class MemberService {
                     member.getPortfolioUrl());
         }
         memberRepository.flush();
-        return MyProfileResponse.of(
-                member, categoryCodes(member.getInterestCategoryIds()));
+        return MyProfileResponse.of(member, categoryCodes(member.getInterestCategoryIds()));
     }
 
     /** MY-05: 이메일·가입 방식·실명·증빙 파일은 넣지 않는다 (AGENTS 9) */

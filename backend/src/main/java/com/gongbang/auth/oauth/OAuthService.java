@@ -54,7 +54,9 @@ public class OAuthService {
             if (!member.isActive()) {
                 return "error=FAILED&provider=" + registrationId;
             }
-            return "code=" + codeStore.save(new OAuthPending(member.getId(), loginType, providerId, email));
+            return "code="
+                    + codeStore.save(
+                            new OAuthPending(member.getId(), loginType, providerId, email));
         }
         // ⑦ 같은 이메일이 이미 다른 방식(이메일·카카오·구글)으로 가입돼 있으면 계정을 합치지 않고 그 방식으로 안내
         Optional<Member> sameEmail =
@@ -107,7 +109,9 @@ public class OAuthService {
             }
             email =
                     emailVerificationService.requireVerifiedEmail(
-                            request.verificationToken(), VerificationPurpose.SIGNUP, request.email());
+                            request.verificationToken(),
+                            VerificationPurpose.SIGNUP,
+                            request.email());
         }
         Member member =
                 memberService.createSocialMember(

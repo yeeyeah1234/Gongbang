@@ -15,8 +15,8 @@ import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
 /**
  * AUTH-10 간편 로그인 제공자 등록 (AGENTS 2-2: Spring Security OAuth2 Client, 카카오는 provider 직접 등록).
  *
- * <p>키(환경 변수)가 비어 있는 제공자는 등록하지 않는다. 그래서 키 없이도 서버가 켜지고, 화면은 GET
- * /api/auth/oauth/providers로 켜진 제공자만 확인한다.
+ * <p>키(환경 변수)가 비어 있는 제공자는 등록하지 않는다. 그래서 키 없이도 서버가 켜지고, 화면은 GET /api/auth/oauth/providers로 켜진 제공자만
+ * 확인한다.
  */
 @Configuration
 public class OAuthClientConfig {
@@ -40,7 +40,8 @@ public class OAuthClientConfig {
                             .clientId(kakaoId)
                             .clientSecret(kakaoSecret)
                             // 카카오는 client_secret을 본문으로 보낸다
-                            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
+                            .clientAuthenticationMethod(
+                                    ClientAuthenticationMethod.CLIENT_SECRET_POST)
                             .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                             .redirectUri(redirect)
                             .authorizationUri("https://kauth.kakao.com/oauth/authorize")
@@ -67,7 +68,8 @@ public class OAuthClientConfig {
     }
 
     @Bean
-    public ClientRegistrationRepository clientRegistrationRepository(EnabledOAuthProviders providers) {
+    public ClientRegistrationRepository clientRegistrationRepository(
+            EnabledOAuthProviders providers) {
         return providers::get;
     }
 

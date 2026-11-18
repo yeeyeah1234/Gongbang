@@ -32,13 +32,7 @@ class NotificationServiceTest {
 
         var result =
                 service.send(
-                        2L,
-                        NotificationType.values()[0],
-                        1L,
-                        "APPLICATION",
-                        10L,
-                        "알림",
-                        "/posts/1");
+                        2L, NotificationType.values()[0], 1L, "APPLICATION", 10L, "알림", "/posts/1");
 
         assertThat(result).isEmpty();
         // 예외를 던지는 조회를 부르면 부르는 쪽 트랜잭션이 rollback-only가 된다

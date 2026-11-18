@@ -37,8 +37,7 @@ class ContestViewCookieTest {
     @Test
     @DisplayName("번호가 너무 많으면 오래된 것부터 빼고 최근 것만 남긴다")
     void 최근_번호만_남긴다() {
-        List<Long> ids =
-                LongStream.rangeClosed(1, ContestViewCookie.MAX_IDS + 5).boxed().toList();
+        List<Long> ids = LongStream.rangeClosed(1, ContestViewCookie.MAX_IDS + 5).boxed().toList();
 
         ResponseCookie cookie =
                 ContestViewCookie.build(ids, ZonedDateTime.of(2026, 11, 12, 9, 0, 0, 0, KST));
@@ -46,6 +45,7 @@ class ContestViewCookieTest {
         List<String> kept = List.of(cookie.getValue().split("\\."));
         assertThat(kept).hasSize(ContestViewCookie.MAX_IDS);
         assertThat(kept.get(0)).isEqualTo("6");
-        assertThat(kept.get(kept.size() - 1)).isEqualTo(String.valueOf(ContestViewCookie.MAX_IDS + 5));
+        assertThat(kept.get(kept.size() - 1))
+                .isEqualTo(String.valueOf(ContestViewCookie.MAX_IDS + 5));
     }
 }

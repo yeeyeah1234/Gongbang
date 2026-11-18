@@ -87,9 +87,8 @@ public class EmailDispatcher {
     /**
      * 서버가 켜질 때 메일 설정을 못 찾았으면 바로 알린다.
      *
-     * <p>설정 위치: 테스트 서버는 systemd(gongbang-backend@blue/green)가 읽는
-     * /srv/gongbang/deploy/backend.env의 MAIL_* 환경 변수, 내 컴퓨터는 backend/mail.properties.
-     * 메일 계정 주소는 로그에 남기지 않는다 (AGENTS 9).
+     * <p>설정 위치: 테스트 서버는 systemd(gongbang-backend@blue/green)가 읽는 /srv/gongbang/deploy/backend.env의
+     * MAIL_* 환경 변수, 내 컴퓨터는 backend/mail.properties. 메일 계정 주소는 로그에 남기지 않는다 (AGENTS 9).
      */
     @EventListener(ApplicationReadyEvent.class)
     public void warnIfMailNotConfigured() {
