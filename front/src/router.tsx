@@ -18,6 +18,7 @@ import MyPostsPage from './pages/mypage/MyPostsPage'
 import MyProfilePage from './pages/mypage/MyProfilePage'
 import PublicProfilePage from './pages/mypage/PublicProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
+import PostCreatePage from './pages/posts/PostCreatePage'
 import PostListPage from './pages/posts/PostListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 
@@ -52,6 +53,8 @@ export const router = createBrowserRouter([
           { path: '/mypage/bookmarks', element: <MyBookmarksPage /> },
           { path: '/mypage/settings', element: <AccountSettingsPage /> },
           { path: '/notifications', element: <NotificationsPage /> },
+          // PST-002 모집글 작성 (비회원은 목록의 「글쓰기」에서 로그인 모달을 먼저 본다)
+          { path: '/posts/new', element: <PostCreatePage /> },
           { path: '/service-notices/:serviceNoticeId', element: <ServiceNoticePage /> },
         ],
       },
