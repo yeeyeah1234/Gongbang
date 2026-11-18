@@ -50,3 +50,40 @@ export interface PostCreateRequest {
 export interface PostCreateResponse {
   postId: number
 }
+
+// API 명세서 PST-005 GET /api/posts/{postId}. myStatus로 버튼을 나눈다 (PST-006).
+export type PostMyStatus = 'NONE' | 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'AUTHOR' | 'LEFT'
+
+export interface PostDetailContest {
+  contestId: number | null // 외부 공모전이면 null
+  title: string
+  categoryName: string | null
+  isExternal: boolean
+  deadline: string // YYYY-MM-DD
+  dDay: number // 마감 당일 0, 지나면 음수
+  url: string | null // 외부 공모전 링크 (서비스 공모전이면 null)
+}
+
+export interface PostDetail {
+  postId: number
+  title: string
+  content: string
+  contest: PostDetailContest
+  imageUrl: string | null
+  author: PostAuthor & { profileImageUrl: string | null }
+  createdAt: string // 한국 시간 YYYY-MM-DDTHH:mm:ss
+  viewCount: number
+  currentCount: number
+  targetCount: number
+  status: PostStatus
+  recruitStartDate: string
+  recruitEndDate: string
+  relatedUrl: string | null
+  myStatus: PostMyStatus
+  myApplicationId: number | null
+}
+
+// API 명세서 REC-001
+export interface ApplicationCreateResponse {
+  applicationId: number
+}

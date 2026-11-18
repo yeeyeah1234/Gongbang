@@ -6,6 +6,7 @@ import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.MyStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.PostDetailResponse;
@@ -35,6 +36,7 @@ public class PostDetailService {
     private final ContestLookupService contestLookupService;
     private final ApplicationQueryService applicationQueryService;
     private final PostMembershipService postMembershipService;
+    private final MemberService memberService;
 
     /**
      * PST-005 모집글 상세. 없거나 삭제된 글이면 404 POST_NOT_FOUND (PST-004 ⑤).
@@ -71,8 +73,7 @@ public class PostDetailService {
         Optional<MyApplication> myApplication = myApplication(post, viewerId);
         MyStatus myStatus = myStatus(post, viewerId, myApplication);
         Long myApplicationId = myApplication.map(MyApplication::applicationId).orElse(null);
-        // TODO(확인 필요): 회원 도메인(정진우)이 생기면 닉네임·프로필 사진을 채운다 (INT-002 ①).
-        AuthorInfo author = new AuthorInfo(post.getAuthorId(), null, null);
+        AuthorInfo author = author(post.getAuthorId());
 
         if (post.getExternalContest() != null) {
             String categoryName =
@@ -88,6 +89,15 @@ public class PostDetailService {
                         .orElseThrow(() -> new IllegalStateException("모집글의 공모전이 없습니다"));
         return PostDetailResponse.of(
                 post, contest, author, viewCount, myStatus, myApplicationId, today);
+    }
+
+    /** 작성자 닉네임·프로필 사진 (INT-002 ①). 탈퇴한 회원은 목록과 같이 「탈퇴한 사용자」, 사진 없음 (MY-11). */
+    private AuthorInfo author(Long authorId) {
+        return memberService
+                .findActiveMember(authorId)
+                .map(m -> new AuthorInfo(authorId, m.getNickname(), m.getProfileImageUrl()))
+                .orElseGet(
+                        () -> new AuthorInfo(authorId, memberService.displayName(authorId), null));
     }
 
     /** 회원(작성자 제외)이 이 글에 낸 지원. */

@@ -19,6 +19,7 @@ import MyProfilePage from './pages/mypage/MyProfilePage'
 import PublicProfilePage from './pages/mypage/PublicProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
 import PostCreatePage from './pages/posts/PostCreatePage'
+import PostDetailPage from './pages/posts/PostDetailPage'
 import PostListPage from './pages/posts/PostListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 
@@ -32,6 +33,8 @@ export const router = createBrowserRouter([
       { path: '/search', element: <SearchPage /> },
       // PST-001 커뮤니티 모집글 목록 (비회원도 본다)
       { path: '/posts', element: <PostListPage /> },
+      // PST-005 모집글 상세 (비회원도 본다. /posts/new는 아래 로그인 그룹이 먼저 받는다)
+      { path: '/posts/:postId', element: <PostDetailPage /> },
       // 정진우 AUTH (로그인 화면 경로 /login, 돌아갈 주소는 ?redirect=)
       { path: '/login', element: <LoginPage /> },
       { path: '/signup', element: <SignupPage /> },
