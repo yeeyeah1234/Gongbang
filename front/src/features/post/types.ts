@@ -27,3 +27,26 @@ export interface PostListItem {
   targetCount: number
   status: PostStatus
 }
+
+// API 명세서 PST-002 POST /api/posts. contestId와 external 중 하나만 보낸다.
+export interface PostExternalContestInput {
+  title: string
+  categoryCode: string
+  deadline: string // YYYY-MM-DD
+  url?: string
+}
+
+export interface PostCreateRequest {
+  contestId?: number
+  external?: PostExternalContestInput
+  title: string
+  targetCount: number
+  recruitStartDate: string // YYYY-MM-DD
+  recruitEndDate: string // YYYY-MM-DD
+  relatedUrl?: string
+  content: string
+}
+
+export interface PostCreateResponse {
+  postId: number
+}
