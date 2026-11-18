@@ -16,6 +16,8 @@ import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.domain.Member;
+import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.MyStatus;
 import com.gongbang.post.domain.RecruitPost;
@@ -48,6 +50,7 @@ class PostDetailServiceTest {
     @Mock private ContestLookupService contestLookupService;
     @Mock private ApplicationQueryService applicationQueryService;
     @Mock private PostMembershipService postMembershipService;
+    @Mock private MemberService memberService;
 
     private PostDetailService postDetailService;
 
@@ -58,11 +61,41 @@ class PostDetailServiceTest {
                         recruitPostRepository,
                         contestLookupService,
                         applicationQueryService,
-                        postMembershipService);
+                        postMembershipService,
+                        memberService);
         // 기본은 팀과 관계없는 회원 (팀원·나간 팀원 경우는 각 테스트에서 바꾼다)
         lenient()
                 .when(postMembershipService.membership(anyLong(), anyLong()))
                 .thenReturn(Membership.NONE);
+        // 작성자 정보를 보지 않는 테스트용 기본값: 탈퇴한 작성자
+        lenient().when(memberService.findActiveMember(anyLong())).thenReturn(Optional.empty());
+        lenient().when(memberService.displayName(anyLong())).thenReturn("탈퇴한 사용자");
+    }
+
+    @Test
+    @DisplayName("작성자 닉네임과 프로필 사진을 담는다 (INT-002 ①)")
+    void 작성자_닉네임과_사진을_담는다() {
+        givenContestPost(5);
+        Member author = Member.createEmailMember("a@test.local", "hash", "김팀장");
+        ReflectionTestUtils.setField(author, "profileImageUrl", "https://img.test/a.png");
+        given(memberService.findActiveMember(AUTHOR_ID)).willReturn(Optional.of(author));
+
+        PostDetailResponse response = postDetailService.getPost(POST_ID, null, NOW);
+
+        assertThat(response.author().memberId()).isEqualTo(AUTHOR_ID);
+        assertThat(response.author().nickname()).isEqualTo("김팀장");
+        assertThat(response.author().profileImageUrl()).isEqualTo("https://img.test/a.png");
+    }
+
+    @Test
+    @DisplayName("탈퇴한 작성자는 「탈퇴한 사용자」, 사진 없음 (MY-11)")
+    void 탈퇴한_작성자는_탈퇴한_사용자() {
+        givenContestPost(5);
+
+        PostDetailResponse response = postDetailService.getPost(POST_ID, null, NOW);
+
+        assertThat(response.author().nickname()).isEqualTo("탈퇴한 사용자");
+        assertThat(response.author().profileImageUrl()).isNull();
     }
 
     private void givenViewedBefore(Long viewerId) {
