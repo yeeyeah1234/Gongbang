@@ -20,6 +20,7 @@ import PublicProfilePage from './pages/mypage/PublicProfilePage'
 import NotificationsPage from './pages/NotificationsPage'
 import PostCreatePage from './pages/posts/PostCreatePage'
 import PostDetailPage from './pages/posts/PostDetailPage'
+import PostEditPage from './pages/posts/PostEditPage'
 import PostListPage from './pages/posts/PostListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 
@@ -58,6 +59,8 @@ export const router = createBrowserRouter([
           { path: '/notifications', element: <NotificationsPage /> },
           // PST-002 모집글 작성 (비회원은 목록의 「글쓰기」에서 로그인 모달을 먼저 본다)
           { path: '/posts/new', element: <PostCreatePage /> },
+          // PST-003 모집글 수정 (작성자가 아니면 화면이 막고, 서버도 403)
+          { path: '/posts/:postId/edit', element: <PostEditPage /> },
           { path: '/service-notices/:serviceNoticeId', element: <ServiceNoticePage /> },
         ],
       },

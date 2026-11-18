@@ -63,8 +63,20 @@ export default function PostDetailPage() {
         <article className="min-w-0">
           <ContestCard contest={post.contest} />
 
-          {/* ② 작성자 전용 [수정] [삭제]는 PST-003·PST-004 화면과 함께 제목 줄 오른쪽에 붙인다 */}
-          <h1 className="mt-8 text-title font-bold break-words text-text">{post.title}</h1>
+          <div className="mt-8 flex items-start justify-between gap-6">
+            <h1 className="min-w-0 text-title font-bold break-words text-text">{post.title}</h1>
+            {/* ② PST-003 ① 작성자에게만 제목 줄 오른쪽 [수정] (모집중·모집완료 모두). [삭제]는 PST-004에서 옆에 붙인다 */}
+            {post.myStatus === 'AUTHOR' && (
+              <div className="flex shrink-0 gap-2 pt-1">
+                <Link
+                  to={`/posts/${post.postId}/edit`}
+                  className="inline-flex h-9 items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg"
+                >
+                  수정
+                </Link>
+              </div>
+            )}
+          </div>
           <AuthorLine post={post} />
 
           <dl className="mt-6 grid grid-cols-[120px_minmax(0,1fr)] gap-x-6 gap-y-3 border-t border-line-strong pt-6 text-body">

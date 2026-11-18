@@ -6,6 +6,7 @@ import type {
   PostCreateResponse,
   PostDetail,
   PostListItem,
+  PostUpdateRequest,
 } from './types'
 
 // PST-001 모집글 목록. 비회원도 부를 수 있다 (⑤). page는 0부터.
@@ -25,6 +26,12 @@ export async function createPost(body: PostCreateRequest) {
 // PST-005 모집글 상세. 비회원도 부를 수 있다. 로그인 회원이면 myStatus와 조회수(24시간에 한 번)가 달라진다.
 export async function fetchPost(postId: number) {
   const response = await apiClient.get<ApiResponse<PostDetail>>(`/api/posts/${postId}`)
+  return response.data.data
+}
+
+// PST-003 모집글 수정 (작성자). 수정된 상세를 돌려준다.
+export async function updatePost({ postId, body }: { postId: number; body: PostUpdateRequest }) {
+  const response = await apiClient.patch<ApiResponse<PostDetail>>(`/api/posts/${postId}`, body)
   return response.data.data
 }
 

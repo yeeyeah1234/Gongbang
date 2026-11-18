@@ -1,7 +1,14 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchContests } from '../contest/api'
 import { useViewer } from '../contest/hooks'
-import { applyToPost, cancelApplication, createPost, fetchPost, fetchPosts } from './api'
+import {
+  applyToPost,
+  cancelApplication,
+  createPost,
+  fetchPost,
+  fetchPosts,
+  updatePost,
+} from './api'
 
 // PST-001 ⑦: 20개씩 페이지로 나눈다
 export const POST_PAGE_SIZE = 20
@@ -76,4 +83,13 @@ export function useApplyToPost() {
 export function useCancelApplication() {
   const refresh = useRefreshPosts()
   return useMutation({ mutationFn: cancelApplication, onSettled: refresh })
+}
+
+// PST-003 수정. 저장하면 목록·상세를 다시 불러오게 한다.
+export function useUpdatePost() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: updatePost,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.all }),
+  })
 }
