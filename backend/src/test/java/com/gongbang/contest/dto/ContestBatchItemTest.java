@@ -14,7 +14,15 @@ class ContestBatchItemTest {
 
     private ContestBatchItem item(String homepageUrl) {
         return new ContestBatchItem(
-                "url-1", "WEVITY", "제목", "주최", "PLANNING", null, null, LocalDate.of(2026, 12, 6), "설명",
+                "url-1",
+                "WEVITY",
+                "제목",
+                "주최",
+                "PLANNING",
+                null,
+                null,
+                LocalDate.of(2026, 12, 6),
+                "설명",
                 homepageUrl);
     }
 

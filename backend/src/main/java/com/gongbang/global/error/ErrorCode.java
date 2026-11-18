@@ -91,15 +91,13 @@ public enum ErrorCode {
     // PST-006 ⑧, REC-002 ⑤ 문구
     NOT_APPLICANT(HttpStatus.FORBIDDEN, "NOT_APPLICANT", "본인의 지원만 취소할 수 있어요"),
     // REC-001 ③ 문구
-    CANNOT_APPLY_OWN_POST(
-            HttpStatus.FORBIDDEN, "CANNOT_APPLY_OWN_POST", "내가 쓴 모집글에는 지원할 수 없어요"),
+    CANNOT_APPLY_OWN_POST(HttpStatus.FORBIDDEN, "CANNOT_APPLY_OWN_POST", "내가 쓴 모집글에는 지원할 수 없어요"),
 
     // 404 Not Found
     // PST-004 ⑤ 문구
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "삭제되었거나 없는 모집글이에요"),
     // REC-002 ⑥ 문구 (11/13 추가)
-    APPLICATION_NOT_FOUND(
-            HttpStatus.NOT_FOUND, "APPLICATION_NOT_FOUND", "이미 취소되었거나 없는 지원이에요"),
+    APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "APPLICATION_NOT_FOUND", "이미 취소되었거나 없는 지원이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (API 명세서 MAIN-02)
     CONTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTEST_NOT_FOUND", "존재하지 않는 공모전입니다."),
 
@@ -115,8 +113,7 @@ public enum ErrorCode {
     // AUTH-05 ⑥ 문구
     EMAIL_DUPLICATED(HttpStatus.CONFLICT, "EMAIL_DUPLICATED", "이미 가입된 이메일이에요"),
     // AUTH-05 ⑥: 카카오·구글로 가입된 이메일로 이메일 가입을 시도 → 그 방식으로 로그인 안내
-    SOCIAL_EMAIL_REGISTERED(
-            HttpStatus.CONFLICT, "SOCIAL_EMAIL_REGISTERED", "간편 로그인으로 가입된 이메일이에요"),
+    SOCIAL_EMAIL_REGISTERED(HttpStatus.CONFLICT, "SOCIAL_EMAIL_REGISTERED", "간편 로그인으로 가입된 이메일이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (AUTH-06 ③)
     NICKNAME_DUPLICATED(HttpStatus.CONFLICT, "NICKNAME_DUPLICATED", "이미 쓰고 있는 닉네임이에요"),
     // AUTH-05 ③: 5번 틀리면 그 번호는 무효 (문구는 임시)

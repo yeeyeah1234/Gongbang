@@ -1,4 +1,2 @@
-/**
- * 알림 도메인 패키지 (담당: 정진우)
- */
+/** 알림 도메인 패키지 (담당: 정진우) */
 package com.gongbang.notification;

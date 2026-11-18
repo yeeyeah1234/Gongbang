@@ -16,13 +16,14 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 /**
- * AUTH-10 ③⑧: 소셜 로그인이 끝나면 프론트 /oauth/callback으로 돌려보낸다. 성공이면 1회용 키(code), 취소·오류면
- * error. 로그인 토큰은 여기서 주지 않는다(주소에 토큰이 남지 않게).
+ * AUTH-10 ③⑧: 소셜 로그인이 끝나면 프론트 /oauth/callback으로 돌려보낸다. 성공이면 1회용 키(code), 취소·오류면 error. 로그인 토큰은 여기서
+ * 주지 않는다(주소에 토큰이 남지 않게).
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class OAuthLoginHandlers implements AuthenticationSuccessHandler, AuthenticationFailureHandler {
+public class OAuthLoginHandlers
+        implements AuthenticationSuccessHandler, AuthenticationFailureHandler {
 
     private final OAuthService oAuthService;
 
@@ -36,14 +37,17 @@ public class OAuthLoginHandlers implements AuthenticationSuccessHandler, Authent
         OAuth2AuthenticationToken token = (OAuth2AuthenticationToken) authentication;
         String query =
                 oAuthService.handleProviderLogin(
-                        token.getAuthorizedClientRegistrationId(), token.getPrincipal().getAttributes());
+                        token.getAuthorizedClientRegistrationId(),
+                        token.getPrincipal().getAttributes());
         clearSession(request);
         response.sendRedirect(frontBaseUrl + "/oauth/callback?" + query);
     }
 
     @Override
     public void onAuthenticationFailure(
-            HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
+            HttpServletRequest request,
+            HttpServletResponse response,
+            AuthenticationException exception)
             throws IOException {
         // 사용자가 취소했거나 제공자 오류 (원인 종류만 남긴다)
         log.warn("간편 로그인 실패: {}", exception.getClass().getSimpleName());
