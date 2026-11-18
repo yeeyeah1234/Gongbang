@@ -87,3 +87,13 @@ export interface PostDetail {
 export interface ApplicationCreateResponse {
   applicationId: number
 }
+
+// API 명세서 PST-003 PATCH /api/posts/{postId}. 보내지 않은 칸은 그대로, relatedUrl ''은 지운다.
+export interface PostUpdateRequest {
+  title?: string
+  targetCount?: number
+  recruitStartDate?: string
+  recruitEndDate?: string
+  relatedUrl?: string
+  content?: string
+}

@@ -1,4 +1,4 @@
-import type { PostCreateRequest } from './types'
+import type { PostCreateRequest, PostDetail, PostUpdateRequest } from './types'
 
 // PST-002 ① 입력 범위 (서버 PostCommandService와 같은 값)
 export const TITLE_MAX = 50
@@ -38,6 +38,7 @@ export type PostFormField =
   | 'externalDeadline'
   | 'externalUrl'
   | 'title'
+  | 'targetCount'
   | 'period'
   | 'relatedUrl'
   | 'content'
@@ -59,6 +60,10 @@ export const MESSAGES = {
   externalCategoryRequired: '분야를 선택해 주세요',
   externalDeadlineRequired: '접수 마감일을 입력해 주세요',
   urlInvalid: 'http:// 또는 https://로 시작하는 주소를 입력해 주세요',
+  // PST-003 ④
+  targetBelowCurrent: '현재 확정된 팀원 수보다 적게 설정할 수 없습니다',
+  targetEqualsCurrent:
+    '현재 확정된 팀원 수와 같게 설정할 수 없습니다. 모집을 마치려면 「모집 완료」를 눌러 주세요',
 } as const
 
 export const EMPTY_POST_FORM: PostFormValues = {
@@ -118,10 +123,15 @@ export function validatePostForm(values: PostFormValues, today: string = todaySt
       errors.externalUrl = MESSAGES.urlInvalid
   }
 
+  return { ...errors, ...validatePostFields(values, contestDeadline(values)) }
+}
+
+// 작성·수정이 함께 쓰는 칸 검사: 제목, ③ 시작일 ≤ 종료일 ≤ 공모전 마감일, ④ URL, 내용
+function validatePostFields(values: PostFormValues, deadline: string | undefined) {
+  const errors: PostFormErrors = {}
+
   if (!values.title.trim()) errors.title = MESSAGES.titleRequired
 
-  // ③ 시작일 ≤ 종료일 ≤ 공모전 마감일
-  const deadline = contestDeadline(values)
   if (!values.recruitStartDate || !values.recruitEndDate) errors.period = MESSAGES.periodRequired
   else if (values.recruitEndDate < values.recruitStartDate) errors.period = MESSAGES.endBeforeStart
   else if (deadline && values.recruitEndDate > deadline) errors.period = MESSAGES.endAfterDeadline
@@ -130,6 +140,16 @@ export function validatePostForm(values: PostFormValues, today: string = todaySt
     errors.relatedUrl = MESSAGES.urlInvalid
   if (!values.content.trim()) errors.content = MESSAGES.contentRequired
 
+  return errors
+}
+
+// PST-003 ④⑦ 수정 화면 검사. 공모전은 바꿀 수 없어 보지 않고, 목표 인원을 확정 인원과 비교한다.
+export function validatePostEditForm(values: PostFormValues, post: PostDetail) {
+  const errors = validatePostFields(values, post.contest.deadline)
+  if (values.targetCount < post.currentCount) errors.targetCount = MESSAGES.targetBelowCurrent
+  // 모집완료 글은 같아도 된다
+  else if (post.status === 'RECRUITING' && values.targetCount === post.currentCount)
+    errors.targetCount = MESSAGES.targetEqualsCurrent
   return errors
 }
 
@@ -157,4 +177,41 @@ export function toCreateRequest(values: PostFormValues): PostCreateRequest {
       url: externalUrl || undefined,
     },
   }
+}
+
+// PST-003 ① 기존 값을 채운 수정 폼. 공모전 칸은 잠겨 있어 화면에만 쓴다.
+export function toEditFormValues(post: PostDetail): PostFormValues {
+  return {
+    ...EMPTY_POST_FORM,
+    title: post.title,
+    targetCount: post.targetCount,
+    recruitStartDate: post.recruitStartDate,
+    recruitEndDate: post.recruitEndDate,
+    relatedUrl: post.relatedUrl ?? '',
+    content: post.content,
+  }
+}
+
+// PST-003: 바꾼 칸만 보낸다. 서버는 보내지 않은 칸을 그대로 두고, 기간을 보낼 때만 기간을 다시 검사한다.
+// 관련 URL을 비우면 빈 문자열을 보내 없는 값으로 만든다 (⑦).
+export function toUpdateRequest(
+  values: PostFormValues,
+  initial: PostFormValues,
+): PostUpdateRequest {
+  const request: PostUpdateRequest = {}
+  const title = values.title.trim()
+  const content = values.content.trim()
+  const relatedUrl = values.relatedUrl.trim()
+  if (title !== initial.title) request.title = title
+  if (values.targetCount !== initial.targetCount) request.targetCount = values.targetCount
+  if (
+    values.recruitStartDate !== initial.recruitStartDate ||
+    values.recruitEndDate !== initial.recruitEndDate
+  ) {
+    request.recruitStartDate = values.recruitStartDate
+    request.recruitEndDate = values.recruitEndDate
+  }
+  if (relatedUrl !== initial.relatedUrl) request.relatedUrl = relatedUrl
+  if (content !== initial.content) request.content = content
+  return request
 }
