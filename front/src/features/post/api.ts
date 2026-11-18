@@ -35,6 +35,11 @@ export async function updatePost({ postId, body }: { postId: number; body: PostU
   return response.data.data
 }
 
+// PST-004 모집글 삭제 (작성자, 소프트 삭제)
+export async function deletePost(postId: number) {
+  await apiClient.delete(`/api/posts/${postId}`)
+}
+
 // REC-001 지원하기 (로그인)
 export async function applyToPost(postId: number) {
   const response = await apiClient.post<ApiResponse<ApplicationCreateResponse>>(
