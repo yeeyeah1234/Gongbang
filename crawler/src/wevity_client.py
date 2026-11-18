@@ -6,6 +6,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from config import WEVITY_BASE_URL, USER_AGENT, REQUEST_DELAY_SECONDS
+from html_sanitizer import sanitize_description
 
 _session = requests.Session()
 _session.headers["User-Agent"] = USER_AGENT
@@ -119,6 +120,8 @@ def parse_detail_page(html):
 
     description_el = soup.select_one("div.comm-desc#viewContents")
     description = description_el.decode_contents().strip() if description_el else ""
+    # 프론트가 HTML로 그리므로 안전한 태그만 남기고, 상대 이미지 주소는 위비티 절대 주소로 바꾼다
+    description = sanitize_description(description, WEVITY_BASE_URL)
 
     return {
         "title": title,
