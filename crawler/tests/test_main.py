@@ -1,5 +1,7 @@
 import datetime
 
+import pytest
+
 import main
 from main import _estimate_deadline, build_contest_payload
 
@@ -169,3 +171,62 @@ def test_위비티에_모자라면_있는_만큼만_모은다(monkeypatch):
 
     assert len([i for i in result if i["categories"] == ["광고/마케팅"]]) == 2
     assert fetched == [(2, 1), (2, 2)]  # 마케팅 필터는 하나뿐, 최대 페이지까지만 본다
+
+
+# --- 배치 1건 실패가 전체를 막지 않게 (보내기 전 검사) ---
+
+
+def _payload(**overrides):
+    payload = {
+        "sourceUrl": "https://www.wevity.com/?c=find&s=1&gub=1&gbn=view&ix=1",
+        "sourceSite": "WEVITY",
+        "title": "제목",
+        "host": "주최",
+        "categoryCode": "ETC",
+        "thumbnailUrl": None,
+        "startDate": None,
+        "deadline": "2026-12-06",
+        "description": "<p>내용</p>",
+        "homepageUrl": None,
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_정상_값이면_문제없음():
+    assert main.find_invalid_reason(_payload()) is None
+
+
+def test_제목이_비어_있으면_보내지_않는다():
+    assert main.find_invalid_reason(_payload(title="  ")) == "제목 없음"
+
+
+def test_DB_글자_수를_넘으면_보내지_않는다():
+    assert main.find_invalid_reason(_payload(title="가" * 200)) is None
+    assert main.find_invalid_reason(_payload(title="가" * 201)) == "title 201자 (최대 200자)"
+    assert main.find_invalid_reason(_payload(host="a" * 101)) == "host 101자 (최대 100자)"
+
+
+def test_상세_내용이_TEXT_바이트를_넘으면_보내지_않는다():
+    # 한글 1자 = 3바이트
+    assert main.find_invalid_reason(_payload(description="가" * 21845)) is None
+    assert main.find_invalid_reason(_payload(description="가" * 21846)) == "description 65538바이트 (최대 65535바이트)"
+
+
+# --- 위비티 화면 구조가 바뀌었을 때 조용히 0건으로 끝나지 않게 ---
+
+
+def test_목록_1페이지가_0건이면_실패로_끝낸다(monkeypatch):
+    monkeypatch.setattr(main.wevity_client, "fetch_list_page", lambda page: "<html>")
+    monkeypatch.setattr(main.wevity_client, "parse_list_page", lambda html: [])
+
+    with pytest.raises(main.CrawlerHealthError):
+        main.collect_list_items()
+
+
+def test_목록_2페이지가_0건인_것은_정상이다(monkeypatch):
+    pages = {1: [{"ix": "1"}], 2: []}
+    monkeypatch.setattr(main.wevity_client, "fetch_list_page", lambda page: page)
+    monkeypatch.setattr(main.wevity_client, "parse_list_page", lambda page: pages[page])
+
+    assert main.collect_list_items() == [{"ix": "1"}]
