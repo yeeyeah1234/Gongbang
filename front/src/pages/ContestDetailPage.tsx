@@ -1,4 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useMemo, useState } from 'react'
 import { useParams } from 'react-router'
@@ -6,14 +5,13 @@ import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 import { Toast } from '../components/ui/Toast'
+import { BookmarkIcon } from '../features/contest/components/BookmarkIcon'
 import { DDayBadge, DefaultThumbnail } from '../features/contest/components/ContestCard'
 import {
-  contestKeys,
   useContestDetail,
   useIsLoggedIn,
   useToggleBookmark,
   bookmarkErrorMessage,
-  useViewer,
 } from '../features/contest/hooks'
 import { sanitizeDescription } from '../features/contest/sanitizeDescription'
 import type { ContestDetail } from '../features/contest/types'
@@ -73,8 +71,6 @@ export default function ContestDetailPage() {
   const { data: contest, isPending, isError, error } = useContestDetail(contestId)
   const isLoggedIn = useIsLoggedIn()
   const toggleBookmark = useToggleBookmark()
-  const { viewer } = useViewer()
-  const queryClient = useQueryClient()
   const toast = useTimedToast()
   const [loginModalOpen, setLoginModalOpen] = useState(false)
 
@@ -98,14 +94,11 @@ export default function ContestDetailPage() {
       setLoginModalOpen(true)
       return
     }
+    // 요청이 끝나기 전에 다시 누르면 무시한다 (화면은 이미 바뀌어 있음)
+    if (toggleBookmark.isPending) return
     toggleBookmark.mutate(
       { contestId: contest.contestId, isBookmarked: contest.isBookmarked },
       {
-        onSuccess: (result) =>
-          queryClient.setQueryData<ContestDetail>(
-            contestKeys.detail(contest.contestId, viewer),
-            (old) => (old ? { ...old, isBookmarked: result.isBookmarked } : old),
-          ),
         onError: (error) => {
           const message = bookmarkErrorMessage(error, contest.isBookmarked)
           if (message) toast.show(message)
@@ -202,10 +195,14 @@ export default function ContestDetailPage() {
               <Button
                 variant="outline"
                 aria-pressed={contest.isBookmarked}
-                loading={toggleBookmark.isPending}
                 onClick={handleBookmark}
               >
-                북마크
+                <span
+                  className={`inline-flex items-center gap-1.5 ${contest.isBookmarked ? 'text-primary' : ''}`}
+                >
+                  <BookmarkIcon filled={contest.isBookmarked} />
+                  북마크
+                </span>
               </Button>
               <Button variant="outline" onClick={handleCopyLink}>
                 복사

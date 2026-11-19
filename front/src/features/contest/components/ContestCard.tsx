@@ -4,6 +4,7 @@ import { Badge } from '../../../components/ui/Badge'
 import { Highlight } from '../../search/components/Highlight'
 import { bookmarkErrorMessage, useIsLoggedIn, useToggleBookmark } from '../hooks'
 import type { ContestCardItem } from '../types'
+import { BookmarkIcon } from './BookmarkIcon'
 
 // D-day 배지는 마감 7일 이내면 빨갛게 (STYLE_GUIDE 5-3)
 const DDAY_EMPHASIS_DAYS = 7
@@ -42,6 +43,8 @@ function BookmarkButton({ contest, onToast }: ContestCardProps) {
       onToast('로그인이 필요한 서비스입니다')
       return
     }
+    // 요청이 끝나기 전에 다시 누르면 무시한다 (화면은 이미 바뀌어 있음)
+    if (toggleBookmark.isPending) return
     toggleBookmark.mutate(
       { contestId: contest.contestId, isBookmarked: contest.isBookmarked },
       {
@@ -58,20 +61,10 @@ function BookmarkButton({ contest, onToast }: ContestCardProps) {
       type="button"
       aria-label="북마크"
       aria-pressed={contest.isBookmarked}
-      disabled={toggleBookmark.isPending}
       onClick={handleClick}
-      className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-full bg-surface shadow-pop disabled:cursor-not-allowed"
+      className={`absolute top-3 right-3 flex size-10 cursor-pointer items-center justify-center rounded-full bg-surface shadow-pop ${contest.isBookmarked ? 'text-primary' : 'text-text-sub'}`}
     >
-      <svg
-        viewBox="0 0 24 24"
-        className={`size-5 ${contest.isBookmarked ? 'text-primary' : 'text-text-sub'}`}
-        fill={contest.isBookmarked ? 'currentColor' : 'none'}
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      >
-        <path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3l-5.6 2.9 1.1-6.2L3 9.6l6.2-.9z" />
-      </svg>
+      <BookmarkIcon filled={contest.isBookmarked} />
     </button>
   )
 }
