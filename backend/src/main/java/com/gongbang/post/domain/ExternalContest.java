@@ -41,4 +41,9 @@ public class ExternalContest {
             String title, Long categoryId, LocalDate deadline, String url) {
         return new ExternalContest(title, categoryId, deadline, url);
     }
+
+    /** PST-002 ⑤: 링크에서 불러온 대표 이미지를 넣는다. 등록이 끝난 뒤 따로 불러오므로 생성 때는 비어 있다. */
+    public void changeImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
 }

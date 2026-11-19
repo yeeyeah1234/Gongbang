@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /** 팀 나가기·강제 퇴장의 확정 인원 감소 (PostCommandService.decreaseCurrentCount, INT-006 ④⑤). */
@@ -35,6 +36,7 @@ class PostDecreaseCountServiceTest {
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private PostCommandService postCommandService;
 
@@ -47,7 +49,8 @@ class PostDecreaseCountServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        eventPublisher);
     }
 
     /** 목표 4명, 확정 currentCount명인 글을 잠금 조회로 돌려준다. */

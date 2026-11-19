@@ -12,6 +12,7 @@ import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.PostCreateRequest;
@@ -28,6 +29,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -44,6 +46,7 @@ class PostCommandServiceTest {
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private PostCommandService postCommandService;
 
@@ -56,7 +59,8 @@ class PostCommandServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        eventPublisher);
     }
 
     private static PostCreateRequest contestRequest(
@@ -322,5 +326,83 @@ class PostCommandServiceTest {
         postCommandService.create(AUTHOR_ID, contestRequest("제목", 4, TODAY, TODAY, " "), TODAY);
 
         assertThat(savedPost().getRelatedUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("외부 공모전 링크를 넣으면 대표 이미지를 불러오도록 postId와 링크를 알린다 (PST-002 ⑤)")
+    void 외부_공모전_링크가_있으면_이미지_불러오기_이벤트를_보낸다() {
+        given(contestQueryService.findCategoryId("IT_SW")).willReturn(Optional.of(1L));
+        givenSaveReturnsId(16L);
+
+        postCommandService.create(
+                AUTHOR_ID, externalRequest(DEADLINE, "https://example.com/hack"), TODAY);
+
+        verify(eventPublisher)
+                .publishEvent(new ExternalContestLinkedEvent(16L, "https://example.com/hack"));
+    }
+
+    @Test
+    @DisplayName("외부 공모전 링크가 없거나 서비스 공모전이면 이미지를 불러오지 않는다")
+    void 링크가_없으면_이미지_불러오기_이벤트를_보내지_않는다() {
+        given(contestQueryService.findCategoryId("IT_SW")).willReturn(Optional.of(1L));
+        givenContestDeadline(DEADLINE);
+        givenSaveReturnsId(17L);
+
+        postCommandService.create(AUTHOR_ID, externalRequest(DEADLINE, null), TODAY);
+        postCommandService.create(AUTHOR_ID, validContestRequest(), TODAY);
+
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    private static RecruitPost externalPost(String url) {
+        RecruitPost post =
+                RecruitPost.withExternalContest(
+                        AUTHOR_ID,
+                        ExternalContest.of("외부 해커톤", 1L, DEADLINE, url),
+                        "제목",
+                        "내용",
+                        4,
+                        TODAY,
+                        TODAY.plusDays(7),
+                        null);
+        ReflectionTestUtils.setField(post, "id", 20L);
+        return post;
+    }
+
+    @Test
+    @DisplayName("불러온 대표 이미지를 외부 공모전에 저장한다")
+    void 불러온_대표_이미지를_저장한다() {
+        RecruitPost post = externalPost("https://example.com/hack");
+        given(recruitPostRepository.findById(20L)).willReturn(Optional.of(post));
+
+        postCommandService.saveExternalImage(
+                20L, "https://example.com/hack", "https://example.com/og.png");
+
+        assertThat(post.getExternalContest().getImageUrl()).isEqualTo("https://example.com/og.png");
+    }
+
+    @Test
+    @DisplayName("불러오는 사이 글이 삭제됐으면 대표 이미지를 저장하지 않는다")
+    void 삭제된_글에는_대표_이미지를_저장하지_않는다() {
+        RecruitPost post = externalPost("https://example.com/hack");
+        post.delete(TODAY.atStartOfDay());
+        given(recruitPostRepository.findById(20L)).willReturn(Optional.of(post));
+
+        postCommandService.saveExternalImage(
+                20L, "https://example.com/hack", "https://example.com/og.png");
+
+        assertThat(post.getExternalContest().getImageUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("글의 공모전 링크와 불러온 링크가 다르면 저장하지 않는다")
+    void 링크가_다르면_대표_이미지를_저장하지_않는다() {
+        RecruitPost post = externalPost("https://example.com/other");
+        given(recruitPostRepository.findById(20L)).willReturn(Optional.of(post));
+
+        postCommandService.saveExternalImage(
+                20L, "https://example.com/hack", "https://example.com/og.png");
+
+        assertThat(post.getExternalContest().getImageUrl()).isNull();
     }
 }

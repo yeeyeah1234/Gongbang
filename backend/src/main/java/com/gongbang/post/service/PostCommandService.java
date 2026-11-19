@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -51,6 +52,7 @@ public class PostCommandService {
     private final PostDetailService postDetailService;
     private final ApplicationCloseService applicationCloseService;
     private final RecruitNotifier recruitNotifier;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * PST-002 모집글 작성. 작성자가 확정 인원 1명인 「모집중」 글을 만든다. 팀은 첫 수락 때 만든다 (INT-006).
@@ -106,7 +108,28 @@ public class PostCommandService {
                             endDate,
                             relatedUrl);
         }
-        return new PostCreateResponse(recruitPostRepository.save(post).getId());
+        Long postId = recruitPostRepository.save(post).getId();
+        // ⑤ 외부 공모전 링크의 대표 이미지는 등록이 커밋된 뒤 따로 불러온다 (ExternalContestImageListener)
+        ExternalContest external = post.getExternalContest();
+        if (external != null && external.getUrl() != null) {
+            eventPublisher.publishEvent(new ExternalContestLinkedEvent(postId, external.getUrl()));
+        }
+        return new PostCreateResponse(postId);
+    }
+
+    /**
+     * PST-002 ⑤: 불러온 대표 이미지를 저장한다. 그사이 글이 지워졌거나 이미 이미지가 있으면 두지 않는다.
+     *
+     * @param pageUrl 이미지를 불러온 공모전 링크. 글의 링크와 다르면 저장하지 않는다.
+     */
+    public void saveExternalImage(Long postId, String pageUrl, String imageUrl) {
+        recruitPostRepository
+                .findById(postId)
+                .filter(post -> post.getDeletedAt() == null)
+                .map(RecruitPost::getExternalContest)
+                .filter(external -> pageUrl.equals(external.getUrl()))
+                .filter(external -> external.getImageUrl() == null)
+                .ifPresent(external -> external.changeImageUrl(imageUrl));
     }
 
     private ExternalContest toExternalContest(PostCreateRequest.External external) {
@@ -120,8 +143,7 @@ public class PostCommandService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INPUT));
         LocalDate deadline = require(external.deadline());
         String url = optionalUrl(external.url());
-        // TODO(확인 필요): 공모전 링크의 대표 이미지(og:image) 불러오기는 라이브러리·SSRF 방어를 정한 뒤 별도 PR로 붙인다
-        // (PST-002 ⑤). 그 전에는 null로 두고 화면은 기본 이미지를 쓴다.
+        // ⑤ 대표 이미지는 등록 뒤 따로 채운다. 그 전이나 못 불러오면 null이고 화면은 기본 이미지를 쓴다.
         return ExternalContest.of(title, categoryId, deadline, url);
     }
 
