@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /** REC-006 수동 모집 완료 (PostCommandService.complete). */
@@ -41,6 +42,7 @@ class PostCompleteServiceTest {
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private PostCommandService postCommandService;
 
@@ -53,7 +55,8 @@ class PostCompleteServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        eventPublisher);
     }
 
     private RecruitPost givenPost() {

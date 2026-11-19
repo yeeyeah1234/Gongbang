@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /** PST-004 모집글 삭제 (PostCommandService.delete). */
@@ -40,6 +41,7 @@ class PostDeleteServiceTest {
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private PostCommandService postCommandService;
 
@@ -52,7 +54,8 @@ class PostDeleteServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        eventPublisher);
     }
 
     private RecruitPost givenPost() {

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /** PST-003 모집글 수정 (PostCommandService.update). */
@@ -44,6 +45,7 @@ class PostUpdateServiceTest {
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private PostCommandService postCommandService;
 
@@ -56,7 +58,8 @@ class PostUpdateServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
-                        recruitNotifier);
+                        recruitNotifier,
+                        eventPublisher);
     }
 
     /** 확정 인원 currentCount명, 목표 4명, 모집 기간 오늘~12/1인 서비스 공모전 글. */

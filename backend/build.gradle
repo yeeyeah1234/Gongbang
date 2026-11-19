@@ -40,6 +40,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
+    // PST-002 ⑤ 외부 공모전 링크의 대표 이미지(og:image) 읽기
+    implementation 'org.jsoup:jsoup:1.18.3'
+
     // Database & Migration
     runtimeOnly 'com.mysql:mysql-connector-j'
     implementation 'org.flywaydb:flyway-core'
