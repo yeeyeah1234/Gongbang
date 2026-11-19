@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -19,6 +20,7 @@ import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
+import com.gongbang.post.dto.MyPostItemResponse;
 import com.gongbang.post.dto.PostListItemResponse;
 import com.gongbang.post.repository.RecruitPostRepository;
 import java.time.LocalDate;
@@ -172,5 +174,40 @@ class PostQueryServiceTest {
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         verify(recruitPostRepository, never()).findByDeletedAtIsNull(any());
+    }
+
+    @Test
+    @DisplayName("내 모집글은 내가 쓴 삭제 안 된 글을 최신순 페이지로 주고, 댓글 수는 아직 0이다 (MY-02)")
+    void 내_모집글을_최신순_페이지로_준다() {
+        RecruitPost post = contestPost(1L, 3L);
+        ReflectionTestUtils.setField(post, "status", PostStatus.COMPLETED);
+        given(recruitPostRepository.findByAuthorIdAndDeletedAtIsNull(any(), any()))
+                .willReturn(new PageImpl<>(List.of(post), PageRequest.of(1, 10), 11));
+
+        PageResponse<MyPostItemResponse> response = postQueryService.getMyPosts(7L, 1, 10);
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(recruitPostRepository).findByAuthorIdAndDeletedAtIsNull(eq(7L), pageable.capture());
+        assertThat(pageable.getValue().getPageNumber()).isEqualTo(1);
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(10);
+        assertThat(pageable.getValue().getSort()).isEqualTo(PostQueryService.LATEST);
+
+        assertThat(response.totalCount()).isEqualTo(11);
+        assertThat(response.hasNext()).isFalse();
+        assertThat(response.items())
+                .containsExactly(
+                        new MyPostItemResponse(
+                                1L, "AI 팀원 모집", post.getCreatedAt(), 0, PostStatus.COMPLETED));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-1, 10", "0, 0", "0, 51"})
+    @DisplayName("내 모집글 페이지 값이 범위를 벗어나면 400 INVALID_INPUT")
+    void 내_모집글_페이지_값이_잘못되면_400(int page, int size) {
+        BusinessException e =
+                assertThrows(
+                        BusinessException.class, () -> postQueryService.getMyPosts(7L, page, size));
+        assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
+        verify(recruitPostRepository, never()).findByAuthorIdAndDeletedAtIsNull(any(), any());
     }
 }

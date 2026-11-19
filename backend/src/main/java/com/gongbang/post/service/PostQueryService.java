@@ -7,6 +7,7 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.RecruitPost;
+import com.gongbang.post.dto.MyPostItemResponse;
 import com.gongbang.post.dto.PostListItemResponse;
 import com.gongbang.post.dto.PostListItemResponse.AuthorInfo;
 import com.gongbang.post.dto.PostListItemResponse.ContestInfo;
@@ -81,6 +82,23 @@ public class PostQueryService {
                                                         post.getAuthorId(),
                                                         nicknames.get(post.getAuthorId()))))
                         .toList();
+        return PageResponse.of(items, page, size, posts.getTotalElements());
+    }
+
+    /**
+     * MY-02 · INT-002 ③ 마이페이지 「내 글 관리」 모집글 탭. 내가 쓴 글(삭제된 글 제외)을 최신순으로 준다 (④).
+     *
+     * <p>TODO(확인 필요): 댓글(김건우 comment)이 develop에 들어오면 글마다 댓글 수를 채운다. 지금은 댓글 테이블이 없어 0이다.
+     */
+    public PageResponse<MyPostItemResponse> getMyPosts(Long memberId, int page, int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        Page<RecruitPost> posts =
+                recruitPostRepository.findByAuthorIdAndDeletedAtIsNull(
+                        memberId, PageRequest.of(page, size, LATEST));
+        List<MyPostItemResponse> items =
+                posts.getContent().stream().map(post -> MyPostItemResponse.of(post, 0)).toList();
         return PageResponse.of(items, page, size, posts.getTotalElements());
     }
 

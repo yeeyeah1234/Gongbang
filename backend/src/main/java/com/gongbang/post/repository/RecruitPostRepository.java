@@ -17,6 +17,9 @@ public interface RecruitPostRepository extends JpaRepository<RecruitPost, Long> 
     /** PST-001: 삭제되지 않은 모집글 (PST-004 소프트 삭제 제외). */
     Page<RecruitPost> findByDeletedAtIsNull(Pageable pageable);
 
+    /** MY-02 내 모집글 (삭제된 글 제외). */
+    Page<RecruitPost> findByAuthorIdAndDeletedAtIsNull(Long authorId, Pageable pageable);
+
     /**
      * 목표·확정 인원을 바꾸는 처리(PST-003 수정, REC-004 수락 등)에서 모집글 행을 잠근다 (SELECT … FOR UPDATE, AGENTS.md 7).
      */
