@@ -69,6 +69,36 @@ class CrawlerKeyFilterTest {
     }
 
     @Test
+    @DisplayName("서버에 크롤러 키가 설정되지 않았으면 어떤 키로도 401 (fail-closed)")
+    void 설정값이_비어_있으면_401() throws Exception {
+        ReflectionTestUtils.setField(crawlerKeyFilter, "crawlerInternalKey", "");
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("POST", "/internal/contests/batch");
+        request.addHeader("X-Crawler-Key", "");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        crawlerKeyFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getContentAsString()).contains("INVALID_INTERNAL_KEY");
+        verifyNoInteractions(filterChain);
+    }
+
+    @Test
+    @DisplayName("키의 앞부분만 맞으면 401")
+    void 키_앞부분만_맞으면_401() throws Exception {
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("POST", "/internal/contests/batch");
+        request.addHeader("X-Crawler-Key", VALID_KEY.substring(0, VALID_KEY.length() - 1));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        crawlerKeyFilter.doFilterInternal(request, response, filterChain);
+
+        assertThat(response.getStatus()).isEqualTo(401);
+        verifyNoInteractions(filterChain);
+    }
+
+    @Test
     @DisplayName("키가 맞으면 체인으로 넘긴다")
     void 키가_맞으면_통과() throws Exception {
         MockHttpServletRequest request =
