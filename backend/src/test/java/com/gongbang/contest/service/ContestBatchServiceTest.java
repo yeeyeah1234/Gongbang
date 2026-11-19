@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import com.gongbang.contest.domain.Category;
 import com.gongbang.contest.domain.Contest;
+import com.gongbang.contest.domain.ContestDeadlineChangedEvent;
 import com.gongbang.contest.dto.ContestBatchItem;
 import com.gongbang.contest.dto.ContestBatchResponse;
 import com.gongbang.contest.repository.CategoryRepository;
@@ -23,6 +25,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ContestBatchServiceTest {
@@ -31,13 +35,16 @@ class ContestBatchServiceTest {
 
     @Mock private CategoryRepository categoryRepository;
 
+    @Mock private ApplicationEventPublisher eventPublisher;
+
     private ContestBatchService contestBatchService;
 
     private final Category planningCategory = mock(Category.class);
 
     @BeforeEach
     void setUp() {
-        contestBatchService = new ContestBatchService(contestRepository, categoryRepository);
+        contestBatchService =
+                new ContestBatchService(contestRepository, categoryRepository, eventPublisher);
     }
 
     private ContestBatchItem item(String sourceUrl, LocalDate deadline) {
@@ -58,6 +65,7 @@ class ContestBatchServiceTest {
         assertThat(result.updated()).isZero();
         assertThat(result.deadlineChanged()).isZero();
         verify(contestRepository).save(any(Contest.class));
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
@@ -81,7 +89,7 @@ class ContestBatchServiceTest {
     }
 
     @Test
-    @DisplayName("이미 있는 sourceUrl이고 마감일이 그대로면 updated만 올린다")
+    @DisplayName("이미 있는 sourceUrl이고 마감일이 그대로면 updated만 올리고 이벤트는 발행하지 않는다")
     void 마감일이_그대로면_deadlineChanged는_올리지_않는다() {
         given(categoryRepository.findByCode("PLANNING")).willReturn(Optional.of(planningCategory));
         Contest existing =
@@ -94,14 +102,16 @@ class ContestBatchServiceTest {
         assertThat(result.created()).isZero();
         assertThat(result.updated()).isEqualTo(1);
         assertThat(result.deadlineChanged()).isZero();
+        verify(eventPublisher, never()).publishEvent(any());
     }
 
     @Test
-    @DisplayName("이미 있는 sourceUrl인데 마감일이 바뀌면 deadlineChanged도 올린다")
+    @DisplayName("이미 있는 sourceUrl인데 마감일이 바뀌면 deadlineChanged를 올리고 새 마감일로 이벤트를 발행한다")
     void 마감일이_바뀌면_deadlineChanged를_올린다() {
         given(categoryRepository.findByCode("PLANNING")).willReturn(Optional.of(planningCategory));
         Contest existing =
                 Contest.create("url-3", planningCategory, item("url-3", LocalDate.of(2026, 12, 6)));
+        ReflectionTestUtils.setField(existing, "id", 3L);
         given(contestRepository.findBySourceUrl("url-3")).willReturn(Optional.of(existing));
 
         ContestBatchResponse result =
@@ -111,5 +121,7 @@ class ContestBatchServiceTest {
         assertThat(result.updated()).isEqualTo(1);
         assertThat(result.deadlineChanged()).isEqualTo(1);
         assertThat(existing.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 20));
+        verify(eventPublisher)
+                .publishEvent(new ContestDeadlineChangedEvent(3L, LocalDate.of(2026, 12, 20)));
     }
 }

@@ -2,6 +2,7 @@ package com.gongbang.contest.service;
 
 import com.gongbang.contest.domain.Category;
 import com.gongbang.contest.domain.Contest;
+import com.gongbang.contest.domain.ContestDeadlineChangedEvent;
 import com.gongbang.contest.dto.ContestBatchItem;
 import com.gongbang.contest.dto.ContestBatchResponse;
 import com.gongbang.contest.repository.CategoryRepository;
@@ -10,6 +11,7 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +21,7 @@ public class ContestBatchService {
 
     private final ContestRepository contestRepository;
     private final CategoryRepository categoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public ContestBatchResponse upsert(Iterable<ContestBatchItem> items) {
@@ -46,13 +49,14 @@ public class ContestBatchService {
             }
 
             Contest contest = existing.get();
-            if (!contest.getEndDate().equals(item.deadline())) {
-                deadlineChanged++;
-                // TODO(확인 필요): CalendarService.upsertAutoEvent(teamId) 호출 (API 명세서 CAL-06, CRW-01
-                // ⑦).
-                // 마감일이 바뀌면 이 공모전에 연결된 팀마다 자동 일정·예약 알림을 갱신한다. 이상현이 만들고 연결하기로 함 (11/13)
-            }
+            boolean deadlineMoved = !contest.getEndDate().equals(item.deadline());
             contest.update(category, item);
+            if (deadlineMoved) {
+                deadlineChanged++;
+                // CRW-01 ⑦, CAL-06: 연결된 팀의 자동 일정·예약 알림 갱신은 캘린더(이상현)가 커밋 후에 받아서 처리한다
+                eventPublisher.publishEvent(
+                        new ContestDeadlineChangedEvent(contest.getId(), contest.getEndDate()));
+            }
             updated++;
         }
 
