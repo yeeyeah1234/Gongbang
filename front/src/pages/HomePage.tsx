@@ -21,11 +21,7 @@ export default function HomePage() {
         <SortSelect value={sort} onChange={setSort} />
       </div>
       <section className="mt-8">
-        <ContestList
-          sort={sort}
-          category={category}
-          onRequireLogin={() => toast.show('로그인이 필요한 서비스입니다')}
-        />
+        <ContestList sort={sort} category={category} onToast={toast.show} />
       </section>
       <Toast message={toast.message} />
     </main>

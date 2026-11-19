@@ -35,17 +35,17 @@ function errorMessageOf(error: unknown) {
 function ContestGrid({
   contests,
   highlight,
-  onRequireLogin,
+  onToast,
 }: {
   contests: ContestCardItem[]
   highlight?: string
-  onRequireLogin: () => void
+  onToast: (message: string) => void
 }) {
   return (
     <ul className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
       {contests.map((contest) => (
         <li key={contest.contestId}>
-          <ContestCard contest={contest} highlight={highlight} onRequireLogin={onRequireLogin} />
+          <ContestCard contest={contest} highlight={highlight} onToast={onToast} />
         </li>
       ))}
     </ul>
@@ -53,7 +53,7 @@ function ContestGrid({
 }
 
 // SRCH-02 ④: 결과가 없으면 안내 문구와 최근 인기 공모전을 추천한다
-function NoResults({ keyword, onRequireLogin }: { keyword: string; onRequireLogin: () => void }) {
+function NoResults({ keyword, onToast }: { keyword: string; onToast: (message: string) => void }) {
   const { data: popular = [] } = usePopularContests(true)
   return (
     <div>
@@ -63,7 +63,7 @@ function NoResults({ keyword, onRequireLogin }: { keyword: string; onRequireLogi
       {popular.length > 0 && (
         <section>
           <h2 className="mb-6 text-heading font-bold">최근 인기 공모전</h2>
-          <ContestGrid contests={popular} onRequireLogin={onRequireLogin} />
+          <ContestGrid contests={popular} onToast={onToast} />
         </section>
       )}
     </div>
@@ -75,13 +75,13 @@ function SearchResults({
   type,
   sort,
   includeClosed,
-  onRequireLogin,
+  onToast,
 }: {
   keyword: string
   type: SearchType
   sort: SearchSort
   includeClosed: boolean
-  onRequireLogin: () => void
+  onToast: (message: string) => void
 }) {
   const { data, isPending, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useSearch({ keyword, type, sort, includeClosed })
@@ -115,12 +115,12 @@ function SearchResults({
   // TODO(확인 필요): 모집글·작성자 결과(SRCH-05 ①)는 모집글 도메인이 생기면 「커뮤니티」 영역으로 함께 보여 준다
   const postCount = data.pages[0].posts.totalCount
   if (contests.length === 0 && postCount === 0) {
-    return <NoResults keyword={keyword} onRequireLogin={onRequireLogin} />
+    return <NoResults keyword={keyword} onToast={onToast} />
   }
 
   return (
     <>
-      <ContestGrid contests={contests} highlight={keyword} onRequireLogin={onRequireLogin} />
+      <ContestGrid contests={contests} highlight={keyword} onToast={onToast} />
       <div ref={sentinelRef} aria-hidden="true" className="h-1" />
     </>
   )
@@ -196,7 +196,7 @@ export default function SearchPage() {
           type={type}
           sort={sort}
           includeClosed={includeClosed}
-          onRequireLogin={() => toast.show('로그인이 필요한 서비스입니다')}
+          onToast={toast.show}
         />
       </section>
       <Toast message={toast.message} />

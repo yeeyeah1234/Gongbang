@@ -2,7 +2,7 @@ import { useState, type MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { Badge } from '../../../components/ui/Badge'
 import { Highlight } from '../../search/components/Highlight'
-import { useIsLoggedIn, useToggleBookmark } from '../hooks'
+import { bookmarkErrorMessage, useIsLoggedIn, useToggleBookmark } from '../hooks'
 import type { ContestCardItem } from '../types'
 
 // D-day 배지는 마감 7일 이내면 빨갛게 (STYLE_GUIDE 5-3)
@@ -27,22 +27,30 @@ export function DefaultThumbnail() {
 
 interface ContestCardProps {
   contest: ContestCardItem
-  // MAIN-06 ③: 비로그인 사용자가 북마크를 누르면 부르는 함수 (토스트는 페이지가 띄운다)
-  onRequireLogin: () => void
+  // MAIN-06 ③④: 비로그인 안내·북마크 실패 문구를 토스트로 띄우는 함수 (토스트는 페이지가 띄운다)
+  onToast: (message: string) => void
   // SRCH-02 ③: 검색 결과에서 제목·주최의 검색어를 강조한다
   highlight?: string
 }
 
-function BookmarkButton({ contest, onRequireLogin }: ContestCardProps) {
+function BookmarkButton({ contest, onToast }: ContestCardProps) {
   const toggleBookmark = useToggleBookmark()
   const isLoggedIn = useIsLoggedIn()
 
   const handleClick = () => {
     if (!isLoggedIn) {
-      onRequireLogin()
+      onToast('로그인이 필요한 서비스입니다')
       return
     }
-    toggleBookmark.mutate({ contestId: contest.contestId, isBookmarked: contest.isBookmarked })
+    toggleBookmark.mutate(
+      { contestId: contest.contestId, isBookmarked: contest.isBookmarked },
+      {
+        onError: (error) => {
+          const message = bookmarkErrorMessage(error, contest.isBookmarked)
+          if (message) onToast(message)
+        },
+      },
+    )
   }
 
   return (
@@ -69,7 +77,7 @@ function BookmarkButton({ contest, onRequireLogin }: ContestCardProps) {
 }
 
 // MAIN-06 공모전 카드. 마감된 공모전은 MAIN-03 ③대로 「마감됨」 배지 + 어둡게.
-export function ContestCard({ contest, onRequireLogin, highlight }: ContestCardProps) {
+export function ContestCard({ contest, onToast, highlight }: ContestCardProps) {
   const navigate = useNavigate()
   const [imageFailed, setImageFailed] = useState(false)
   const showImage = contest.thumbnailUrl && !imageFailed
@@ -125,7 +133,7 @@ export function ContestCard({ contest, onRequireLogin, highlight }: ContestCardP
           <Highlight text={contest.host} keyword={highlight} />
         </p>
       </div>
-      <BookmarkButton contest={contest} onRequireLogin={onRequireLogin} />
+      <BookmarkButton contest={contest} onToast={onToast} />
     </article>
   )
 }

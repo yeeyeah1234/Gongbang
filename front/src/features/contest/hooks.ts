@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { getApiError } from '../../api/errors'
 import { useAuthStore, useIsLoggedIn as useAuthIsLoggedIn } from '../auth/store'
 import { fetchCategories, fetchContest, fetchContests, updateBookmark } from './api'
 import type { ContestSort } from './types'
@@ -81,4 +82,15 @@ export function useToggleBookmark() {
       void queryClient.invalidateQueries({ queryKey: ['search'] })
     },
   })
+}
+
+// MAIN-06 ④·MAIN-02 ④: 북마크 요청이 실패했을 때 띄울 문구. 서버 문구가 있으면 그걸 쓰고,
+// 로그인이 풀린 경우(401)는 공통 axios가 로그인 화면으로 보내므로(AUTH-12 ③) 띄우지 않는다(null).
+export function bookmarkErrorMessage(error: unknown, wasBookmarked: boolean): string | null {
+  const { code, message } = getApiError(error)
+  if (code === 'UNAUTHORIZED') return null
+  if (message) return message
+  return wasBookmarked
+    ? '북마크를 해제하지 못했어요. 잠시 후 다시 시도해 주세요'
+    : '북마크하지 못했어요. 잠시 후 다시 시도해 주세요'
 }
