@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { getErrorMessage } from '../../../api/errors'
 import { Button } from '../../../components/ui/Button'
 import { Modal } from '../../../components/ui/Modal'
@@ -12,6 +12,10 @@ interface ApplicantManagerProps {
   // 서버가 막은 이유를 페이지 토스트로 띄운다 (REC-004 ③, PST-006 ⑧)
   onError: (message: string) => void
 }
+
+// INT-003 ①: 새 지원 알림은 「상세 주소?applicants=open」으로 와서 지원자 관리 모달을 바로 연다 (RecruitNotifier)
+const OPEN_PARAM = 'applicants'
+const OPEN_VALUE = 'open'
 
 const TABS: { status: ApplicantStatus; label: string }[] = [
   { status: 'PENDING', label: '대기' },
@@ -30,7 +34,20 @@ function displayName(applicant: Applicant) {
 
 // REC-003 지원자 관리 / Figma 03-6·04-1. 작성자 패널의 「지원자 관리 (대기 N)」 버튼과 모달.
 export function ApplicantManager({ post, onError }: ApplicantManagerProps) {
-  const [open, setOpen] = useState(false)
+  // 모달이 열려 있는지는 주소 표시로 정한다. 알림을 눌러 같은 상세로 다시 와도 열린다.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const open = searchParams.get(OPEN_PARAM) === OPEN_VALUE
+  const setOpen = (next: boolean) =>
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        if (next) params.set(OPEN_PARAM, OPEN_VALUE)
+        else params.delete(OPEN_PARAM)
+        return params
+      },
+      // 열고 닫을 때마다 방문 기록을 쌓지 않는다
+      { replace: true },
+    )
   // 대기 인원은 버튼에도 보이므로 모달을 열기 전부터 불러온다 (PST-006 ⑥)
   const pending = useApplicants(post.postId, 'PENDING')
   const pendingCount = pending.data?.counts.pending
