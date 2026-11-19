@@ -6,7 +6,7 @@ import { ContestCard } from './ContestCard'
 interface ContestListProps {
   sort: ContestSort
   category?: string
-  onRequireLogin: () => void
+  onToast: (message: string) => void
 }
 
 function StatusMessage({ children }: { children: string }) {
@@ -44,7 +44,7 @@ function ContestListSkeleton() {
 }
 
 // MAIN-01 공모전 목록 + MAIN-03 ① 로딩·빈 화면. 아래로 내리면 다음 20개를 불러온다(무한 스크롤).
-export function ContestList({ sort, category, onRequireLogin }: ContestListProps) {
+export function ContestList({ sort, category, onToast }: ContestListProps) {
   const { data, isPending, isError, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useContestList({ sort, category })
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -80,7 +80,7 @@ export function ContestList({ sort, category, onRequireLogin }: ContestListProps
       <ul className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
         {contests.map((contest) => (
           <li key={contest.contestId}>
-            <ContestCard contest={contest} onRequireLogin={onRequireLogin} />
+            <ContestCard contest={contest} onToast={onToast} />
           </li>
         ))}
       </ul>

@@ -12,6 +12,7 @@ import {
   useContestDetail,
   useIsLoggedIn,
   useToggleBookmark,
+  bookmarkErrorMessage,
   useViewer,
 } from '../features/contest/hooks'
 import { sanitizeDescription } from '../features/contest/sanitizeDescription'
@@ -105,6 +106,10 @@ export default function ContestDetailPage() {
             contestKeys.detail(contest.contestId, viewer),
             (old) => (old ? { ...old, isBookmarked: result.isBookmarked } : old),
           ),
+        onError: (error) => {
+          const message = bookmarkErrorMessage(error, contest.isBookmarked)
+          if (message) toast.show(message)
+        },
       },
     )
   }
