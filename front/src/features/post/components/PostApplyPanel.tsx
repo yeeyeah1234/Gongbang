@@ -10,6 +10,7 @@ import { todayString } from '../postForm'
 import type { PostDetail } from '../types'
 import { ApplicantManager } from './ApplicantManager'
 import { LoginRequiredModal } from './LoginRequiredModal'
+import { PostCompleteButton } from './PostCompleteButton'
 
 interface PostApplyPanelProps {
   post: PostDetail
@@ -94,9 +95,14 @@ function PanelAction({ post, onError }: PostApplyPanelProps) {
 
   switch (post.myStatus) {
     case 'AUTHOR':
-      // ⑥⑦⑩ 작성자는 모집완료·기간 종료 뒤에도 지원자 관리를 그대로 쓴다 (수락·거절은 종료일 뒤에도 가능, REC-001)
-      // TODO(확인 필요): REC-006 「모집 완료」 버튼은 다음 PR에서 이 아래에 붙인다
-      return <ApplicantManager post={post} onError={onError} />
+      // ⑥ 작성자: 「지원자 관리 (대기 N)」, 「모집 완료」.
+      // ⑦⑩ 모집완료·기간 종료 뒤에도 지원자 관리는 그대로 쓰고, 모집 완료는 모집중일 때만 (REC-006 ③)
+      return (
+        <div className="flex flex-col gap-3">
+          <ApplicantManager post={post} onError={onError} />
+          {post.status === 'RECRUITING' && <PostCompleteButton post={post} onError={onError} />}
+        </div>
+      )
     case 'LEFT':
       return <Notice>팀에서 나간 모집글입니다</Notice> // ⑨
     case 'ACCEPTED':
