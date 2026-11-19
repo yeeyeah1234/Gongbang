@@ -8,6 +8,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
+import com.gongbang.post.dto.MyPostDeleteResponse;
 import com.gongbang.post.dto.PostCompleteResponse;
 import com.gongbang.post.dto.PostCreateRequest;
 import com.gongbang.post.dto.PostCreateResponse;
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -204,6 +206,25 @@ public class PostCommandService {
         closedApplicantIds.forEach(
                 applicantId -> recruitNotifier.postDeleted(post, applicantId, memberId));
         // TODO(확인 필요): 팀 초대(team_invitation, 김건우·김수형)가 생기면 이 글의 PENDING 초대를 CANCELED로 바꾼다 (④).
+    }
+
+    /**
+     * MY-02 ③⑥ 내 모집글 선택 삭제. 고른 글마다 PST-004와 같은 규칙으로 처리하고(소프트 삭제, 대기 지원 CLOSED·알림), 하나라도 내 글이 아니거나
+     * 없으면 그 에러(403 NOT_POST_AUTHOR · 404 POST_NOT_FOUND)로 전체를 되돌린다. 같은 ID는 한 번만 지우고, 여러 행을 잠글 때 순서가
+     * 엇갈리지 않게 ID 순으로 잠근다.
+     */
+    public MyPostDeleteResponse deleteMine(Long memberId, List<Long> postIds) {
+        return deleteMine(memberId, postIds, LocalDateTime.now(KST));
+    }
+
+    MyPostDeleteResponse deleteMine(Long memberId, List<Long> postIds, LocalDateTime now) {
+        // List.of()로 만든 목록은 contains(null)이 예외를 던지므로 하나씩 본다
+        if (postIds == null || postIds.isEmpty() || postIds.stream().anyMatch(Objects::isNull)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        List<Long> ids = postIds.stream().distinct().sorted().toList();
+        ids.forEach(postId -> delete(memberId, postId, now));
+        return new MyPostDeleteResponse(ids.size());
     }
 
     /**
