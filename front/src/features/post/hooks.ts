@@ -5,6 +5,7 @@ import {
   applyToPost,
   cancelApplication,
   createPost,
+  deletePost,
   fetchPost,
   fetchPosts,
   updatePost,
@@ -15,7 +16,8 @@ export const POST_PAGE_SIZE = 20
 
 export const postKeys = {
   all: ['posts'] as const,
-  list: (page: number) => [...postKeys.all, 'list', page] as const,
+  lists: () => [...postKeys.all, 'list'] as const,
+  list: (page: number) => [...postKeys.lists(), page] as const,
   details: () => [...postKeys.all, 'detail'] as const,
   detail: (postId: number, viewer: string) => [...postKeys.details(), postId, viewer] as const,
 }
@@ -91,5 +93,14 @@ export function useUpdatePost() {
   return useMutation({
     mutationFn: updatePost,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.all }),
+  })
+}
+
+// PST-004 삭제. 목록으로 가므로 목록만 다시 불러온다 (지운 글의 상세를 다시 부르면 404가 난다).
+export function useDeletePost() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: deletePost,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.lists() }),
   })
 }

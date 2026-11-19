@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Toast } from '../../components/ui/Toast'
 import { DDayBadge, DefaultThumbnail } from '../../features/contest/components/ContestCard'
+import { PostDeleteButton } from '../../features/post/components/PostDeleteButton'
 import { PostApplyPanel, StatusBadge } from '../../features/post/components/PostApplyPanel'
 import { usePostDetail } from '../../features/post/hooks'
 import { isHttpUrl } from '../../features/post/postForm'
@@ -65,7 +66,7 @@ export default function PostDetailPage() {
 
           <div className="mt-8 flex items-start justify-between gap-6">
             <h1 className="min-w-0 text-title font-bold break-words text-text">{post.title}</h1>
-            {/* ② PST-003 ① 작성자에게만 제목 줄 오른쪽 [수정] (모집중·모집완료 모두). [삭제]는 PST-004에서 옆에 붙인다 */}
+            {/* ② 작성자에게만 제목 줄 오른쪽 [수정] [삭제] (PST-003 ①, PST-004 ①, 모집중·모집완료 모두) */}
             {post.myStatus === 'AUTHOR' && (
               <div className="flex shrink-0 gap-2 pt-1">
                 <Link
@@ -74,6 +75,7 @@ export default function PostDetailPage() {
                 >
                   수정
                 </Link>
+                <PostDeleteButton post={post} onError={toast.show} />
               </div>
             )}
           </div>
