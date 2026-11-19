@@ -129,3 +129,8 @@ export interface ApplicationAcceptResponse {
   targetCount: number
   postStatus: PostDetail['status']
 }
+
+// REC-006 모집 완료 응답: 자동으로 거절된 대기 지원 수
+export interface PostCompleteResponse {
+  autoRejectedCount: number
+}

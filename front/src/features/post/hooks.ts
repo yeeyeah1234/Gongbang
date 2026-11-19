@@ -5,6 +5,7 @@ import {
   acceptApplication,
   applyToPost,
   cancelApplication,
+  completePost,
   createPost,
   deletePost,
   fetchApplicants,
@@ -132,4 +133,11 @@ export function useAcceptApplication() {
 export function useRejectApplication() {
   const refresh = useRefreshPosts()
   return useMutation({ mutationFn: rejectApplication, onSettled: refresh })
+}
+
+// REC-006 모집 완료. 상세(상태)·목록·지원자 목록이 모두 바뀌므로 posts 전체를 다시 불러온다.
+// 이미 모집완료(409)여도 화면이 서버와 달라졌을 수 있어 다시 불러온다.
+export function useCompletePost() {
+  const refresh = useRefreshPosts()
+  return useMutation({ mutationFn: completePost, onSettled: refresh })
 }

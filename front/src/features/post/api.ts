@@ -7,6 +7,7 @@ import type {
   ApplicationCreateResponse,
   PostCreateRequest,
   PostCreateResponse,
+  PostCompleteResponse,
   PostDetail,
   PostListItem,
   PostUpdateRequest,
@@ -76,4 +77,12 @@ export async function acceptApplication(applicationId: number) {
 // REC-005 지원자 거절 (작성자)
 export async function rejectApplication(applicationId: number) {
   await apiClient.patch(`/api/applications/${applicationId}/reject`)
+}
+
+// REC-006 모집 완료 (작성자). 남은 대기 지원은 서버가 자동으로 거절한다.
+export async function completePost(postId: number) {
+  const response = await apiClient.patch<ApiResponse<PostCompleteResponse>>(
+    `/api/posts/${postId}/complete`,
+  )
+  return response.data.data
 }
