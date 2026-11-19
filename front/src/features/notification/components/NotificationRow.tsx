@@ -28,10 +28,15 @@ export function NotificationRow({
   const remove = useDeleteNotification()
   const [inviteResult, setInviteResult] = useState<string | null>(null)
 
-  const open = () => {
-    if (!item.isRead) markRead.mutate(item.notificationId)
-    onNavigate?.()
-    navigate(item.linkUrl)
+  const open = async () => {
+    if (markRead.isPending) return
+    try {
+      if (!item.isRead) await markRead.mutateAsync(item.notificationId)
+      onNavigate?.()
+      navigate(item.linkUrl)
+    } catch (error) {
+      onError?.(getErrorMessage(error, '알림을 읽음 처리하지 못했어요. 다시 시도해 주세요'))
+    }
   }
 
   // ④ 팀 초대: [수락] [거절] [모집글 보기]
@@ -75,7 +80,12 @@ export function NotificationRow({
         {CATEGORY_LABEL[item.category]}
       </span>
       <div className="min-w-0 flex-1">
-        <button type="button" onClick={open} className="block w-full cursor-pointer text-left">
+        <button
+          type="button"
+          onClick={open}
+          disabled={markRead.isPending}
+          className="block w-full cursor-pointer text-left"
+        >
           <p
             className={[
               'text-small text-text',

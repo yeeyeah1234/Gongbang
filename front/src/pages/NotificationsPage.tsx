@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { getErrorMessage } from '../api/errors'
 import { Button } from '../components/ui/Button'
 import { Chip } from '../components/ui/Chip'
 import { Toast } from '../components/ui/Toast'
@@ -39,7 +40,21 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-title font-bold text-text">알림</h1>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => markAll.mutate()}>
+          <Button
+            variant="outline"
+            size="sm"
+            loading={markAll.isPending}
+            disabled={unread.data === 0}
+            onClick={() =>
+              markAll.mutate(undefined, {
+                onSuccess: () => toast.show('모든 알림을 읽음 처리했어요'),
+                onError: (error) =>
+                  toast.show(
+                    getErrorMessage(error, '알림을 읽음 처리하지 못했어요. 다시 시도해 주세요'),
+                  ),
+              })
+            }
+          >
             모두 읽음
           </Button>
           <Button

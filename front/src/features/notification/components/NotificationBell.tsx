@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
+import { getErrorMessage } from '../../../api/errors'
 import { useMarkAllRead, useRecentNotifications, useUnreadCount } from '../hooks'
 import { NotificationRow } from './NotificationRow'
 
@@ -76,7 +77,15 @@ export function NotificationBell({ onError }: { onError?: (message: string) => v
             <span className="text-body font-bold text-text">알림 {count > 0 ? count : ''}</span>
             <button
               type="button"
-              onClick={() => markAll.mutate()}
+              disabled={markAll.isPending || count === 0}
+              onClick={() =>
+                markAll.mutate(undefined, {
+                  onError: (error) =>
+                    onError?.(
+                      getErrorMessage(error, '알림을 읽음 처리하지 못했어요. 다시 시도해 주세요'),
+                    ),
+                })
+              }
               className="cursor-pointer text-caption text-text-sub hover:text-text"
             >
               모두 읽음

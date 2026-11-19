@@ -1,4 +1,11 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from '@tanstack/react-query'
+import type { PageResponse } from '../../api/types'
 import { useIsLoggedIn } from '../auth/store'
 import {
   deleteNotification,
@@ -8,7 +15,7 @@ import {
   markAllRead,
   markRead,
 } from './api'
-import type { NotificationCategory } from './types'
+import type { NotificationCategory, NotificationItem } from './types'
 
 export const notificationKeys = {
   all: ['notifications'] as const,
@@ -58,13 +65,46 @@ function useInvalidateAll() {
 }
 
 export function useMarkRead() {
-  const invalidate = useInvalidateAll()
-  return useMutation({ mutationFn: markRead, onSuccess: invalidate })
+  const syncRead = useSyncRead()
+  return useMutation({ mutationFn: markRead, onSuccess: (_, id) => syncRead(id) })
 }
 
 export function useMarkAllRead() {
-  const invalidate = useInvalidateAll()
-  return useMutation({ mutationFn: markAllRead, onSuccess: invalidate })
+  const syncRead = useSyncRead()
+  return useMutation({ mutationFn: markAllRead, onSuccess: () => syncRead() })
+}
+
+// 서버 저장 성공 뒤 캐시를 먼저 갱신한다. 진행 중인 이전 조회가 읽음 표시를 되돌리지 않게 취소한다.
+function useSyncRead() {
+  const client = useQueryClient()
+  return async (id?: number) => {
+    await client.cancelQueries({ queryKey: notificationKeys.all })
+    let wasUnread = false
+    const updatePage = (page: PageResponse<NotificationItem>, unreadOnly = false) => {
+      const items = page.items.map((item) => {
+        if (id !== undefined && item.notificationId !== id) return item
+        if (!item.isRead) wasUnread = true
+        return { ...item, isRead: true }
+      })
+      return { ...page, items: unreadOnly ? items.filter((item) => !item.isRead) : items }
+    }
+    client.setQueryData<PageResponse<NotificationItem>>(notificationKeys.recent, (page) =>
+      page ? updatePage(page) : page,
+    )
+    for (const [key] of client.getQueriesData({ queryKey: ['notifications', 'list'] })) {
+      const filter = key[2] as { unreadOnly: boolean }
+      client.setQueryData<InfiniteData<PageResponse<NotificationItem>>>(key, (data) =>
+        data
+          ? { ...data, pages: data.pages.map((page) => updatePage(page, filter.unreadOnly)) }
+          : data,
+      )
+    }
+    client.setQueryData<number>(notificationKeys.unread, (count) =>
+      id === undefined ? 0 : count === undefined ? count : Math.max(0, count - (wasUnread ? 1 : 0)),
+    )
+    // 그동안 도착한 새 알림과 페이지 정보는 서버 값으로 다시 맞춘다.
+    await client.invalidateQueries({ queryKey: notificationKeys.all })
+  }
 }
 
 export function useDeleteNotification() {
