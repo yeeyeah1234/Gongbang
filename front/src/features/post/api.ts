@@ -1,6 +1,9 @@
 import { apiClient } from '../../api/client'
 import type { ApiResponse, PageResponse } from '../../api/types'
 import type {
+  ApplicantList,
+  ApplicantStatus,
+  ApplicationAcceptResponse,
   ApplicationCreateResponse,
   PostCreateRequest,
   PostCreateResponse,
@@ -51,4 +54,26 @@ export async function applyToPost(postId: number) {
 // REC-002 지원 취소 (지원자 본인)
 export async function cancelApplication(applicationId: number) {
   await apiClient.delete(`/api/applications/${applicationId}`)
+}
+
+// REC-003 지원자 목록 (작성자). 먼저 지원한 순.
+export async function fetchApplicants(params: { postId: number; status: ApplicantStatus }) {
+  const response = await apiClient.get<ApiResponse<ApplicantList>>(
+    `/api/posts/${params.postId}/applications`,
+    { params: { status: params.status } },
+  )
+  return response.data.data
+}
+
+// REC-004 지원자 수락 (작성자)
+export async function acceptApplication(applicationId: number) {
+  const response = await apiClient.patch<ApiResponse<ApplicationAcceptResponse>>(
+    `/api/applications/${applicationId}/accept`,
+  )
+  return response.data.data
+}
+
+// REC-005 지원자 거절 (작성자)
+export async function rejectApplication(applicationId: number) {
+  await apiClient.patch(`/api/applications/${applicationId}/reject`)
 }

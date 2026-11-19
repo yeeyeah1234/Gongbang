@@ -2,14 +2,18 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { fetchContests } from '../contest/api'
 import { useViewer } from '../contest/hooks'
 import {
+  acceptApplication,
   applyToPost,
   cancelApplication,
   createPost,
   deletePost,
+  fetchApplicants,
   fetchPost,
   fetchPosts,
+  rejectApplication,
   updatePost,
 } from './api'
+import type { ApplicantStatus } from './types'
 
 // PST-001 ⑦: 20개씩 페이지로 나눈다
 export const POST_PAGE_SIZE = 20
@@ -20,6 +24,10 @@ export const postKeys = {
   list: (page: number) => [...postKeys.lists(), page] as const,
   details: () => [...postKeys.all, 'detail'] as const,
   detail: (postId: number, viewer: string) => [...postKeys.details(), postId, viewer] as const,
+  // 지원자 목록도 posts 아래에 두어, 지원·취소·수락·거절 때 한 번에 다시 불러온다
+  applicants: (postId: number) => [...postKeys.all, 'applicants', postId] as const,
+  applicantTab: (postId: number, status: ApplicantStatus) =>
+    [...postKeys.applicants(postId), status] as const,
 }
 
 // PST-001 모집글 목록. 페이지를 넘길 때 앞 페이지를 잠깐 그대로 보여 줘서 표가 깜빡이지 않게 한다.
@@ -103,4 +111,25 @@ export function useDeletePost() {
     mutationFn: deletePost,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.lists() }),
   })
+}
+
+// REC-003 지원자 목록 (작성자만). 탭마다 따로 불러오고, 탭 인원 수는 응답의 counts를 쓴다.
+export function useApplicants(postId: number, status: ApplicantStatus, enabled = true) {
+  return useQuery({
+    queryKey: postKeys.applicantTab(postId, status),
+    queryFn: () => fetchApplicants({ postId, status }),
+    enabled,
+  })
+}
+
+// REC-004·005: 수락·거절하면 지원자 목록과 상세(모집 인원·상태)를 함께 다시 불러온다.
+// 실패(이미 처리됨, 정원 초과)해도 화면이 서버와 달라졌을 수 있어 다시 불러온다.
+export function useAcceptApplication() {
+  const refresh = useRefreshPosts()
+  return useMutation({ mutationFn: acceptApplication, onSettled: refresh })
+}
+
+export function useRejectApplication() {
+  const refresh = useRefreshPosts()
+  return useMutation({ mutationFn: rejectApplication, onSettled: refresh })
 }

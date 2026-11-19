@@ -13,11 +13,14 @@ import com.gongbang.application.dto.ApplicantListResponse;
 import com.gongbang.application.repository.ApplicationRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.domain.Member;
+import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.service.PostQueryService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,12 +40,14 @@ class ApplicantQueryServiceTest {
 
     @Mock private ApplicationRepository applicationRepository;
     @Mock private PostQueryService postQueryService;
+    @Mock private MemberService memberService;
 
     private ApplicantQueryService applicantQueryService;
 
     @BeforeEach
     void setUp() {
-        applicantQueryService = new ApplicantQueryService(applicationRepository, postQueryService);
+        applicantQueryService =
+                new ApplicantQueryService(applicationRepository, postQueryService, memberService);
     }
 
     private void givenPost() {
@@ -97,6 +102,37 @@ class ApplicantQueryServiceTest {
                 .containsExactly(1L, 2L);
         assertThat(response.items().get(0).member().memberId()).isEqualTo(20L);
         assertThat(response.items().get(0).createdAt()).isEqualTo(first);
+    }
+
+    @Test
+    @DisplayName("지원자 프로필은 회원 정보로 채우고, 탈퇴한 회원은 닉네임 없이 ID만 준다")
+    void 지원자_프로필을_채우고_탈퇴_회원은_비운다() {
+        givenPost();
+        LocalDateTime first = LocalDateTime.of(2026, 11, 13, 9, 0);
+        given(
+                        applicationRepository.findByPostIdAndStatusOrderByCreatedAtAscIdAsc(
+                                POST_ID, ApplicationStatus.PENDING))
+                .willReturn(
+                        List.of(
+                                application(1L, 20L, first),
+                                application(2L, 21L, first.plusMinutes(5))));
+        given(applicationRepository.countByStatus(POST_ID)).willReturn(List.of());
+        Member active = Member.createEmailMember("a@test.local", "hash", "홍길동");
+        ReflectionTestUtils.setField(active, "profileImageUrl", "https://img.test/a.png");
+        ReflectionTestUtils.setField(active, "major", "컴퓨터공학");
+        ReflectionTestUtils.setField(active, "bio", "Spring 경험");
+        given(memberService.findActiveMember(20L)).willReturn(Optional.of(active));
+        given(memberService.findActiveMember(21L)).willReturn(Optional.empty());
+
+        ApplicantListResponse response =
+                applicantQueryService.getApplicants(AUTHOR_ID, POST_ID, "PENDING");
+
+        assertThat(response.items().get(0).member())
+                .isEqualTo(
+                        new ApplicantListResponse.MemberInfo(
+                                20L, "홍길동", "https://img.test/a.png", "컴퓨터공학", "Spring 경험"));
+        assertThat(response.items().get(1).member())
+                .isEqualTo(new ApplicantListResponse.MemberInfo(21L, null, null, null, null));
     }
 
     @Test

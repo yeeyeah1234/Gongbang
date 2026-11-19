@@ -8,6 +8,7 @@ import com.gongbang.application.dto.ApplicantListResponse.MemberInfo;
 import com.gongbang.application.repository.ApplicationRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.service.PostQueryService;
 import java.util.EnumMap;
@@ -33,6 +34,7 @@ public class ApplicantQueryService {
 
     private final ApplicationRepository applicationRepository;
     private final PostQueryService postQueryService;
+    private final MemberService memberService;
 
     /**
      * REC-003 지원자 목록. 작성자만 본다 (403 NOT_POST_AUTHOR). 탭별 인원 수와 고른 탭의 지원자를 먼저 지원한 순으로 준다.
@@ -53,18 +55,27 @@ public class ApplicantQueryService {
                         .stream()
                         .map(
                                 application ->
-                                        Item.of(
-                                                application,
-                                                // TODO(확인 필요): 회원 도메인(정진우)이 생기면 닉네임·프로필 사진·전공·한 줄
-                                                // 소개를 한 번에 읽어 채운다 (③, INT-002 ①). 지금은 ID만 준다.
-                                                new MemberInfo(
-                                                        application.getApplicantId(),
-                                                        null,
-                                                        null,
-                                                        null,
-                                                        null)))
+                                        Item.of(application, member(application.getApplicantId())))
                         .toList();
         return new ApplicantListResponse(counts(postId), items);
+    }
+
+    /**
+     * 지원자 프로필 (③, INT-002 ①). 탈퇴·삭제 회원은 닉네임을 비워 화면이 「탈퇴한 사용자」로 보여 주게 한다. TODO(확인 필요): 회원 도메인(정진우)에
+     * 여러 명을 한 번에 읽는 메서드가 생기면 바꾼다. 지금은 한 명씩 읽는다.
+     */
+    private MemberInfo member(Long memberId) {
+        return memberService
+                .findActiveMember(memberId)
+                .map(
+                        m ->
+                                new MemberInfo(
+                                        memberId,
+                                        m.getNickname(),
+                                        m.getProfileImageUrl(),
+                                        m.getMajor(),
+                                        m.getBio()))
+                .orElseGet(() -> new MemberInfo(memberId, null, null, null, null));
     }
 
     private Counts counts(Long postId) {

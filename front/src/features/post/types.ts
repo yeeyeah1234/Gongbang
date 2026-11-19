@@ -97,3 +97,35 @@ export interface PostUpdateRequest {
   relatedUrl?: string
   content?: string
 }
+
+// REC-003 지원자 목록 탭
+export type ApplicantStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED'
+
+export interface ApplicantMember {
+  memberId: number
+  // 탈퇴 회원은 null → 「탈퇴한 사용자」
+  nickname: string | null
+  profileImageUrl: string | null
+  major: string | null
+  bio: string | null
+}
+
+export interface Applicant {
+  applicationId: number
+  member: ApplicantMember
+  // 지원 일시
+  createdAt: string
+}
+
+export interface ApplicantList {
+  counts: { pending: number; accepted: number; rejected: number }
+  items: Applicant[]
+}
+
+// REC-004 수락 응답
+export interface ApplicationAcceptResponse {
+  teamId: number
+  currentCount: number
+  targetCount: number
+  postStatus: PostDetail['status']
+}

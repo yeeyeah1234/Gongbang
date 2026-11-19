@@ -8,6 +8,7 @@ import { useIsLoggedIn } from '../../auth/store'
 import { useApplyToPost, useCancelApplication } from '../hooks'
 import { todayString } from '../postForm'
 import type { PostDetail } from '../types'
+import { ApplicantManager } from './ApplicantManager'
 import { LoginRequiredModal } from './LoginRequiredModal'
 
 interface PostApplyPanelProps {
@@ -93,9 +94,9 @@ function PanelAction({ post, onError }: PostApplyPanelProps) {
 
   switch (post.myStatus) {
     case 'AUTHOR':
-      // ⑥ 지원자 관리·모집 완료 버튼은 REC-003·REC-006 화면과 함께 붙인다
-      // TODO(확인 필요): 다음 PR에서 「지원자 관리 (대기 N)」, 「모집 완료」 추가
-      return null
+      // ⑥⑦⑩ 작성자는 모집완료·기간 종료 뒤에도 지원자 관리를 그대로 쓴다 (수락·거절은 종료일 뒤에도 가능, REC-001)
+      // TODO(확인 필요): REC-006 「모집 완료」 버튼은 다음 PR에서 이 아래에 붙인다
+      return <ApplicantManager post={post} onError={onError} />
     case 'LEFT':
       return <Notice>팀에서 나간 모집글입니다</Notice> // ⑨
     case 'ACCEPTED':

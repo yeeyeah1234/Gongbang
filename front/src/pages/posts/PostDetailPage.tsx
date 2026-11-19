@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Toast } from '../../components/ui/Toast'
 import { DDayBadge, DefaultThumbnail } from '../../features/contest/components/ContestCard'
+import { MemberPhoto } from '../../features/post/components/MemberPhoto'
 import { PostDeleteButton } from '../../features/post/components/PostDeleteButton'
 import { PostApplyPanel, StatusBadge } from '../../features/post/components/PostApplyPanel'
 import { usePostDetail } from '../../features/post/hooks'
@@ -208,7 +209,11 @@ function AuthorLine({ post }: { post: PostDetail }) {
         to={`/members/${post.author.memberId}`}
         className="inline-flex items-center gap-2 font-bold text-text hover:underline"
       >
-        <AuthorPhoto url={post.author.profileImageUrl} nickname={nickname} />
+        <MemberPhoto
+          url={post.author.profileImageUrl}
+          nickname={nickname}
+          className="size-8 text-caption"
+        />
         {nickname}
       </Link>
       <span aria-hidden="true">·</span>
@@ -216,28 +221,6 @@ function AuthorLine({ post }: { post: PostDetail }) {
       <span aria-hidden="true">·</span>
       <span>조회 {post.viewCount.toLocaleString()}</span>
     </div>
-  )
-}
-
-function AuthorPhoto({ url, nickname }: { url: string | null; nickname: string }) {
-  const [failed, setFailed] = useState(false)
-  if (url && !failed) {
-    return (
-      <img
-        src={url}
-        alt=""
-        onError={() => setFailed(true)}
-        className="size-8 rounded-full object-cover"
-      />
-    )
-  }
-  return (
-    <span
-      aria-hidden="true"
-      className="flex size-8 items-center justify-center rounded-full bg-surface-sub text-caption font-bold text-text-sub"
-    >
-      {nickname.slice(0, 1)}
-    </span>
   )
 }
 
