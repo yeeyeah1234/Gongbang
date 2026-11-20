@@ -96,6 +96,7 @@ app:
   # 보내는 사람 주소. 비우면 MAIL_USERNAME(이메일 형식일 때)을 쓴다
   mail-from: ${MAIL_FROM:}
   # MY-01 프로필 사진을 저장하는 폴더 (깃에 안 올라감). 배포 서버에서는 지워지지 않는 경로로
+  profile-storage: ${PROFILE_STORAGE:local}
   upload-dir: ${UPLOAD_DIR:./uploads}
   # 로컬 개발: MAIL_HOST가 비어 있으면 인증번호를 메일 대신 화면에 보여 준다. 배포 서버에서는 꼭 MAIL_DEV_CODE=false
   # 기본은 꺼짐: 메일 설정이 없으면 화면에 번호를 채우지 않고 「메일을 보내지 못했어요」로 알린다
