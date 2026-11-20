@@ -127,7 +127,7 @@ export default function MyBookmarksPage() {
       </div>
 
       {isLoading ? (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-4">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="h-72 animate-pulse rounded-card bg-surface-sub" />
           ))}
@@ -149,7 +149,7 @@ export default function MyBookmarksPage() {
         </div>
       ) : (
         <>
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))] gap-4">
             {items.map((c) => (
               // ④ 마감된 공모전은 뒤로 + 딤드 + [마감됨]
               <article
