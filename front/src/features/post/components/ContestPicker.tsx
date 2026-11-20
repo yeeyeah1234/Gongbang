@@ -161,6 +161,10 @@ function ContestSearch({
           id="post-contest-results"
           role="listbox"
           aria-busy={searching}
+          // Safari는 버튼을 눌러도 버튼에 포커스를 주지 않아 입력칸 blur의 relatedTarget이 null이 된다.
+          // 그러면 click 전에 목록이 닫혀 결과를 고를 수 없으므로, 목록을 누를 때는 포커스를 입력칸에 그대로 둔다
+          // (스크롤바를 눌러도 닫히지 않는다). Tab으로 항목에 옮겨 가는 것은 그대로 된다.
+          onMouseDown={(event) => event.preventDefault()}
           className="absolute top-full right-0 left-0 z-10 mt-2 max-h-[360px] overflow-y-auto rounded-popover border border-line bg-surface py-2 shadow-pop"
         >
           {results.map((contest) => (
