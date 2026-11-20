@@ -6,21 +6,13 @@ import com.gongbang.member.domain.Member;
 import com.gongbang.member.dto.MyProfileResponse;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * MY-01 ③ 프로필 사진 (JPG·PNG 5MB 이하). 파일 업로드 모듈이 생기기 전까지 서버 폴더(app.upload-dir)에 저장하고
- * /uploads/profile/... 주소로 보여 준다.
- */
+/** MY-01 ③ 프로필 사진 (JPG·PNG 5MB 이하). 설정에 따라 로컬 폴더 또는 S3 공개 버킷에 저장한다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,8 +23,7 @@ public class ProfileImageService {
 
     private final MemberService memberService;
 
-    @Value("${app.upload-dir:./uploads}")
-    private String uploadDir;
+    private final ProfileImageStorage storage;
 
     @Transactional
     public MyProfileResponse change(Long memberId, MultipartFile file) {
@@ -49,38 +40,50 @@ public class ProfileImageService {
         }
 
         Member member = memberService.getActiveMember(memberId);
-        String fileName = memberId + "-" + UUID.randomUUID() + "." + ext;
-        Path dir = profileDir();
+        String oldUrl = member.getProfileImageUrl();
+        String newUrl;
         try {
-            Files.createDirectories(dir);
-            file.transferTo(dir.resolve(fileName));
-        } catch (IOException e) {
-            log.warn("프로필 사진 저장 실패 memberId={}", memberId);
+            newUrl = storage.store(memberId, ext, file);
+        } catch (IOException | RuntimeException e) {
+            log.warn("Profile image upload failed memberId={}", memberId);
             throw new BusinessException(
                     ErrorCode.INTERNAL_SERVER_ERROR, "사진을 올리지 못했어요. 잠시 후 다시 시도해 주세요");
         }
-        deleteOldFile(member.getProfileImageUrl());
-        member.changeProfileImage(URL_PREFIX + fileName);
-        return memberService.getMyProfile(memberId);
-    }
+        boolean synchronizedTransaction =
+                org.springframework.transaction.support.TransactionSynchronizationManager
+                        .isSynchronizationActive();
+        if (synchronizedTransaction) {
+            org.springframework.transaction.support.TransactionSynchronizationManager
+                    .registerSynchronization(
+                            new org.springframework.transaction.support
+                                    .TransactionSynchronization() {
+                                @Override
+                                public void afterCommit() {
+                                    deleteOldFile(oldUrl);
+                                }
 
-    private Path profileDir() {
-        return Paths.get(uploadDir, "profile").toAbsolutePath().normalize();
-    }
-
-    /** 예전 사진이 우리 서버에 올린 파일이면 지운다 (다른 주소는 건드리지 않음) */
-    void deleteOldFile(String oldUrl) {
-        if (oldUrl == null || !oldUrl.startsWith(URL_PREFIX)) {
-            return;
-        }
-        String name = oldUrl.substring(URL_PREFIX.length());
-        if (name.contains("/") || name.contains("\\") || name.contains("..")) {
-            return;
+                                @Override
+                                public void afterCompletion(int status) {
+                                    if (status == STATUS_ROLLED_BACK) deleteOldFile(newUrl);
+                                }
+                            });
         }
         try {
-            Files.deleteIfExists(profileDir().resolve(name));
-        } catch (IOException e) {
-            log.warn("예전 프로필 사진 삭제 실패");
+            member.changeProfileImage(newUrl);
+            MyProfileResponse response = memberService.getMyProfile(memberId);
+            if (!synchronizedTransaction) deleteOldFile(oldUrl);
+            return response;
+        } catch (RuntimeException e) {
+            if (!synchronizedTransaction) deleteOldFile(newUrl);
+            throw e;
+        }
+    }
+
+    void deleteOldFile(String url) {
+        try {
+            storage.delete(url);
+        } catch (IOException | RuntimeException e) {
+            log.warn("Profile image cleanup failed");
         }
     }
 

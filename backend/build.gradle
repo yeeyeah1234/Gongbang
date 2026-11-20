@@ -25,6 +25,8 @@ repositories {
 }
 
 dependencies {
+    // MY-01 Garage profile image storage
+    implementation 'software.amazon.awssdk:s3:2.29.52'
     // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

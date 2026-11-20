@@ -13,7 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.util.ReflectionTestUtils;
 
 /** MY-01 ③ 프로필 사진: JPG·PNG만, 5MB 이하, 올리면 바로 프로필 사진 주소가 바뀌고 예전 파일은 지운다 */
 class ProfileImageServiceTest {
@@ -32,8 +31,9 @@ class ProfileImageServiceTest {
     @BeforeEach
     void setUp() {
         memberService = mock(MemberService.class);
-        service = new ProfileImageService(memberService);
-        ReflectionTestUtils.setField(service, "uploadDir", dir.toString());
+        service =
+                new ProfileImageService(
+                        memberService, new LocalProfileImageStorage(dir.toString()));
         member = Member.createEmailMember("a@b.com", "hash", "테스터");
         when(memberService.getActiveMember(1L)).thenReturn(member);
     }
@@ -72,5 +72,67 @@ class ProfileImageServiceTest {
         System.arraycopy(PNG, 0, big, 0, PNG.length);
         MockMultipartFile file = new MockMultipartFile("file", "big.png", "image/png", big);
         assertThatThrownBy(() -> service.change(1L, file)).isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void rollbackDeletesNewImageAndPreservesOldImage() throws Exception {
+        var storage = mock(ProfileImageStorage.class);
+        service = new ProfileImageService(memberService, storage);
+        member.changeProfileImage("old");
+        when(storage.store(
+                        org.mockito.ArgumentMatchers.eq(1L),
+                        org.mockito.ArgumentMatchers.eq("png"),
+                        org.mockito.ArgumentMatchers.any()))
+                .thenReturn("new");
+        org.springframework.transaction.support.TransactionSynchronizationManager
+                .initSynchronization();
+        try {
+            service.change(1L, new MockMultipartFile("file", "a.png", "image/png", PNG));
+            org.mockito.Mockito.verify(storage, org.mockito.Mockito.never())
+                    .delete(org.mockito.ArgumentMatchers.any());
+            for (var sync :
+                    org.springframework.transaction.support.TransactionSynchronizationManager
+                            .getSynchronizations())
+                sync.afterCompletion(
+                        org.springframework.transaction.support.TransactionSynchronization
+                                .STATUS_ROLLED_BACK);
+            org.mockito.Mockito.verify(storage).delete("new");
+            org.mockito.Mockito.verify(storage, org.mockito.Mockito.never()).delete("old");
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager
+                    .clearSynchronization();
+        }
+    }
+
+    @Test
+    void deletesOldImageOnlyAfterCommit() throws Exception {
+        var storage = mock(ProfileImageStorage.class);
+        service = new ProfileImageService(memberService, storage);
+        member.changeProfileImage("old");
+        when(storage.store(
+                        org.mockito.ArgumentMatchers.eq(1L),
+                        org.mockito.ArgumentMatchers.eq("png"),
+                        org.mockito.ArgumentMatchers.any()))
+                .thenReturn("new");
+        org.springframework.transaction.support.TransactionSynchronizationManager
+                .initSynchronization();
+        try {
+            service.change(1L, new MockMultipartFile("file", "a.png", "image/png", PNG));
+            org.mockito.Mockito.verify(storage, org.mockito.Mockito.never())
+                    .delete(org.mockito.ArgumentMatchers.any());
+            for (var sync :
+                    org.springframework.transaction.support.TransactionSynchronizationManager
+                            .getSynchronizations()) {
+                sync.afterCommit();
+                sync.afterCompletion(
+                        org.springframework.transaction.support.TransactionSynchronization
+                                .STATUS_COMMITTED);
+            }
+            org.mockito.Mockito.verify(storage).delete("old");
+            org.mockito.Mockito.verify(storage, org.mockito.Mockito.never()).delete("new");
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager
+                    .clearSynchronization();
+        }
     }
 }
