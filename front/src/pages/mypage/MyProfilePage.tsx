@@ -660,7 +660,7 @@ function ProfileEditCard({
               </span>
             ))}
           </div>
-          <div className="mt-2 flex gap-2">
+          <div className="mt-2 flex min-w-0 flex-col gap-2 sm:flex-row">
             <input
               id="edit-tag"
               value={tagInput}
@@ -673,9 +673,9 @@ function ProfileEditCard({
                   addTag()
                 }
               }}
-              className="h-11 flex-1 rounded-input border border-line-input bg-surface px-4 text-body focus:border-2 focus:border-primary focus:outline-none"
+              className="h-11 w-full min-w-0 rounded-input border border-line-input bg-surface px-4 text-body focus:border-2 focus:border-primary focus:outline-none sm:flex-1"
             />
-            <Button variant="outline" onClick={addTag}>
+            <Button variant="outline" onClick={addTag} className="w-full sm:w-auto">
               + 태그 추가
             </Button>
           </div>

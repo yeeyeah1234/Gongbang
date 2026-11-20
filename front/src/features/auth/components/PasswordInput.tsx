@@ -1,4 +1,5 @@
 import { useState, type InputHTMLAttributes } from 'react'
+import { removeHangul } from '../passwordRules'
 
 interface PasswordInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> {
   label: string
@@ -30,9 +31,11 @@ export function PasswordInput({
   errorText,
   successText,
   className = '',
+  onChange,
   ...props
 }: PasswordInputProps) {
   const [visible, setVisible] = useState(false)
+  const [hangulBlocked, setHangulBlocked] = useState(false)
   return (
     <div className="flex flex-col">
       <label htmlFor={id} className="mb-2 text-body font-bold text-text">
@@ -50,6 +53,13 @@ export function PasswordInput({
             className,
           ].join(' ')}
           {...props}
+          onChange={(event) => {
+            const original = event.currentTarget.value
+            const filtered = removeHangul(original)
+            setHangulBlocked(original !== filtered)
+            event.currentTarget.value = filtered
+            onChange?.(event)
+          }}
         />
         <button
           type="button"
@@ -61,6 +71,11 @@ export function PasswordInput({
         </button>
       </div>
       {errorText && <p className="mt-2 text-small text-danger">{errorText}</p>}
+      {hangulBlocked && (
+        <p role="status" className="mt-2 text-small text-danger">
+          비밀번호에는 한글을 사용할 수 없어요.
+        </p>
+      )}
       {!errorText && successText && <p className="mt-2 text-small text-success">{successText}</p>}
     </div>
   )

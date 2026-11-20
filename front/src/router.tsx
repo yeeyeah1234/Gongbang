@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
 import { RequireLogin } from './features/auth/RequireLogin'
+import { RequireGuest } from './features/auth/RequireGuest'
 import FindEmailPage from './pages/auth/FindEmailPage'
 import FindPasswordPage from './pages/auth/FindPasswordPage'
 import LoginPage from './pages/auth/LoginPage'
@@ -52,14 +53,19 @@ export const router = createBrowserRouter([
       // PST-005 모집글 상세 (비회원도 본다. /posts/new는 아래 로그인 그룹이 먼저 받는다)
       { path: '/posts/:postId', element: <PostDetailPage /> },
       // 정진우 AUTH (로그인 화면 경로 /login, 돌아갈 주소는 ?redirect=)
-      { path: '/login', element: <LoginPage /> },
-      { path: '/signup', element: <SignupPage /> },
+      {
+        element: <RequireGuest />,
+        children: [
+          { path: '/login', element: <LoginPage /> },
+          { path: '/signup', element: <SignupPage /> },
+          { path: '/signup/social', element: <SocialSignupPage /> },
+        ],
+      },
       { path: '/find-email', element: <FindEmailPage /> },
       { path: '/find-password', element: <FindPasswordPage /> },
       { path: '/restore', element: <RestorePage /> },
       // AUTH-10 간편 로그인: 백엔드가 돌려보내는 곳, 처음 온 계정의 추가 정보 입력
       { path: '/oauth/callback', element: <OAuthCallbackPage /> },
-      { path: '/signup/social', element: <SocialSignupPage /> },
       // MY-05 공개 프로필
       { path: '/members/:memberId', element: <PublicProfilePage /> },
       {

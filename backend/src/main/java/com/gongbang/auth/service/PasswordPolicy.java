@@ -10,6 +10,7 @@ public final class PasswordPolicy {
     private static final Pattern LETTER = Pattern.compile("[A-Za-z]");
     private static final Pattern DIGIT = Pattern.compile("[0-9]");
     private static final Pattern SPECIAL = Pattern.compile("[^A-Za-z0-9\\s]");
+    private static final Pattern HANGUL = Pattern.compile("\\p{IsHangul}");
 
     private PasswordPolicy() {}
 
@@ -17,6 +18,7 @@ public final class PasswordPolicy {
         if (password == null
                 || password.length() < 8
                 || password.length() > 20
+                || HANGUL.matcher(password).find()
                 || !LETTER.matcher(password).find()
                 || !DIGIT.matcher(password).find()
                 || !SPECIAL.matcher(password).find()) {

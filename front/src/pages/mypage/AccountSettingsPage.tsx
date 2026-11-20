@@ -37,7 +37,10 @@ export default function AccountSettingsPage() {
 
   return (
     <MyPageLayout breadcrumb="마이페이지 / 계정 설정" title="계정 설정">
-      <div className="flex gap-10 border-b border-divider" role="tablist">
+      <div
+        className="grid grid-cols-3 gap-2 border-b border-divider sm:flex sm:gap-10"
+        role="tablist"
+      >
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -52,7 +55,24 @@ export default function AccountSettingsPage() {
                 : 'border-transparent text-text-sub',
             ].join(' ')}
           >
-            {t.label}
+            <span className="inline-flex flex-col items-center text-small whitespace-nowrap sm:block sm:text-subheading">
+              {t.key === 'withdraw' ? (
+                <>
+                  회원<span className="hidden sm:inline"> </span>
+                  <span className="sm:inline">탈퇴</span>
+                </>
+              ) : t.key === 'password' ? (
+                <>
+                  비밀번호<span className="hidden sm:inline"> </span>
+                  <span className="sm:inline">변경</span>
+                </>
+              ) : (
+                <>
+                  알림 수신<span className="hidden sm:inline"> </span>
+                  <span className="sm:inline">설정</span>
+                </>
+              )}
+            </span>
           </button>
         ))}
       </div>

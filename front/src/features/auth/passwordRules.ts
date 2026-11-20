@@ -3,7 +3,8 @@ export function passwordChecks(password: string, current?: string) {
   const checks = [
     { label: '8~20자', ok: password.length >= 8 && password.length <= 20 },
     { label: '영문, 숫자 포함', ok: /[A-Za-z]/.test(password) && /[0-9]/.test(password) },
-    { label: '특수문자 포함', ok: /[^A-Za-z0-9\s]/.test(password) },
+    { label: '특수문자 포함', ok: /[^A-Za-z0-9\s]/.test(removeHangul(password)) },
+    { label: '한글 사용 불가', ok: password === removeHangul(password) },
   ]
   if (current !== undefined) {
     checks.push({ label: '현재 비밀번호와 다름', ok: password.length > 0 && password !== current })
@@ -22,4 +23,7 @@ export function isNicknameFormatValid(nickname: string) {
 
 export function isEmailFormatValid(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+}
+export function removeHangul(password: string) {
+  return password.replace(/\p{Script=Hangul}/gu, '')
 }
