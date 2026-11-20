@@ -18,6 +18,7 @@ import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.team.service.TeamService;
+import com.gongbang.workspace.calendar.service.CalendarService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,7 @@ class TeamJoinServiceTest {
     @Mock private TeamService teamService;
     @Mock private ApplicationCloseService applicationCloseService;
     @Mock private RecruitNotifier recruitNotifier;
+    @Mock private CalendarService calendarService;
 
     private TeamJoinService teamJoinService;
 
@@ -51,7 +53,11 @@ class TeamJoinServiceTest {
     void setUp() {
         teamJoinService =
                 new TeamJoinService(
-                        postCommandService, teamService, applicationCloseService, recruitNotifier);
+                        postCommandService,
+                        teamService,
+                        applicationCloseService,
+                        recruitNotifier,
+                        calendarService);
     }
 
     /** 목표 targetCount명, 확정 currentCount명인 글을 잠금 조회로 돌려준다. */
@@ -83,6 +89,8 @@ class TeamJoinServiceTest {
         TeamJoinResult result = teamJoinService.join(POST_ID, MEMBER_ID, NOW);
 
         verify(teamService).addMember(TEAM_ID, MEMBER_ID);
+        // CAL-06: 팀을 만들 때 공모전 마감 자동 일정을 넣는다
+        verify(calendarService).upsertAutoEvent(TEAM_ID);
         assertThat(result).isEqualTo(new TeamJoinResult(TEAM_ID, 2, 4, PostStatus.RECRUITING));
         assertThat(post.getCurrentCount()).isEqualTo(2);
         verifyNoInteractions(applicationCloseService);
@@ -97,6 +105,8 @@ class TeamJoinServiceTest {
         TeamJoinResult result = teamJoinService.join(POST_ID, MEMBER_ID, NOW);
 
         verify(teamService, never()).createTeam(anyLong(), anyString(), anyLong());
+        // 자동 일정은 팀을 만들 때 한 번만 넣는다
+        verify(calendarService, never()).upsertAutoEvent(anyLong());
         verify(teamService).addMember(TEAM_ID, MEMBER_ID);
         assertThat(result.currentCount()).isEqualTo(3);
     }
