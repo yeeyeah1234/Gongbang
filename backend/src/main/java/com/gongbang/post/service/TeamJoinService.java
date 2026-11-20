@@ -6,6 +6,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.team.service.TeamService;
+import com.gongbang.workspace.calendar.service.CalendarService;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class TeamJoinService {
     private final TeamService teamService;
     private final ApplicationCloseService applicationCloseService;
     private final RecruitNotifier recruitNotifier;
+    private final CalendarService calendarService;
 
     /**
      * memberId를 이 글 팀의 확정 팀원으로 넣는다. 첫 확정이면 팀을 만들고 작성자를 팀장으로 넣는다 (INT-006 ①). 확정 인원이 목표에 닿으면 자동
@@ -72,8 +74,8 @@ public class TeamJoinService {
         Long teamId =
                 teamService.createTeam(post.getId(), teamName(post.getTitle()), post.getAuthorId());
         // TODO(확인 필요): 김건우 채팅이 생기면 여기서 팀 채팅방을 만든다 (INT-006 ①).
-        // TODO(확인 필요): 이상현 캘린더가 생기면 CalendarService.upsertAutoEvent(teamId)로 공모전 마감 자동 일정을 넣는다
-        // (CAL-06, API 명세서).
+        // CAL-06: 공모전 마감 자동 일정. 이 트랜잭션에 합류하고, 마감일이 없으면 아무것도 하지 않는다 (예외 없음)
+        calendarService.upsertAutoEvent(teamId);
         return teamId;
     }
 
