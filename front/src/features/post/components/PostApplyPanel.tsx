@@ -174,7 +174,7 @@ function ApplyButton({ post, onError }: PostApplyPanelProps) {
 
 // ③ 지원 대기: 「지원 완료」 표시와 「지원 취소」 (REC-002)
 function PendingActions({ post, onError }: PostApplyPanelProps) {
-  const cancel = useCancelApplication()
+  const cancel = useCancelApplication(post.postId)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const confirm = () => {
