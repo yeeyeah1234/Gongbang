@@ -14,7 +14,7 @@ import {
   rejectApplication,
   updatePost,
 } from './api'
-import type { ApplicantStatus } from './types'
+import type { ApplicantList, ApplicantStatus, PostDetail } from './types'
 
 // PST-001 ⑦: 20개씩 페이지로 나눈다
 export const POST_PAGE_SIZE = 20
@@ -40,12 +40,15 @@ export function usePostList(page: number) {
   })
 }
 
-// PST-002 작성. 등록하면 목록을 다시 불러오게 한다.
+// PST-002 작성. 등록하면 목록을 새로 받게 한다.
+// 다시 불러오기를 기다리지 않는다: 기다리면 그동안 요청이 「진행 중」으로 남아 화면 이동이 늦어진다 (테스트 서버는 왕복 약 0.5초)
 export function useCreatePost() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: createPost,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.all }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: postKeys.lists() })
+    },
   })
 }
 
@@ -80,28 +83,90 @@ export function usePostDetail(postId: number) {
   })
 }
 
-// REC-001·002: 지원하거나 취소하면 상세(버튼 상태)와 목록을 다시 불러온다
-function useRefreshPosts() {
+// 요청이 끝나면 서버 응답으로 캐시를 바로 고치고, 다시 불러오기는 기다리지 않고 뒤에서 돌린다.
+// 다시 불러오기를 기다리면 그동안 요청이 「진행 중」으로 남아 모달이 늦게 닫힌다 (테스트 서버는 왕복 약 0.5초).
+// 실패(이미 처리됨, 정원 초과 등)해도 화면이 서버와 달라졌을 수 있어 다시 불러온다.
+function usePostCache() {
   const queryClient = useQueryClient()
-  return () => queryClient.invalidateQueries({ queryKey: postKeys.all })
+  return {
+    refresh: () => {
+      void queryClient.invalidateQueries({ queryKey: postKeys.all })
+    },
+    // 상세 키에는 보는 사람이 들어 있어서 그 글의 상세를 모두 고친다
+    patchDetail: (postId: number, patch: (post: PostDetail) => Partial<PostDetail>) =>
+      queryClient.setQueriesData<PostDetail>(
+        { queryKey: [...postKeys.details(), postId] },
+        (post) => (post ? { ...post, ...patch(post) } : post),
+      ),
+    patchApplicants: (
+      postId: number,
+      status: ApplicantStatus,
+      patch: (list: ApplicantList) => ApplicantList,
+    ) =>
+      queryClient.setQueryData<ApplicantList>(postKeys.applicantTab(postId, status), (list) =>
+        list ? patch(list) : list,
+      ),
+  }
 }
 
+// 대기 탭에서 처리한 지원자를 빼고, 탭 인원 수를 옮긴다 (REC-003 ②)
+function movePending(list: ApplicantList, applicationId: number, to: 'accepted' | 'rejected') {
+  if (!list.items.some((item) => item.applicationId === applicationId)) return list
+  return {
+    items: list.items.filter((item) => item.applicationId !== applicationId),
+    counts: {
+      ...list.counts,
+      pending: Math.max(0, list.counts.pending - 1),
+      [to]: list.counts[to] + 1,
+    },
+  }
+}
+
+// 다른 탭은 목록을 갖고 있지 않으니 인원 수만 옮긴다
+function moveCount(list: ApplicantList, to: 'accepted' | 'rejected', amount = 1) {
+  return {
+    ...list,
+    counts: {
+      ...list.counts,
+      pending: Math.max(0, list.counts.pending - amount),
+      [to]: list.counts[to] + amount,
+    },
+  }
+}
+
+// REC-001 지원하기: 응답의 지원 ID로 「지원 완료」·「지원 취소」 상태로 바꾼다
 export function useApplyToPost() {
-  const refresh = useRefreshPosts()
-  return useMutation({ mutationFn: applyToPost, onSettled: refresh })
+  const cache = usePostCache()
+  return useMutation({
+    mutationFn: applyToPost,
+    onSuccess: ({ applicationId }, postId) => {
+      cache.patchDetail(postId, () => ({ myStatus: 'PENDING', myApplicationId: applicationId }))
+    },
+    onSettled: cache.refresh,
+  })
 }
 
-export function useCancelApplication() {
-  const refresh = useRefreshPosts()
-  return useMutation({ mutationFn: cancelApplication, onSettled: refresh })
+// REC-002 지원 취소: 「지원하기」 상태로 돌아간다
+export function useCancelApplication(postId: number) {
+  const cache = usePostCache()
+  return useMutation({
+    mutationFn: cancelApplication,
+    onSuccess: () => {
+      cache.patchDetail(postId, () => ({ myStatus: 'NONE', myApplicationId: null }))
+    },
+    onSettled: cache.refresh,
+  })
 }
 
-// PST-003 수정. 저장하면 목록·상세를 다시 불러오게 한다.
+// PST-003 수정. 응답이 상세 전체라서 그 값으로 상세를 바꾸고 바로 상세로 돌아간다.
 export function useUpdatePost() {
-  const queryClient = useQueryClient()
+  const cache = usePostCache()
   return useMutation({
     mutationFn: updatePost,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.all }),
+    onSuccess: (updated, { postId }) => {
+      cache.patchDetail(postId, () => updated)
+    },
+    onSettled: cache.refresh,
   })
 }
 
@@ -110,7 +175,9 @@ export function useDeletePost() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: deletePost,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: postKeys.lists() }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: postKeys.lists() })
+    },
   })
 }
 
@@ -123,21 +190,57 @@ export function useApplicants(postId: number, status: ApplicantStatus, enabled =
   })
 }
 
-// REC-004·005: 수락·거절하면 지원자 목록과 상세(모집 인원·상태)를 함께 다시 불러온다.
-// 실패(이미 처리됨, 정원 초과)해도 화면이 서버와 달라졌을 수 있어 다시 불러온다.
-export function useAcceptApplication() {
-  const refresh = useRefreshPosts()
-  return useMutation({ mutationFn: acceptApplication, onSettled: refresh })
+// REC-004 수락: 모집 인원·상태는 응답 값으로, 지원자는 대기 탭에서 수락 탭으로 옮긴다
+export function useAcceptApplication(postId: number) {
+  const cache = usePostCache()
+  return useMutation({
+    mutationFn: acceptApplication,
+    onSuccess: ({ currentCount, targetCount, postStatus }, applicationId) => {
+      cache.patchDetail(postId, () => ({ currentCount, targetCount, status: postStatus }))
+      cache.patchApplicants(postId, 'PENDING', (list) =>
+        movePending(list, applicationId, 'accepted'),
+      )
+      cache.patchApplicants(postId, 'ACCEPTED', (list) => moveCount(list, 'accepted'))
+      cache.patchApplicants(postId, 'REJECTED', (list) => moveCount(list, 'accepted'))
+    },
+    onSettled: cache.refresh,
+  })
 }
 
-export function useRejectApplication() {
-  const refresh = useRefreshPosts()
-  return useMutation({ mutationFn: rejectApplication, onSettled: refresh })
+// REC-005 거절: 지원자를 대기 탭에서 거절 탭으로 옮긴다. 모집 인원은 그대로다.
+export function useRejectApplication(postId: number) {
+  const cache = usePostCache()
+  return useMutation({
+    mutationFn: rejectApplication,
+    onSuccess: (_, applicationId) => {
+      cache.patchApplicants(postId, 'PENDING', (list) =>
+        movePending(list, applicationId, 'rejected'),
+      )
+      cache.patchApplicants(postId, 'ACCEPTED', (list) => moveCount(list, 'rejected'))
+      cache.patchApplicants(postId, 'REJECTED', (list) => moveCount(list, 'rejected'))
+    },
+    onSettled: cache.refresh,
+  })
 }
 
-// REC-006 모집 완료. 상세(상태)·목록·지원자 목록이 모두 바뀌므로 posts 전체를 다시 불러온다.
-// 이미 모집완료(409)여도 화면이 서버와 달라졌을 수 있어 다시 불러온다.
+// REC-006 모집 완료: 상태를 모집완료로 바꾸고, 남은 대기 지원은 거절로 옮긴다 (④)
 export function useCompletePost() {
-  const refresh = useRefreshPosts()
-  return useMutation({ mutationFn: completePost, onSettled: refresh })
+  const cache = usePostCache()
+  return useMutation({
+    mutationFn: completePost,
+    onSuccess: ({ autoRejectedCount }, postId) => {
+      cache.patchDetail(postId, () => ({ status: 'COMPLETED' }))
+      cache.patchApplicants(postId, 'PENDING', (list) => ({
+        items: [],
+        counts: { ...list.counts, pending: 0, rejected: list.counts.rejected + autoRejectedCount },
+      }))
+      cache.patchApplicants(postId, 'ACCEPTED', (list) =>
+        moveCount(list, 'rejected', autoRejectedCount),
+      )
+      cache.patchApplicants(postId, 'REJECTED', (list) =>
+        moveCount(list, 'rejected', autoRejectedCount),
+      )
+    },
+    onSettled: cache.refresh,
+  })
 }

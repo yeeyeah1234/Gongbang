@@ -73,8 +73,8 @@ function ApplicantModal({
   const [tab, setTab] = useState<ApplicantStatus>('PENDING')
   const [confirm, setConfirm] = useState<Confirm | null>(null)
   const list = useApplicants(post.postId, tab)
-  const accept = useAcceptApplication()
-  const reject = useRejectApplication()
+  const accept = useAcceptApplication(post.postId)
+  const reject = useRejectApplication(post.postId)
   // REC-004 ③ 정원이 차면 수락 버튼을 바로 막는다 (서버도 409 POST_FULL로 막는다)
   const full = post.currentCount >= post.targetCount
   const counts = list.data?.counts
