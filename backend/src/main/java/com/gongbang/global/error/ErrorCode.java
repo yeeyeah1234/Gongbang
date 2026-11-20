@@ -148,6 +148,9 @@ public enum ErrorCode {
     ALREADY_TEAM_MEMBER(HttpStatus.CONFLICT, "ALREADY_TEAM_MEMBER", "이미 이 팀의 팀원이에요"),
     // REC-002 ④ 문구
     ALREADY_PROCESSED(HttpStatus.CONFLICT, "ALREADY_PROCESSED", "이미 처리된 지원이에요"),
+    // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (NTC-05, 고정 동시 요청으로 팀당 고정 1개 UNIQUE 위반)
+    NOTICE_PIN_CONFLICT(
+            HttpStatus.CONFLICT, "NOTICE_PIN_CONFLICT", "다른 공지가 방금 고정됐어요. 새로고침 후 다시 시도해 주세요"),
 
     // 429 Too Many Requests
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", "요청 횟수를 초과했습니다."),
