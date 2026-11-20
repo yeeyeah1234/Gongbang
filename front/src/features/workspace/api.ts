@@ -2,11 +2,9 @@ import { apiClient } from '../../api/client'
 import type { ApiResponse } from '../../api/types'
 import type { PinnedNotice, WorkspaceSummary } from './types'
 
-// WS-02 헤더 정보. 팀원이 아니면 403 NOT_TEAM_MEMBER
+// WS-02 헤더 정보 (GET /api/teams/{teamId}). 팀원이 아니면 403 NOT_TEAM_MEMBER
 export async function fetchWorkspaceSummary(teamId: number) {
-  return (
-    await apiClient.get<ApiResponse<WorkspaceSummary>>(`/api/teams/${teamId}/workspace-summary`)
-  ).data.data
+  return (await apiClient.get<ApiResponse<WorkspaceSummary>>(`/api/teams/${teamId}`)).data.data
 }
 
 // NTC-05 고정 공지 배너. 없으면 null

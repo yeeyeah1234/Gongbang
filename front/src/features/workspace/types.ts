@@ -11,7 +11,7 @@ export const WORKSPACE_TABS: ReadonlyArray<{ key: WorkspaceTabKey; label: string
   { key: 'notice', label: '공지' },
 ]
 
-// GET /api/teams/{teamId}/workspace-summary (WS-02 헤더)
+// GET /api/teams/{teamId} (WS-02 헤더)
 export interface WorkspaceSummary {
   teamId: number
   teamName: string

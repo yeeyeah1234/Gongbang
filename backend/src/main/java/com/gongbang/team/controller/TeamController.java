@@ -17,8 +17,8 @@ public class TeamController {
 
     private final TeamQueryService teamQueryService;
 
-    /** WS-02 워크스페이스 헤더 (명세서에 없어 추가): 팀원만. */
-    @GetMapping("/api/teams/{teamId}/workspace-summary")
+    /** WS-02 워크스페이스 헤더 (API 명세서 GET /api/teams/{teamId}): 팀원만. */
+    @GetMapping("/api/teams/{teamId}")
     public ApiResponse<WorkspaceSummaryResponse> getWorkspaceSummary(
             @AuthenticationPrincipal LoginMember me, @PathVariable Long teamId) {
         return ApiResponse.success(teamQueryService.getWorkspaceSummary(teamId, me.getMemberId()));
