@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from 'react-router'
+import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { SiteLayout } from './components/layout/SiteLayout'
 import ContestDetailPage from './pages/ContestDetailPage'
 import HomePage from './pages/HomePage'
@@ -23,6 +23,21 @@ import PostDetailPage from './pages/posts/PostDetailPage'
 import PostEditPage from './pages/posts/PostEditPage'
 import PostListPage from './pages/posts/PostListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
+import { WorkspaceLayout } from './features/workspace/components/WorkspaceLayout'
+import { WorkspacePlaceholder } from './features/workspace/components/WorkspacePlaceholder'
+
+// 개발 서버에서만 쓰는 화면. 배포 빌드에서는 import.meta.env.DEV가 false라 import 자체가 빠진다
+const devRoutes: RouteObject[] = import.meta.env.DEV
+  ? [
+      {
+        // WS-02 헤더·탭·배너를 백엔드·로그인 없이 본다
+        path: '/dev/workspace-preview/:tab?',
+        lazy: async () => ({
+          Component: (await import('./pages/dev/WorkspacePreviewPage')).default,
+        }),
+      },
+    ]
+  : []
 
 export const router = createBrowserRouter([
   {
@@ -68,4 +83,26 @@ export const router = createBrowserRouter([
   },
   // 워크스페이스는 사이트 GNB 없이 자기 헤더를 쓴다 (WS-02 ②)
   { path: '/teams/:teamId/chat', element: <WorkspaceChatPage /> },
+  {
+    // WS-02 워크스페이스 공통 틀 (GNB 없음). 탭은 URL로 정한다: /workspaces/:teamId/{chat|docs|board|calendar|notice}
+    // 각 탭 담당자는 아래 element를 자기 화면으로 바꾼다 (WorkspaceLayout.tsx 맨 위 주석 참고)
+    element: <RequireLogin />,
+    children: [
+      {
+        path: '/workspaces/:teamId',
+        element: <WorkspaceLayout />,
+        children: [
+          // 첫 입장은 채팅 탭
+          { index: true, element: <Navigate to="chat" replace /> },
+          // TODO(확인 필요): 채팅(김건우)은 지금 /teams/:teamId/chat에 따로 있다. 합칠 때 여기로 옮긴다
+          { path: 'chat', element: <WorkspacePlaceholder tab="chat" /> },
+          { path: 'docs', element: <WorkspacePlaceholder tab="docs" /> },
+          { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
+          { path: 'calendar', element: <WorkspacePlaceholder tab="calendar" /> },
+          { path: 'notice', element: <WorkspacePlaceholder tab="notice" /> },
+        ],
+      },
+    ],
+  },
+  ...devRoutes,
 ])

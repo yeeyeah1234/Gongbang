@@ -21,4 +21,31 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from Team t where t.id = :teamId")
     Optional<Team> findByIdForUpdate(@Param("teamId") Long teamId);
+
+    /**
+     * WS-02 워크스페이스 헤더: 팀 이름, 공모전명, 마감일. 팀이 없으면 빈 값.
+     *
+     * <ul>
+     *   <li>모집글에 contest_id가 있으면 contest.title·end_date, 없으면
+     *       recruit_post.ext_contest_title·ext_deadline (CAL-06 {@code CalendarEventRepository}와 같은
+     *       기준).
+     *   <li>recruit_post를 deleted_at으로 거르지 않는다: 모집글이 삭제돼도 팀은 남는다 (PST-004 ④).
+     *   <li>모집글 행이 없어도(team.post_id는 FK 없음) 팀 이름은 돌려주고 공모전명·마감일은 null.
+     * </ul>
+     *
+     * <p>post·contest 도메인의 repository를 부르지 않으려고 native 쿼리 하나로 읽는다 (AGENTS.md 3).
+     */
+    @Query(
+            value =
+                    "SELECT t.name AS teamName,"
+                            + " CASE WHEN rp.contest_id IS NOT NULL THEN c.title"
+                            + " ELSE rp.ext_contest_title END AS contestTitle,"
+                            + " CASE WHEN rp.contest_id IS NOT NULL THEN c.end_date"
+                            + " ELSE rp.ext_deadline END AS deadline"
+                            + " FROM team t"
+                            + " LEFT JOIN recruit_post rp ON rp.id = t.post_id"
+                            + " LEFT JOIN contest c ON c.id = rp.contest_id"
+                            + " WHERE t.id = :teamId",
+            nativeQuery = true)
+    Optional<TeamWorkspaceSummary> findWorkspaceSummary(@Param("teamId") Long teamId);
 }
