@@ -13,12 +13,15 @@
  *    - refreshNoticeIndicators(): 고정 공지 배너와 공지 탭 배지를 다시 불러온다 (공지 고정·작성·삭제 뒤)
  * 4. 접속자 목록과 채팅 안 읽은 개수는 아직 API가 없어 이 컴포넌트의 props로 받는다
  *    (onlineMembers 기본 [], chatUnreadCount 기본 0). 실시간 연결이 생기면 이 안에서 훅으로 불러오게 바꾼다.
+ *    헤더는 로그인한 나(features/auth/store.ts의 useLoginMember + summary)를 항상 맨 앞에 그린다.
+ *    onlineMembers에 나를 넣어도 빼도 된다 (memberId로 중복 제거, features/workspace/onlineMembers.ts).
  * 5. 본문 영역은 flex 세로 칸이고 남은 높이를 채운다(flex-1, min-h-0). 탭 화면 맨 바깥은 flex-1로 두면 된다.
  */
 import { useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { getApiError } from '../../../api/errors'
 import { Button } from '../../../components/ui/Button'
+import { useLoginMember } from '../../auth/store'
 import type { WorkspaceOutletContext } from '../context'
 import {
   useNoticeUnreadCount,
@@ -26,6 +29,7 @@ import {
   useRefreshNoticeIndicators,
   useWorkspaceSummary,
 } from '../hooks'
+import { memberColorIndex } from '../onlineMembers'
 import { usePinnedCollapsed } from '../pinnedCollapse'
 import { WORKSPACE_TABS, type WorkspaceOnlineMember } from '../types'
 import { PinnedNoticeBanner } from './PinnedNoticeBanner'
@@ -52,6 +56,7 @@ export function WorkspaceLayout({
   const teamIdParam = useParams().teamId ?? ''
   const teamId = Number(teamIdParam)
   const basePath = `${WORKSPACE_LIST_PATH}/${teamIdParam}`
+  const loginMember = useLoginMember()
 
   const summaryQuery = useWorkspaceSummary(teamId)
   const summary = summaryQuery.data
@@ -106,6 +111,15 @@ export function WorkspaceLayout({
   }
 
   const context: WorkspaceOutletContext = { teamId, summary, refreshNoticeIndicators }
+  // 헤더 맨 앞의 나: 닉네임은 로그인 상태, memberId·팀장 여부는 팀 요약에서
+  const self: WorkspaceOnlineMember | null = loginMember
+    ? {
+        memberId: summary.myMemberId,
+        nickname: loginMember.nickname,
+        colorIndex: memberColorIndex(summary.myMemberId),
+        isLeader: summary.isLeader,
+      }
+    : null
 
   return (
     <div className="flex min-h-screen flex-col bg-bg lg:h-screen lg:overflow-hidden">
@@ -113,6 +127,7 @@ export function WorkspaceLayout({
         teamName={summary.teamName}
         contestTitle={summary.contestTitle}
         deadline={summary.deadline}
+        self={self}
         onlineMembers={onlineMembers}
         onBack={goList}
       />
