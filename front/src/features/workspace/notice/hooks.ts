@@ -1,14 +1,30 @@
 import {
   useInfiniteQuery,
+  useMutation,
   useQuery,
   useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query'
 import { useCallback, useEffect } from 'react'
 import type { PageResponse } from '../../../api/types'
+import { fetchPinnedNotice } from '../api'
+import { useWorkspace } from '../context'
 import { workspaceKeys } from '../hooks'
-import { fetchNotice, fetchNotices } from './api'
-import type { NoticeListItemData } from './types'
+import {
+  createNotice,
+  deleteNotice,
+  fetchNotice,
+  fetchNotices,
+  pinNotice,
+  unpinNotice,
+  updateNotice,
+} from './api'
+import type {
+  NoticeCreateRequest,
+  NoticeDetailData,
+  NoticeListItemData,
+  NoticeUpdateRequest,
+} from './types'
 
 // workspaceKeys.notice 아래에 두어 refreshNoticeIndicators()가 목록·상세까지 함께 갱신한다
 export const noticeKeys = {
@@ -24,6 +40,19 @@ function mapItems(data: ListCache, map: (items: NoticeListItemData[]) => NoticeL
   return { ...data, pages: data.pages.map((page) => ({ ...page, items: map(page.items) })) }
 }
 
+// page 방식이라 그사이 새 글이 끼면 다음 쪽에 같은 공지가 또 온다
+export function uniqueNotices(data: ListCache | undefined) {
+  return [
+    ...new Map(
+      data?.pages.flatMap((page) => page.items).map((item) => [item.noticeId, item]),
+    ).values(),
+  ]
+}
+
+function withoutNotice(data: ListCache | undefined, noticeId: number | null) {
+  return data && mapItems(data, (items) => items.filter((item) => item.noticeId !== noticeId))
+}
+
 export function useNoticeList(teamId: number) {
   return useInfiniteQuery({
     queryKey: noticeKeys.list(teamId),
@@ -34,11 +63,12 @@ export function useNoticeList(teamId: number) {
   })
 }
 
-export function useNoticeDetail(teamId: number, noticeId: number | null) {
+// enabled false: 지우는 중인 공지를 다시 불러와 404가 나지 않게
+export function useNoticeDetail(teamId: number, noticeId: number | null, enabled = true) {
   return useQuery({
     queryKey: noticeKeys.detail(teamId, noticeId),
     queryFn: () => fetchNotice(noticeId!),
-    enabled: noticeId !== null,
+    enabled: enabled && noticeId !== null,
     retry: false,
   })
 }
@@ -83,10 +113,8 @@ export function useForgetNotice(teamId: number) {
   const client = useQueryClient()
   return useCallback(
     (noticeId: number | null) => {
-      client.setQueryData<ListCache>(
-        noticeKeys.list(teamId),
-        (data) =>
-          data && mapItems(data, (items) => items.filter((item) => item.noticeId !== noticeId)),
+      client.setQueryData<ListCache>(noticeKeys.list(teamId), (data) =>
+        withoutNotice(data, noticeId),
       )
       const detailSegment = noticeKeys.details(teamId).length - 1
       void client.invalidateQueries({
@@ -96,4 +124,79 @@ export function useForgetNotice(teamId: number) {
     },
     [client, teamId],
   )
+}
+
+// NTC-04 고정 직전에 새로 받는다. fetchQuery만 부르면 먼저 나간 요청의 낡은 응답을 같이 받는다
+export function useFetchLatestPinned(teamId: number) {
+  const client = useQueryClient()
+  return useCallback(async () => {
+    const queryKey = workspaceKeys.pinnedNotice(teamId)
+    await client.cancelQueries({ queryKey })
+    return client.fetchQuery({
+      queryKey,
+      queryFn: () => fetchPinnedNotice(teamId),
+      staleTime: 0,
+      networkMode: 'always',
+    })
+  }, [client, teamId])
+}
+
+// 쓰기 공통
+// - onSuccess는 탭을 떠나도 실행된다. 이동·모달 닫기는 화면이 mutate(…, { onSuccess })로 한다
+// - networkMode always: 오프라인이면 멈춰 기다리지 않고 실패해야 요청 중 잠긴 모달이 풀린다
+export function useCreateNotice() {
+  const { teamId, refreshNoticeIndicators } = useWorkspace()
+  return useMutation({
+    mutationFn: (body: NoticeCreateRequest) => createNotice(teamId, body),
+    networkMode: 'always',
+    onSuccess: () => {
+      void refreshNoticeIndicators()
+    },
+  })
+}
+
+export function useUpdateNotice() {
+  const client = useQueryClient()
+  const { teamId, refreshNoticeIndicators } = useWorkspace()
+  return useMutation({
+    mutationFn: ({ noticeId, body }: { noticeId: number; body: NoticeUpdateRequest }) =>
+      updateNotice(noticeId, body),
+    networkMode: 'always',
+    onSuccess: (_, { noticeId, body }) => {
+      // 다시 불러오기 전에 수정을 또 열어도 옛 내용으로 덮어쓰지 않게
+      client.setQueryData<NoticeDetailData>(
+        noticeKeys.detail(teamId, noticeId),
+        (data) => data && { ...data, ...body },
+      )
+      void refreshNoticeIndicators()
+    },
+  })
+}
+
+export function useDeleteNotice() {
+  const client = useQueryClient()
+  const { teamId, refreshNoticeIndicators } = useWorkspace()
+  return useMutation({
+    mutationFn: deleteNotice,
+    networkMode: 'always',
+    onSuccess: (_, noticeId) => {
+      // 먼저 빼야 목록 갱신이 실패해도 /notice가 지운 공지로 옮기지 않는다
+      client.setQueryData<ListCache>(noticeKeys.list(teamId), (data) =>
+        withoutNotice(data, noticeId),
+      )
+      void refreshNoticeIndicators()
+    },
+  })
+}
+
+export function useSetNoticePinned() {
+  const { refreshNoticeIndicators } = useWorkspace()
+  return useMutation({
+    mutationFn: ({ noticeId, pinned }: { noticeId: number; pinned: boolean }) =>
+      pinned ? pinNotice(noticeId) : unpinNotice(noticeId),
+    networkMode: 'always',
+    onSuccess: () => {
+      void refreshNoticeIndicators()
+    },
+  })
 }

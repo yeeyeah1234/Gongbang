@@ -1,21 +1,37 @@
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
 import { apiClient } from '../../api/client'
-import type { NoticeDetailData } from '../../features/workspace/notice/types'
+import type { NoticeCreateRequest, NoticeDetailData } from '../../features/workspace/notice/types'
 
-// 개발 전용: /dev/notice-preview가 떠 있는 동안만 공지 API를 고정 데이터로 답한다.
-export type PreviewView = 'leader' | 'member' | 'empty' | 'error'
+// 개발 전용: /dev/notice-preview가 떠 있는 동안만 공지·팀 요약 API를 메모리 데이터로 답한다.
+export type PreviewView =
+  'leader' | 'member' | 'empty' | 'single' | 'conflict' | 'forbidden' | 'error'
 
 export const PREVIEW_TEAM_ID = 0
-export const PREVIEW_LEADER_ID = 1
-export const PREVIEW_MEMBER_ID = 2
+const LEADER_ID = 1
+const MEMBER_ID = 2
+const PINNED_ID = 8
 const DELETED_ID = 22 // 목록에는 있지만 열면 404
+const GONE_ON_WRITE_ID = 21 // 열리지만 수정·삭제·고정하면 404
 const OTHER_TEAM_ID = 999 // 주소로 열면 다른 팀 공지
 const DELAY_MS = 300
+
+// 서버 ErrorCode 문구 그대로
+const MESSAGES: Record<string, string> = {
+  INTERNAL_SERVER_ERROR: '서버 오류(미리보기)',
+  NOT_TEAM_LEADER: '팀장만 접근할 수 있습니다.',
+  NOTICE_PIN_CONFLICT: '다른 공지가 방금 고정됐어요. 새로고침 후 다시 시도해 주세요',
+  RESOURCE_NOT_FOUND: '없거나 삭제된 항목이에요',
+}
 
 // 오늘(KST) 기준 n일 전
 function daysAgo(days: number, time: string) {
   const date = new Date(Date.now() + (9 - days * 24) * 60 * 60 * 1000)
   return `${date.toISOString().slice(0, 10)}T${time}:00`
+}
+
+// 지금(KST)
+function nowKst() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 19)
 }
 
 const LONG_CONTENT = [
@@ -31,12 +47,13 @@ const LONG_CONTENT = [
 function createNotices(): NoticeDetailData[] {
   return Array.from({ length: 25 }, (_, i) => {
     const id = 25 - i
-    let author: NoticeDetailData['author'] = { memberId: PREVIEW_LEADER_ID, nickname: '김하늘' }
+    let author: NoticeDetailData['author'] = { memberId: LEADER_ID, nickname: '김하늘' }
     if (i % 4 === 1) author = { memberId: 4, nickname: '최노을' }
     if (i === 4) author = { memberId: null, nickname: '탈퇴한 사용자' }
 
     let title = `미리보기 공지 ${id}`
     if (id === DELETED_ID) title = '누르면 404 (삭제된 공지)'
+    if (id === GONE_ON_WRITE_ID) title = '수정·삭제·고정하면 404'
     if (i === 1)
       title = '제목이아주길고띄어쓰기가없어도한줄로잘리고상세에서는줄바꿈되어야하는공지제목입니다'
 
@@ -44,35 +61,103 @@ function createNotices(): NoticeDetailData[] {
       noticeId: id,
       teamId: PREVIEW_TEAM_ID,
       title,
-      content: i < 2 || id === 8 ? LONG_CONTENT : `공지 ${id}의 내용입니다.\n둘째 줄입니다.`,
+      content:
+        i < 2 || id === PINNED_ID ? LONG_CONTENT : `공지 ${id}의 내용입니다.\n둘째 줄입니다.`,
       author,
       createdAt: daysAgo(i < 2 ? 0 : i, i === 0 ? '21:10' : '09:05'),
       editedAt: i % 6 === 1 ? daysAgo(0, '10:00') : null,
-      isPinned: id === 8,
+      isPinned: id === PINNED_ID,
       isEdited: i % 6 === 1,
     }
-  }).sort((a, b) => Number(b.isPinned) - Number(a.isPinned))
+  })
 }
 
 type Result = { status: number; data?: unknown; code?: string }
+const OK: Result = { status: 200 }
+
+function initialNotices(view: PreviewView) {
+  if (view === 'empty') return []
+  const notices = createNotices()
+  return view === 'single' ? notices.filter((notice) => notice.noticeId === PINNED_ID) : notices
+}
 
 function createHandler(view: PreviewView) {
-  let notices = view === 'empty' ? [] : createNotices()
-  const me = view === 'member' ? PREVIEW_MEMBER_ID : PREVIEW_LEADER_ID
+  let notices = initialNotices(view)
+  let nextId = 101
+  let isLeader = view !== 'member'
+  let conflictLeft = view === 'conflict'
+  const me = view === 'member' ? MEMBER_ID : LEADER_ID
   const read = new Set<number>()
   const isUnread = (notice: NoticeDetailData) =>
     notice.author.memberId !== me && !read.has(notice.noticeId)
 
-  return (path: string, params: { page?: number; size?: number } = {}): Result => {
+  const pinOnly = (id: number | null) => {
+    notices = notices.map((notice) => ({ ...notice, isPinned: notice.noticeId === id }))
+  }
+
+  const write = (method: string, path: string, body: Partial<NoticeCreateRequest>): Result => {
+    if (view === 'forbidden') isLeader = false // 첫 쓰기부터 403
+    if (!isLeader) return { status: 403, code: 'NOT_TEAM_LEADER' }
+
+    const isPinPath = path.endsWith('/pin')
+    const id = method === 'post' ? null : Number(path.split('/')[3])
+    if (id === GONE_ON_WRITE_ID) notices = notices.filter((notice) => notice.noticeId !== id)
+    const notice = notices.find((item) => item.noticeId === id)
+    if (id !== null && !notice) return { status: 404, code: 'RESOURCE_NOT_FOUND' }
+
+    const pins = (method === 'put' && isPinPath) || (method === 'post' && body.pinned)
+    if (pins && conflictLeft) {
+      // 그사이 다른 사람이 고정한 상태로 바뀐다. 다시 누르면 성공
+      conflictLeft = false
+      pinOnly(id === 5 ? 6 : 5)
+      return { status: 409, code: 'NOTICE_PIN_CONFLICT' }
+    }
+
+    const { title = '', content = '' } = body
+    if (!notice) {
+      const noticeId = nextId++
+      notices.unshift({
+        noticeId,
+        teamId: PREVIEW_TEAM_ID,
+        title,
+        content,
+        author: { memberId: me, nickname: '김하늘' },
+        createdAt: nowKst(),
+        editedAt: null,
+        isPinned: false,
+        isEdited: false,
+      })
+      if (pins) pinOnly(noticeId)
+      return { status: 200, data: { noticeId } }
+    }
+
+    if (method === 'put') pinOnly(id)
+    else if (isPinPath) pinOnly(null)
+    else if (method === 'delete') notices = notices.filter((item) => item !== notice)
+    else if (notice.title !== title || notice.content !== content)
+      Object.assign(notice, { title, content, isEdited: true, editedAt: nowKst() })
+    return OK
+  }
+
+  return ({ url = '', method = 'get', params, data }: InternalAxiosRequestConfig): Result => {
+    if (url === `/api/teams/${PREVIEW_TEAM_ID}`) {
+      const summary = { teamId: PREVIEW_TEAM_ID, teamName: '공방팀', isLeader, myMemberId: me }
+      return { status: 200, data: { ...summary, contestTitle: null, deadline: null } }
+    }
     if (view === 'error') return { status: 500, code: 'INTERNAL_SERVER_ERROR' }
-    if (path.endsWith('/unread-count'))
+    if (method !== 'get') return write(method, url, data ? JSON.parse(data) : {})
+
+    if (url.endsWith('/unread-count'))
       return { status: 200, data: { count: notices.filter(isUnread).length } }
-    if (path.endsWith('/pinned'))
+    if (url.endsWith('/pinned'))
       return { status: 200, data: notices.find((notice) => notice.isPinned) ?? null }
 
-    if (path.startsWith('/api/teams/')) {
-      const { page = 0, size = 10 } = params
-      const items = notices.slice(page * size, (page + 1) * size).map((notice) => ({
+    if (url.startsWith('/api/teams/')) {
+      const { page = 0, size = 10 } = params ?? {}
+      const sorted = [...notices].sort(
+        (a, b) => Number(b.isPinned) - Number(a.isPinned) || b.noticeId - a.noticeId,
+      )
+      const items = sorted.slice(page * size, (page + 1) * size).map((notice) => ({
         noticeId: notice.noticeId,
         title: notice.title,
         preview: Array.from(notice.content.split('\n')[0]).slice(0, 100).join(''),
@@ -86,14 +171,14 @@ function createHandler(view: PreviewView) {
       return { status: 200, data: { items, page, size, totalCount: notices.length, hasNext } }
     }
 
-    const id = Number(path.split('/').pop())
+    const id = Number(url.split('/').pop())
     if (id === OTHER_TEAM_ID && notices[0])
       return { status: 200, data: { ...notices[0], noticeId: id, teamId: 7 } }
     if (id === DELETED_ID) notices = notices.filter((notice) => notice.noticeId !== id)
     const notice = notices.find((item) => item.noticeId === id)
     if (!notice) return { status: 404, code: 'RESOURCE_NOT_FOUND' }
     read.add(id)
-    return { status: 200, data: notice }
+    return { status: 200, data: { ...notice } }
   }
 }
 
@@ -103,8 +188,8 @@ export function installPreviewApi(view: PreviewView) {
 
   const adapter = async (config: InternalAxiosRequestConfig): Promise<AxiosResponse> => {
     await new Promise((resolve) => setTimeout(resolve, DELAY_MS))
-    const { status, data = null, code } = handle(config.url ?? '', config.params)
-    const error = code ? { code, message: code } : null
+    const { status, data = null, code } = handle(config)
+    const error = code ? { code, message: MESSAGES[code] ?? code } : null
     const response: AxiosResponse = {
       status,
       statusText: String(status),
@@ -117,8 +202,8 @@ export function installPreviewApi(view: PreviewView) {
   }
 
   const id = apiClient.interceptors.request.use((config) => {
-    const isNoticeApi = /^\/api\/(teams\/0\/notices|notices\/)/.test(config.url ?? '')
-    return isNoticeApi ? Object.assign(config, { adapter }) : config
+    const isPreviewApi = /^\/api\/(teams\/0($|\/notices)|notices\/)/.test(config.url ?? '')
+    return isPreviewApi ? Object.assign(config, { adapter }) : config
   })
   return () => apiClient.interceptors.request.eject(id)
 }

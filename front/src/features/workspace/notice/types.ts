@@ -16,3 +16,14 @@ export interface NoticeListItemData {
 
 // GET /api/notices/{noticeId}. 고정 배너와 같은 DTO(NoticeDetailResponse)
 export type NoticeDetailData = PinnedNotice
+
+// NTC-03 PATCH /api/notices/{noticeId}. 고정은 바꿀 수 없다
+export interface NoticeUpdateRequest {
+  title: string
+  content: string
+}
+
+// NTC-02 POST /api/teams/{teamId}/notices
+export interface NoticeCreateRequest extends NoticeUpdateRequest {
+  pinned: boolean
+}

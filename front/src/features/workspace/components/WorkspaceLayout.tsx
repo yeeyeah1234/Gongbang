@@ -17,6 +17,7 @@
  *    onlineMembers에 나를 넣어도 빼도 된다 (memberId로 중복 제거, features/workspace/onlineMembers.ts).
  * 5. 본문 영역은 flex 세로 칸이고 남은 높이를 채운다(flex-1, min-h-0). 탭 화면 맨 바깥은 flex-1로 두면 된다.
  */
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { getApiError } from '../../../api/errors'
@@ -28,6 +29,7 @@ import {
   usePinnedNotice,
   useRefreshNoticeIndicators,
   useWorkspaceSummary,
+  workspaceKeys,
 } from '../hooks'
 import { memberColorIndex } from '../onlineMembers'
 import { usePinnedCollapsed } from '../pinnedCollapse'
@@ -52,6 +54,7 @@ export function WorkspaceLayout({
   chatUnreadCount = 0,
 }: WorkspaceLayoutProps) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { pathname } = useLocation()
   const teamIdParam = useParams().teamId ?? ''
   const teamId = Number(teamIdParam)
@@ -84,9 +87,18 @@ export function WorkspaceLayout({
   const forbidden =
     !Number.isFinite(teamId) ||
     (summaryQuery.isError && getApiError(summaryQuery.error).code === 'NOT_TEAM_MEMBER')
+
+  // 403 뒤 재조회가 500이면 오류만 바뀌고 예전 data는 남는다. 비워 두어야 빠진 팀이 다시 보이지 않는다
+  useEffect(() => {
+    if (!forbidden || !ready) return
+    const queryKey = workspaceKeys.summary(teamId)
+    queryClient.getQueryCache().find({ queryKey })?.setState({ data: undefined })
+  }, [forbidden, ready, teamId, queryClient])
+
   if (forbidden) return <WorkspaceNoAccess onGoList={goList} />
 
-  if (summaryQuery.isError) {
+  // 처음 불러오기 실패만 오류 화면. 다시 불러오다 실패하면 탭 화면(작성 중인 내용)을 그대로 둔다
+  if (summaryQuery.isError && !summary) {
     // TODO(확인 필요): 403 이외 오류(500·네트워크) 화면은 명세에 없다
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-6 text-center">
