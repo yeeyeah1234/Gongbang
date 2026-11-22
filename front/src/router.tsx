@@ -4,6 +4,7 @@ import ContestDetailPage from './pages/ContestDetailPage'
 import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
+import WorkspaceNoticePage from './pages/WorkspaceNoticePage'
 import { RequireLogin } from './features/auth/RequireLogin'
 import { RequireGuest } from './features/auth/RequireGuest'
 import FindEmailPage from './pages/auth/FindEmailPage'
@@ -36,6 +37,39 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
         lazy: async () => ({
           Component: (await import('./pages/dev/WorkspacePreviewPage')).default,
         }),
+      },
+      {
+        path: '/dev/notice-preview',
+        element: <Navigate to="/dev/notice-preview/leader" replace />,
+      },
+      {
+        // NTC-01 공지 조회를 백엔드·로그인 없이 본다: {leader|member|empty|error}
+        path: '/dev/notice-preview/:view',
+        lazy: async () => ({
+          Component: (await import('./pages/dev/NoticePreviewPage')).default,
+        }),
+        children: [
+          {
+            path: 'notice/:noticeId?',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/NoticePreviewPage')).NoticePreviewTab,
+            }),
+          },
+          {
+            // 첫 진입은 공지 탭으로 ('*'는 뒤 조각이 없으면 안 잡힌다)
+            index: true,
+            lazy: async () => ({
+              Component: (await import('./pages/dev/NoticePreviewPage')).NoticePreviewRedirect,
+            }),
+          },
+          {
+            // 다른 탭도 공지 탭으로
+            path: '*',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/NoticePreviewPage')).NoticePreviewRedirect,
+            }),
+          },
+        ],
       },
     ]
   : []
@@ -105,7 +139,8 @@ export const router = createBrowserRouter([
           { path: 'docs', element: <WorkspacePlaceholder tab="docs" /> },
           { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
           { path: 'calendar', element: <WorkspacePlaceholder tab="calendar" /> },
-          { path: 'notice', element: <WorkspacePlaceholder tab="notice" /> },
+          // NTC-01: noticeId가 없으면 목록의 첫 공지로 옮긴다
+          { path: 'notice/:noticeId?', element: <WorkspaceNoticePage /> },
         ],
       },
     ],
