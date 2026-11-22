@@ -26,6 +26,10 @@ const MEMBERS: WorkspaceOnlineMember[] = NAMES.map((nickname, i) => ({
   isLeader: i === 0,
 }))
 
+// 헤더 맨 앞의 "나" (실제 화면은 로그인 상태 + 팀 요약에서 만든다). 팀장인 나 / 팀원인 나
+const ME_LEADER: WorkspaceOnlineMember = MEMBERS[0]
+const ME_MEMBER: WorkspaceOnlineMember = MEMBERS[1]
+
 const NOTICE: PinnedNotice = {
   noticeId: 1,
   teamId: 0,
@@ -64,12 +68,14 @@ export default function WorkspacePreviewPage() {
     <div className="flex min-h-screen flex-col gap-6 bg-bg pb-12">
       <section>
         <Label>
-          기본: D-10 (보통), 접속 7명 → 아바타 5개 + 「+2」, 팀장 왕관, 채팅 3·공지 12 배지
+          기본: D-10 (보통), 나(팀장 김하늘) 맨 앞 + 목록 7명(나 포함, 중복 제거) → 접속 7명, 아바타
+          5개 + 「+2」, 내 툴팁 「(나) [팀장] 김하늘」, 채팅 3·공지 12 배지
         </Label>
         <WorkspaceHeader
           teamName="공방팀"
           contestTitle="2026 공공데이터 활용 아이디어 공모전"
           deadline={daysFromToday(10)}
+          self={ME_LEADER}
           onlineMembers={MEMBERS}
           onBack={noop}
         />
@@ -92,12 +98,13 @@ export default function WorkspacePreviewPage() {
       <section>
         <Label>
           고정 공지 접힘: 배너 줄 없음(높이 0), 탭 바 오른쪽 끝 「고정 공지 펼치기」 버튼 → 누르면
-          펼침
+          펼침. 접속 3명(나 포함)
         </Label>
         <WorkspaceHeader
           teamName="공방팀"
           contestTitle="2026 공공데이터 활용 아이디어 공모전"
           deadline={daysFromToday(10)}
+          self={ME_LEADER}
           onlineMembers={MEMBERS.slice(0, 3)}
           onBack={noop}
         />
@@ -118,12 +125,16 @@ export default function WorkspacePreviewPage() {
       </section>
 
       <section>
-        <Label>D-3 (danger 강조), 접속 2명, 배지 0이면 숨김, 고정 공지 없음 → 배너 숨김</Label>
+        <Label>
+          D-3 (danger 강조), 팀원인 나(이바다, 왕관 없음, 툴팁 「(나) 이바다」) 맨 앞 + 팀장·팀원
+          1명 → 접속 3명, 배지 0이면 숨김, 고정 공지 없음 → 배너 숨김
+        </Label>
         <WorkspaceHeader
           teamName="디자인팀"
           contestTitle="UX 디자인 공모전"
           deadline={daysFromToday(3)}
-          onlineMembers={MEMBERS.slice(0, 2)}
+          self={ME_MEMBER}
+          onlineMembers={[MEMBERS[0], MEMBERS[2]]}
           onBack={noop}
         />
         <WorkspaceTabs basePath={BASE_PATH} chatUnreadCount={0} noticeUnreadCount={0} />
@@ -131,22 +142,27 @@ export default function WorkspacePreviewPage() {
       </section>
 
       <section>
-        <Label>마감 당일 D-0 / 공모전명 없음 → 팀명만, 접속 0명</Label>
+        <Label>
+          마감 당일 D-0 / 공모전명 없음 → 팀명만, 접속자 목록 없음 → 나만 「접속 중 1명」 (지금 실제
+          화면)
+        </Label>
         <WorkspaceHeader
           teamName="모집글 삭제된 팀"
           contestTitle={null}
           deadline={daysFromToday(0)}
+          self={ME_LEADER}
           onlineMembers={[]}
           onBack={noop}
         />
       </section>
 
       <section>
-        <Label>마감 지남 → 「종료」</Label>
+        <Label>마감 지남 → 「종료」, 목록에 나만 있음 → 중복 제거로 접속 1명</Label>
         <WorkspaceHeader
           teamName="끝난팀"
           contestTitle="지난 공모전"
           deadline={daysFromToday(-1)}
+          self={ME_LEADER}
           onlineMembers={MEMBERS.slice(0, 1)}
           onBack={noop}
         />
