@@ -143,6 +143,7 @@ export function WorkspaceLayout({
         notice={pinnedNotice}
         collapsed={pinnedCollapsed}
         onCollapse={() => setPinnedCollapsed(true)}
+        to={pinnedNotice ? `${basePath}/notice/${pinnedNotice.noticeId}` : undefined}
       />
       <main className="mx-auto flex min-h-0 w-full max-w-[1680px] flex-1 flex-col px-6 py-6 lg:px-12 xl:px-[120px]">
         <Outlet context={context} />
