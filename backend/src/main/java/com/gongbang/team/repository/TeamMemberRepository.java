@@ -9,6 +9,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
 
+    /** 공지 알림 수신자: 팀장과 나간 팀원을 제외한다. */
+    @Query(
+            "select distinct tm.memberId from TeamMember tm"
+                    + " where tm.team.id = :teamId and tm.leftAt is null and tm.role = :role")
+    List<Long> findActiveMemberIdsByRole(
+            @Param("teamId") Long teamId, @Param("role") TeamRole role);
+
     /** 현재 팀원인지 (left_at IS NULL). */
     boolean existsByTeamIdAndMemberIdAndLeftAtIsNull(Long teamId, Long memberId);
 

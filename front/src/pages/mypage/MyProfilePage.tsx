@@ -32,12 +32,12 @@ import {
   gradeLabel,
   roleLabel,
 } from '../../features/member/constants'
-import { uploadProfileImage } from '../../features/member/api'
 import {
   useDeleteHistory,
   useHistory,
   useMyProfile,
   useUpdateMyProfile,
+  useUploadProfileImage,
 } from '../../features/member/hooks'
 import type { Award, Career, Certificate, MyProfile } from '../../features/member/types'
 
@@ -353,6 +353,7 @@ function ProfileEditCard({
   // MY-01 ③ 새로 고른 사진: [저장]을 누를 때 올린다. 고르면 바로 미리 보기
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const uploadPhoto = useUploadProfileImage()
   const photoInput = useRef<HTMLInputElement>(null)
   const photoPreview = useMemo(
     () => (photoFile ? URL.createObjectURL(photoFile) : null),
@@ -438,7 +439,8 @@ function ProfileEditCard({
     if (photoFile) {
       setUploading(true)
       try {
-        await uploadProfileImage(photoFile)
+        await uploadPhoto.mutateAsync(photoFile)
+        setPhotoFile(null)
       } catch (e) {
         setError(getErrorMessage(e))
         setUploading(false)

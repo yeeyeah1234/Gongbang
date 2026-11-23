@@ -29,6 +29,12 @@ public class CalendarService {
 
     private final CalendarEventRepository calendarEventRepository;
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<com.gongbang.workspace.calendar.domain.CalendarEvent> findForReminder(
+            Long eventId) {
+        return calendarEventRepository.findById(eventId);
+    }
+
     /**
      * CAL-06: 팀의 공모전 마감 자동 일정을 만들거나 날짜를 고친다. 모집글이나 마감일이 없으면 아무것도 하지 않는다.
      *

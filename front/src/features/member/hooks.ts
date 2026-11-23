@@ -9,9 +9,10 @@ import {
   fetchMyProfile,
   fetchPublicProfile,
   updateMyProfile,
+  uploadProfileImage,
   type HistoryKind,
 } from './api'
-import type { BookmarkSort, UpdateProfileRequest } from './types'
+import type { BookmarkSort, MyProfile, UpdateProfileRequest } from './types'
 
 export const memberKeys = {
   me: ['members', 'me'] as const,
@@ -26,21 +27,32 @@ export function useMyProfile() {
   return useQuery({ queryKey: memberKeys.me, queryFn: fetchMyProfile })
 }
 
-export function useUpdateMyProfile() {
+function useSyncProfile() {
   const queryClient = useQueryClient()
+  return async (profile: MyProfile) => {
+    await queryClient.cancelQueries({ queryKey: memberKeys.me, exact: true })
+    queryClient.setQueryData(memberKeys.me, profile)
+    const member = useAuthStore.getState().member
+    if (member)
+      useAuthStore.getState().setMember({
+        ...member,
+        nickname: profile.nickname,
+        profileImageUrl: profile.profileImageUrl,
+      })
+    await queryClient.invalidateQueries({ queryKey: memberKeys.publicProfile(profile.memberId) })
+  }
+}
+
+export function useUploadProfileImage() {
+  const syncProfile = useSyncProfile()
+  return useMutation({ mutationFn: uploadProfileImage, onSuccess: syncProfile })
+}
+
+export function useUpdateMyProfile() {
+  const syncProfile = useSyncProfile()
   return useMutation({
     mutationFn: (body: UpdateProfileRequest) => updateMyProfile(body),
-    onSuccess: (profile) => {
-      queryClient.setQueryData(memberKeys.me, profile)
-      // GNB 닉네임도 바꾼다
-      const member = useAuthStore.getState().member
-      if (member)
-        useAuthStore.getState().setMember({
-          ...member,
-          nickname: profile.nickname,
-          profileImageUrl: profile.profileImageUrl,
-        })
-    },
+    onSuccess: syncProfile,
   })
 }
 
