@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDownIcon, MessageSquareIcon } from '../../../components/icons/Icons'
 import { Badge, CountBadge } from '../../../components/ui/Badge'
+import { Button } from '../../../components/ui/Button'
 import type { ChatRoom, RoomSortOrder } from '../types'
 
 interface ChatRoomListProps {
@@ -8,6 +9,8 @@ interface ChatRoomListProps {
   selectedRoomId: number | null
   sortOrder: RoomSortOrder
   isLoading?: boolean
+  isError?: boolean
+  onRetry?: () => void
   onChangeSortOrder: (sort: RoomSortOrder) => void
   onSelectRoom: (roomId: number) => void
 }
@@ -23,6 +26,8 @@ export function ChatRoomList({
   selectedRoomId,
   sortOrder,
   isLoading = false,
+  isError = false,
+  onRetry,
   onChangeSortOrder,
   onSelectRoom,
 }: ChatRoomListProps) {
@@ -89,6 +94,16 @@ export function ChatRoomList({
       {isLoading && rooms.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
           <p className="text-body text-text-sub">채팅방을 불러오고 있어요…</p>
+        </div>
+      ) : isError && rooms.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
+          <MessageSquareIcon className="h-12 w-12 text-text-disabled" />
+          <p className="text-body text-text-sub">채팅방 목록을 불러오지 못했어요</p>
+          {onRetry && (
+            <Button variant="outline" size="sm" onClick={onRetry}>
+              다시 시도
+            </Button>
+          )}
         </div>
       ) : rooms.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
