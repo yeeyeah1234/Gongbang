@@ -1,14 +1,26 @@
+import { useState } from 'react'
 import { useParams } from 'react-router'
+import { FlagIcon } from '../../components/icons/Icons'
+import { Toast } from '../../components/ui/Toast'
+import { useIsLoggedIn, useLoginMember } from '../../features/auth/store'
 import { useCategories } from '../../features/contest/hooks'
 import { ProfilePhoto } from '../../features/member/components/ProfilePhoto'
 import { formatDate, formatMonth, roleLabel } from '../../features/member/constants'
 import { usePublicProfile } from '../../features/member/hooks'
+import { LoginRequiredModal } from '../../features/post/components/LoginRequiredModal'
+import { ReportModal } from '../../features/report/components/ReportModal'
+import { useTimedToast } from '../../hooks/useTimedToast'
 
 // MY-05 공개 프로필 전용 화면 (팝오버의 [프로필 보기])
 export default function PublicProfilePage() {
   const memberId = Number(useParams().memberId)
   const { data, isLoading, isError } = usePublicProfile(Number.isFinite(memberId) ? memberId : null)
   const categories = useCategories()
+  const isLoggedIn = useIsLoggedIn()
+  const loginMember = useLoginMember()
+  const toast = useTimedToast()
+  const [reportOpen, setReportOpen] = useState(false)
+  const [loginModalOpen, setLoginModalOpen] = useState(false)
 
   if (isLoading)
     return (
@@ -27,17 +39,39 @@ export default function PublicProfilePage() {
     (code) => categories.data?.find((c) => c.categoryCode === code)?.name ?? code,
   )
 
+  const isSelf = loginMember?.memberId === data.memberId
+
+  const handleReportClick = () => {
+    if (!isLoggedIn) {
+      setLoginModalOpen(true)
+      return
+    }
+    setReportOpen(true)
+  }
+
   return (
     <main className="mx-auto flex max-w-[960px] flex-col gap-6 px-4 py-10">
-      <section className="flex items-center gap-6 rounded-card border border-line bg-surface p-8">
-        <ProfilePhoto url={data.profileImageUrl} name={data.nickname} />
-        <div>
-          <h1 className="text-title font-bold text-text">{data.nickname}</h1>
-          <p className="text-small text-text-sub">
-            {[data.school, data.major].filter(Boolean).join(' · ')}
-          </p>
-          {data.bio && <p className="mt-2 text-body text-text">{data.bio}</p>}
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-line bg-surface p-8">
+        <div className="flex items-center gap-6">
+          <ProfilePhoto url={data.profileImageUrl} name={data.nickname} />
+          <div>
+            <h1 className="text-title font-bold text-text">{data.nickname}</h1>
+            <p className="text-small text-text-sub">
+              {[data.school, data.major].filter(Boolean).join(' · ')}
+            </p>
+            {data.bio && <p className="mt-2 text-body text-text">{data.bio}</p>}
+          </div>
         </div>
+        {!isSelf && (
+          <button
+            type="button"
+            onClick={handleReportClick}
+            className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-full border border-danger-line px-4 text-small font-medium text-danger transition-colors hover:bg-danger-soft"
+          >
+            <FlagIcon className="h-4 w-4" />
+            <span>신고하기</span>
+          </button>
+        )}
       </section>
       <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="rounded-card border border-line bg-surface p-6">
@@ -132,6 +166,23 @@ export default function PublicProfilePage() {
           )}
         </div>
       </section>
+
+      <ReportModal
+        open={reportOpen}
+        reportedMemberId={data.memberId}
+        targetNickname={data.nickname}
+        targetType="MEMBER"
+        onClose={() => setReportOpen(false)}
+        onSubmitted={toast.show}
+      />
+
+      <LoginRequiredModal
+        open={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        redirectTo={`/members/${data.memberId}`}
+      />
+
+      <Toast message={toast.message} />
     </main>
   )
 }
