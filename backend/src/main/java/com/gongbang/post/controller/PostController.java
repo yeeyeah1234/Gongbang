@@ -7,10 +7,13 @@ import com.gongbang.post.dto.PostCompleteResponse;
 import com.gongbang.post.dto.PostCreateRequest;
 import com.gongbang.post.dto.PostCreateResponse;
 import com.gongbang.post.dto.PostDetailResponse;
+import com.gongbang.post.dto.PostImageOrderRequest;
+import com.gongbang.post.dto.PostImagesResponse;
 import com.gongbang.post.dto.PostListItemResponse;
 import com.gongbang.post.dto.PostUpdateRequest;
 import com.gongbang.post.service.PostCommandService;
 import com.gongbang.post.service.PostDetailService;
+import com.gongbang.post.service.PostImageService;
 import com.gongbang.post.service.PostQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /** 모집글 API (API 명세서 PST-001~005). 값 검증과 권한 확인은 service가 한다. */
 @RestController
@@ -31,6 +35,7 @@ public class PostController {
     private final PostQueryService postQueryService;
     private final PostDetailService postDetailService;
     private final PostCommandService postCommandService;
+    private final PostImageService postImageService;
 
     /** PST-001: 공개. 최신 등록순, 20개씩 (⑦, 20은 제안값). */
     @GetMapping("/api/posts")
@@ -70,6 +75,34 @@ public class PostController {
             @AuthenticationPrincipal LoginMember me, @PathVariable Long postId) {
         postCommandService.delete(me.getMemberId(), postId);
         return ApiResponse.success();
+    }
+
+    /** PST-007: 작성자. 외부 공모전 모집글에 사진 한 장을 맨 뒤에 붙인다 (최대 3장). 파일이 없으면 service가 400으로 막는다. */
+    @PostMapping("/api/posts/{postId}/images")
+    public ApiResponse<PostImagesResponse> uploadImage(
+            @AuthenticationPrincipal LoginMember me,
+            @PathVariable Long postId,
+            @RequestParam(value = "file", required = false) MultipartFile file) {
+        return ApiResponse.success(postImageService.upload(me.getMemberId(), postId, file));
+    }
+
+    /** PST-007: 작성자. 소프트 삭제, 파일은 남긴다. */
+    @DeleteMapping("/api/posts/{postId}/images/{imageId}")
+    public ApiResponse<PostImagesResponse> deleteImage(
+            @AuthenticationPrincipal LoginMember me,
+            @PathVariable Long postId,
+            @PathVariable Long imageId) {
+        return ApiResponse.success(postImageService.delete(me.getMemberId(), postId, imageId));
+    }
+
+    /** PST-007: 작성자. 남아 있는 사진 ID 전부를 새 순서대로 받는다 (첫 번째가 대표). */
+    @PatchMapping("/api/posts/{postId}/images/order")
+    public ApiResponse<PostImagesResponse> reorderImages(
+            @AuthenticationPrincipal LoginMember me,
+            @PathVariable Long postId,
+            @RequestBody PostImageOrderRequest request) {
+        return ApiResponse.success(
+                postImageService.reorder(me.getMemberId(), postId, request.imageIds()));
     }
 
     /** REC-006: 작성자. 수동 모집 완료, 남은 대기 지원은 자동 거절. */
