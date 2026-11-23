@@ -2,6 +2,7 @@ package com.gongbang.team.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -9,6 +10,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,7 +23,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * 실제 MySQL에서 쿼리 의미와 행 잠금을 확인한다. Mockito로는 확인할 수 없는 부분만 둔다.
  *
  * <p>환경 변수 TEST_DATASOURCE_URL이 있을 때만 돈다. 반드시 테스트 전용 스키마(예: gongbang_test)를 가리키게 한다. Flyway가 V1부터
- * 적용하고, 테스트가 끝날 때마다 team_member·team 행을 모두 지운다.
+ * 적용하고, 테스트가 끝날 때마다 이 테스트가 만든 팀의 채팅·팀원·팀 행만 지운다 (회원·모집글 행은 만들지 않는다).
  *
  * <p>개발용 DB를 지우지 않도록 스키마 이름에 _test가 없으면 건너뜀 (TEST_DATASOURCE_URL에 _test가 있어야 돈다).
  *
@@ -45,16 +47,38 @@ class TeamMysqlTest {
 
     private static final Long LEADER_ID = 1L;
 
+    // team.post_id는 FK가 없고 UNIQUE라 다른 테스트·이전 실행이 남긴 팀과 겹치지 않는 큰 번호를 쓴다
+    private static final AtomicLong POST_ID_SEQ =
+            new AtomicLong(9_500_000_000L + (System.currentTimeMillis() % 1_000_000L) * 100L);
+
     @Autowired private TeamService teamService;
 
     @Autowired private TeamMemberService teamMemberService;
 
     @Autowired private JdbcTemplate jdbcTemplate;
 
+    private final List<Long> teamIds = new ArrayList<>();
+
     @AfterEach
     void tearDown() {
-        jdbcTemplate.update("DELETE FROM team_member");
-        jdbcTemplate.update("DELETE FROM team");
+        for (Long teamId : teamIds) {
+            // 팀 채팅방이 team을 가리키므로(fk_chat_room_team, #99) 채팅 행을 먼저 지운다
+            String teamRooms = "SELECT id FROM chat_room WHERE team_id = ?";
+            jdbcTemplate.update(
+                    "DELETE FROM chat_message WHERE chat_room_id IN (" + teamRooms + ")", teamId);
+            jdbcTemplate.update(
+                    "DELETE FROM chat_room_member WHERE chat_room_id IN (" + teamRooms + ")",
+                    teamId);
+            jdbcTemplate.update("DELETE FROM chat_room WHERE team_id = ?", teamId);
+            jdbcTemplate.update("DELETE FROM team_member WHERE team_id = ?", teamId);
+            jdbcTemplate.update("DELETE FROM team WHERE id = ?", teamId);
+        }
+    }
+
+    private Long createTeam(String name) {
+        Long id = teamService.createTeam(POST_ID_SEQ.incrementAndGet(), name, LEADER_ID);
+        teamIds.add(id);
+        return id;
     }
 
     private void leave(Long teamId, Long memberId, String leaveType) {
@@ -69,7 +93,7 @@ class TeamMysqlTest {
     @Test
     @DisplayName("같은 팀에 addMember가 동시에 들어와도 색 번호가 겹치지 않는다 (AGENTS.md 7)")
     void 같은_팀에_addMember가_동시에_들어와도_색_번호가_겹치지_않는다() throws Exception {
-        Long teamId = teamService.createTeam(1L, "동시성팀", LEADER_ID);
+        Long teamId = createTeam("동시성팀");
         int threads = 7; // 팀장 1명 + 7명 = 8색 모두 사용
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         CountDownLatch ready = new CountDownLatch(threads);
@@ -110,7 +134,7 @@ class TeamMysqlTest {
     @Test
     @DisplayName("나간 팀원은 isActiveMember false, hasLeft true")
     void 나간_팀원은_isActiveMember_false_hasLeft_true() {
-        Long teamId = teamService.createTeam(2L, "나가기팀", LEADER_ID);
+        Long teamId = createTeam("나가기팀");
         teamService.addMember(teamId, 200L);
 
         leave(teamId, 200L, "LEFT");
@@ -122,7 +146,7 @@ class TeamMysqlTest {
     @Test
     @DisplayName("강제 퇴장(KICKED)된 팀원도 hasLeft true (PST-006 ⑨)")
     void 강퇴된_팀원도_hasLeft_true() {
-        Long teamId = teamService.createTeam(3L, "강퇴팀", LEADER_ID);
+        Long teamId = createTeam("강퇴팀");
         teamService.addMember(teamId, 300L);
 
         leave(teamId, 300L, "KICKED");
@@ -134,7 +158,7 @@ class TeamMysqlTest {
     @Test
     @DisplayName("나갔다가 다시 들어온 팀원은 isActiveMember true, hasLeft true이고 행이 새로 생긴다")
     void 나갔다가_다시_들어온_팀원은_isActiveMember_true_hasLeft_true() {
-        Long teamId = teamService.createTeam(4L, "재가입팀", LEADER_ID);
+        Long teamId = createTeam("재가입팀");
         teamService.addMember(teamId, 400L);
         leave(teamId, 400L, "LEFT");
 
