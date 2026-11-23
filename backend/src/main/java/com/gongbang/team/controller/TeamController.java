@@ -2,10 +2,14 @@ package com.gongbang.team.controller;
 
 import com.gongbang.auth.domain.LoginMember;
 import com.gongbang.global.common.ApiResponse;
+import com.gongbang.team.dto.MyTeamResponse;
 import com.gongbang.team.dto.TeamLeaderDelegateRequest;
 import com.gongbang.team.dto.TeamMemberKickResponse;
 import com.gongbang.team.dto.TeamMemberResponse;
+import com.gongbang.team.dto.TeamRenameRequest;
+import com.gongbang.team.dto.TeamRenameResponse;
 import com.gongbang.team.dto.WorkspaceSummaryResponse;
+import com.gongbang.team.service.TeamListService;
 import com.gongbang.team.service.TeamMemberManagementService;
 import com.gongbang.team.service.TeamQueryService;
 import jakarta.validation.Valid;
@@ -26,6 +30,23 @@ public class TeamController {
 
     private final TeamQueryService teamQueryService;
     private final TeamMemberManagementService teamMemberManagementService;
+    private final TeamListService teamListService;
+
+    /** WS-08 워크스페이스 팀 목록 (API 명세서 GET /api/teams): 내가 현재 팀원인 팀. */
+    @GetMapping("/api/teams")
+    public ApiResponse<List<MyTeamResponse>> getMyTeams(@AuthenticationPrincipal LoginMember me) {
+        return ApiResponse.success(teamListService.getMyTeams(me.getMemberId()));
+    }
+
+    /** WS-08 팀 이름 변경 (API 명세서 PATCH /api/teams/{teamId}): 팀장만. */
+    @PatchMapping("/api/teams/{teamId}")
+    public ApiResponse<TeamRenameResponse> renameTeam(
+            @AuthenticationPrincipal LoginMember me,
+            @PathVariable Long teamId,
+            @RequestBody TeamRenameRequest request) {
+        return ApiResponse.success(
+                teamListService.renameTeam(teamId, me.getMemberId(), request.name()));
+    }
 
     /** WS-02 워크스페이스 헤더 (API 명세서 GET /api/teams/{teamId}): 팀원만. */
     @GetMapping("/api/teams/{teamId}")

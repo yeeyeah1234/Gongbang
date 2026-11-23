@@ -7,6 +7,8 @@ import type { PostFormErrors, PostFormValues } from '../postForm'
 interface PostFormProps {
   // 작성은 공모전 고르기, 수정은 잠긴 공모전 칸 (PST-003 ②)
   contestField: ReactNode
+  // PST-007 외부 공모전 사진 (외부 공모전일 때만)
+  imageField?: ReactNode
   values: PostFormValues
   errors: PostFormErrors
   onChange: (patch: Partial<PostFormValues>) => void
@@ -20,6 +22,7 @@ interface PostFormProps {
 // PST-002·PST-003 모집글 작성·수정 폼 / Figma 02-1~02-5
 export function PostForm({
   contestField,
+  imageField,
   values,
   errors,
   onChange,
@@ -38,6 +41,7 @@ export function PostForm({
   return (
     <form noValidate onSubmit={submit} className="mt-8 flex max-w-[1100px] flex-col gap-8">
       {contestField}
+      {imageField}
 
       <Counted length={values.title.length} max={TITLE_MAX}>
         <Input

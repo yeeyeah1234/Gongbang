@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router'
 import { getApiError } from '../../api/errors'
 import { ContestPicker } from '../../features/post/components/ContestPicker'
 import { PostForm } from '../../features/post/components/PostForm'
-import { useCreatePost } from '../../features/post/hooks'
+import { PostImagePicker } from '../../features/post/components/PostImagePicker'
+import { useCreatePost, useSavePostImages } from '../../features/post/hooks'
 import {
   EMPTY_POST_FORM,
   MESSAGES,
@@ -11,6 +12,8 @@ import {
   validatePostForm,
 } from '../../features/post/postForm'
 import type { PostFormErrors, PostFormValues } from '../../features/post/postForm'
+import { POST_IMAGE_MESSAGES } from '../../features/post/postImages'
+import type { PostImageDraft } from '../../features/post/postImages'
 
 // 서버가 막은 이유를 해당 칸 아래에 보여 준다 (PST-002 ⑥)
 function serverErrorToField(code: string | null, message: string | null): PostFormErrors | null {
@@ -32,6 +35,9 @@ function serverErrorToField(code: string | null, message: string | null): PostFo
 export default function PostCreatePage() {
   const navigate = useNavigate()
   const createPost = useCreatePost()
+  const saveImages = useSavePostImages()
+  // PST-007 외부 공모전 사진 (등록한 뒤 차례로 올린다)
+  const [images, setImages] = useState<PostImageDraft[]>([])
   const [values, setValues] = useState<PostFormValues>(EMPTY_POST_FORM)
   const [submitted, setSubmitted] = useState(false)
   const [serverErrors, setServerErrors] = useState<PostFormErrors>({})
@@ -53,8 +59,24 @@ export default function PostCreatePage() {
     if (Object.keys(validatePostForm(values)).length > 0) return
 
     createPost.mutate(toCreateRequest(values), {
-      // ⑦ 등록하면 상세 화면으로
-      onSuccess: ({ postId }) => navigate(`/posts/${postId}`, { replace: true }),
+      // ⑦ 등록하면 상세 화면으로. 외부 공모전 사진이 있으면 다 올린 뒤에 간다 (PST-007)
+      onSuccess: ({ postId }) => {
+        const detailPath = `/posts/${postId}`
+        if (values.contestMode !== 'external' || images.length === 0) {
+          navigate(detailPath, { replace: true })
+          return
+        }
+        // 글은 이미 등록됐으므로 사진을 일부 못 올려도 상세로 가서 알린다
+        const goDetail = (failed: number) =>
+          navigate(detailPath, {
+            replace: true,
+            state: failed > 0 ? { notice: POST_IMAGE_MESSAGES.failed } : undefined,
+          })
+        saveImages.mutate(
+          { postId, saved: [], drafts: images },
+          { onSuccess: ({ failed }) => goDetail(failed), onError: () => goDetail(1) },
+        )
+      },
       onError: (error) => {
         const { code, message } = getApiError(error)
         const fieldErrors = serverErrorToField(code, message)
@@ -70,12 +92,17 @@ export default function PostCreatePage() {
       <h1 className="text-title font-bold text-text">모집글 작성</h1>
       <PostForm
         contestField={<ContestPicker values={values} errors={errors} onChange={update} />}
+        imageField={
+          values.contestMode === 'external' && (
+            <PostImagePicker drafts={images} onChange={setImages} />
+          )
+        }
         values={values}
         errors={errors}
         onChange={update}
         formError={formError}
         submitLabel="등록"
-        submitting={createPost.isPending}
+        submitting={createPost.isPending || saveImages.isPending}
         onSubmit={submit}
         onCancel={() => navigate('/posts')}
       />

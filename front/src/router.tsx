@@ -4,6 +4,7 @@ import ContestDetailPage from './pages/ContestDetailPage'
 import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
+import WorkspaceListPage from './pages/WorkspaceListPage'
 import WorkspaceNoticePage from './pages/WorkspaceNoticePage'
 import { RequireLogin } from './features/auth/RequireLogin'
 import { RequireGuest } from './features/auth/RequireGuest'
@@ -117,6 +118,8 @@ export const router = createBrowserRouter([
           // PST-003 모집글 수정 (작성자가 아니면 화면이 막고, 서버도 403)
           { path: '/posts/:postId/edit', element: <PostEditPage /> },
           { path: '/service-notices/:serviceNoticeId', element: <ServiceNoticePage /> },
+          // WS-08 워크스페이스 팀 목록 (GNB 「워크스페이스」). 팀을 고르면 아래 /workspaces/:teamId로
+          { path: '/workspaces', element: <WorkspaceListPage /> },
         ],
       },
     ],
