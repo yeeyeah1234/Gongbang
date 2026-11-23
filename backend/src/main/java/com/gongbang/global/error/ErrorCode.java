@@ -92,6 +92,8 @@ public enum ErrorCode {
     NOT_APPLICANT(HttpStatus.FORBIDDEN, "NOT_APPLICANT", "본인의 지원만 취소할 수 있어요"),
     // REC-001 ③ 문구
     CANNOT_APPLY_OWN_POST(HttpStatus.FORBIDDEN, "CANNOT_APPLY_OWN_POST", "내가 쓴 모집글에는 지원할 수 없어요"),
+    NOT_EVENT_AUTHOR(HttpStatus.FORBIDDEN, "NOT_EVENT_AUTHOR", "작성자나 팀장만 바꿀 수 있어요"),
+    AUTO_EVENT_NOT_EDITABLE(HttpStatus.FORBIDDEN, "AUTO_EVENT_NOT_EDITABLE", "자동 일정은 바꿀 수 없어요"),
 
     // 404 Not Found
     // PST-004 ⑤ 문구

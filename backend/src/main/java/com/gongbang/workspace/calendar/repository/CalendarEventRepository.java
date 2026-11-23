@@ -1,12 +1,30 @@
 package com.gongbang.workspace.calendar.repository;
 
 import com.gongbang.workspace.calendar.domain.CalendarEvent;
+import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Long> {
+
+    /**
+     * CAL-03 목록: 기간이 겹치는 일정을 모두 (자동 일정 포함). 여러 날 일정이 달 경계에 걸쳐도 나온다. 시작 시각 → ID 순.
+     *
+     * <p>종일 일정의 end_at은 마지막 날 00:00(종료일 포함)이라 {@code >=}로 비교한다. idx(team_id, start_at)를 탄다.
+     */
+    @Query(
+            "select e from CalendarEvent e"
+                    + " where e.teamId = :teamId"
+                    + " and e.startAt < :toExclusive"
+                    + " and e.endAt >= :fromInclusive"
+                    + " order by e.startAt asc, e.id asc")
+    List<CalendarEvent> findOverlapping(
+            @Param("teamId") Long teamId,
+            @Param("fromInclusive") LocalDateTime fromInclusive,
+            @Param("toExclusive") LocalDateTime toExclusive);
 
     /**
      * CAL-06: 팀의 공모전 마감 자동 일정을 한 문장으로 넣거나 날짜만 고친다. 바뀐 행 수를 돌려준다 (MySQL 기준: 넣음 1, 날짜 바뀜 2, 그대로 0).

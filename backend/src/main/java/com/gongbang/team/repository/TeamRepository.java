@@ -23,9 +23,11 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     Optional<Team> findByIdForUpdate(@Param("teamId") Long teamId);
 
     /**
-     * WS-02 워크스페이스 헤더: 팀 이름, 공모전명, 마감일. 팀이 없으면 빈 값.
+     * WS-02 워크스페이스 헤더: 팀 이름, 공모전 ID·공모전명, 마감일. 팀이 없으면 빈 값.
      *
      * <ul>
+     *   <li>공모전 ID는 rp.contest_id 그대로다. 직접 입력한 외부 공모전이나 모집글이 없으면 NULL (CAL 자동 일정 상세의 「공모전 상세 보기」
+     *       링크용).
      *   <li>모집글에 contest_id가 있으면 contest.title·end_date, 없으면
      *       recruit_post.ext_contest_title·ext_deadline (CAL-06 {@code CalendarEventRepository}와 같은
      *       기준).
@@ -38,6 +40,7 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
     @Query(
             value =
                     "SELECT t.name AS teamName,"
+                            + " rp.contest_id AS contestId,"
                             + " CASE WHEN rp.contest_id IS NOT NULL THEN c.title"
                             + " ELSE rp.ext_contest_title END AS contestTitle,"
                             + " CASE WHEN rp.contest_id IS NOT NULL THEN c.end_date"

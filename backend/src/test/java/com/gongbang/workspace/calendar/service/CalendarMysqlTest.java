@@ -2,10 +2,14 @@ package com.gongbang.workspace.calendar.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.gongbang.contest.dto.ContestBatchItem;
 import com.gongbang.contest.service.ContestBatchService;
+import com.gongbang.global.error.ErrorCode;
 import com.gongbang.team.service.TeamService;
+import com.gongbang.workspace.calendar.dto.CalendarEventRequest;
+import com.gongbang.workspace.calendar.dto.CalendarEventResponse;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.LocalDate;
@@ -33,7 +37,8 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
- * CAL-06 공모전 마감 자동 일정을 실제 MySQL에서 확인한다 (네이티브 upsert의 마감일 계산, UQ, 동시 호출, 커밋 후 리스너).
+ * CAL-06 공모전 마감 자동 일정을 실제 MySQL에서 확인한다 (네이티브 upsert의 마감일 계산, UQ, 동시 호출, 커밋 후 리스너). CAL-03~05 일반 일정
+ * API의 기간 겹침 조회와 실제 저장도 함께 본다.
  *
  * <p>환경 변수 TEST_DATASOURCE_URL이 있을 때만 돈다 (TeamMysqlTest와 같은 방식). 반드시 테스트 전용 스키마(이름에 _test)를 가리키게
  * 한다. 테스트가 끝나면 이 테스트가 넣은 일정·팀·모집글·공모전 행만 지운다.
@@ -63,6 +68,8 @@ class CalendarMysqlTest {
     private static final long MISSING_POST_ID = 8_920_000_001L;
 
     @Autowired private CalendarService calendarService;
+    @Autowired private CalendarEventService calendarEventService;
+    @Autowired private CalendarEventQueryService calendarEventQueryService;
     @Autowired private ContestBatchService contestBatchService;
     @Autowired private TeamService teamService;
     @Autowired private PlatformTransactionManager transactionManager;
@@ -71,6 +78,8 @@ class CalendarMysqlTest {
     private final List<Long> contestIds = new ArrayList<>();
     private final List<Long> postIds = new ArrayList<>();
     private final List<Long> teamIds = new ArrayList<>();
+    // CAL-03~05: calendar_event.created_by는 member FK라 일반 일정 작성자는 실제 회원 행이어야 한다.
+    private final List<Long> memberIds = new ArrayList<>();
 
     @AfterEach
     void tearDown() {
@@ -84,6 +93,9 @@ class CalendarMysqlTest {
         }
         for (Long contestId : contestIds) {
             jdbcTemplate.update("DELETE FROM contest WHERE id = ?", contestId);
+        }
+        for (Long memberId : memberIds) {
+            jdbcTemplate.update("DELETE FROM member WHERE id = ?", memberId);
         }
     }
 
@@ -160,6 +172,43 @@ class CalendarMysqlTest {
 
     private void changeContestEndDate(long contestId, LocalDate endDate) {
         jdbcTemplate.update("UPDATE contest SET end_date = ? WHERE id = ?", endDate, contestId);
+    }
+
+    private long member() {
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        long id =
+                insertAndGetId(
+                        "INSERT INTO member (email, nickname) VALUES (?, ?)",
+                        "calendar-" + suffix + "@test.local",
+                        "ce" + suffix);
+        memberIds.add(id);
+        return id;
+    }
+
+    /** 팀장이 있는 팀 (일반 일정 API는 team_member로 권한을 본다). */
+    private long teamWithLeader(long postId, long leaderId) {
+        Long id = teamService.createTeam(postId, "캘린더 API 테스트팀", leaderId);
+        teamIds.add(id);
+        return id;
+    }
+
+    private long createEvent(
+            long memberId,
+            long teamId,
+            String title,
+            LocalDateTime startAt,
+            LocalDateTime endAt,
+            boolean allDay) {
+        return calendarEventService.create(
+                memberId,
+                teamId,
+                new CalendarEventRequest(title, startAt, endAt, allDay, null, null));
+    }
+
+    private List<String> titlesBetween(long memberId, long teamId, LocalDate from, LocalDate to) {
+        return calendarEventQueryService.getEvents(memberId, teamId, from, to).stream()
+                .map(CalendarEventResponse::title)
+                .toList();
     }
 
     private void insertNormalEvent(long teamId, String title) {
@@ -401,5 +450,139 @@ class CalendarMysqlTest {
 
         assertThat(countEvents(teamId)).isEqualTo(1);
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2027, 4, 1, 0, 0));
+    }
+
+    // ---------- CAL-03~05 일반 일정 API ----------
+
+    @Test
+    @DisplayName("목록: 기간이 겹치는 일정을 모두 준다 (달 경계에 걸친 여러 날 일정은 두 달 모두, 자동 일정 포함, 시작 시각 순)")
+    void 기간이_겹치는_일정을_모두_준다() {
+        long leaderId = member();
+        long teamId = teamWithLeader(servicePost(contest(LocalDate.of(2026, 12, 20))), leaderId);
+        calendarService.upsertAutoEvent(teamId); // 12/20 종일 「공모전 접수 마감」
+
+        createEvent(
+                leaderId,
+                teamId,
+                "달 경계 종일",
+                LocalDateTime.of(2026, 11, 28, 0, 0),
+                LocalDateTime.of(2026, 12, 3, 0, 0),
+                true);
+        createEvent(
+                leaderId,
+                teamId,
+                "10월 말 밤샘",
+                LocalDateTime.of(2026, 10, 31, 22, 0),
+                LocalDateTime.of(2026, 11, 1, 2, 0),
+                false);
+        createEvent(
+                leaderId,
+                teamId,
+                "11월 마지막 날",
+                LocalDateTime.of(2026, 11, 30, 0, 0),
+                LocalDateTime.of(2026, 11, 30, 0, 0),
+                true);
+        createEvent(
+                leaderId,
+                teamId,
+                "12월 회의",
+                LocalDateTime.of(2026, 12, 1, 10, 0),
+                LocalDateTime.of(2026, 12, 1, 11, 0),
+                false);
+        createEvent(
+                leaderId,
+                teamId,
+                "10월 하루",
+                LocalDateTime.of(2026, 10, 30, 0, 0),
+                LocalDateTime.of(2026, 10, 30, 0, 0),
+                true);
+
+        assertThat(
+                        titlesBetween(
+                                leaderId,
+                                teamId,
+                                LocalDate.of(2026, 11, 1),
+                                LocalDate.of(2026, 11, 30)))
+                .containsExactly("10월 말 밤샘", "달 경계 종일", "11월 마지막 날");
+        assertThat(
+                        titlesBetween(
+                                leaderId,
+                                teamId,
+                                LocalDate.of(2026, 12, 1),
+                                LocalDate.of(2026, 12, 31)))
+                .containsExactly("달 경계 종일", "12월 회의", "공모전 접수 마감");
+    }
+
+    @Test
+    @DisplayName("생성 → 다른 팀원 수정 403 → 팀장 수정 → 팀장 삭제가 실제로 저장된다, 자동 일정은 팀장도 못 지운다")
+    void 생성_수정_삭제가_저장된다() {
+        long leaderId = member();
+        long authorId = member();
+        long otherId = member();
+        long teamId = teamWithLeader(servicePost(contest(LocalDate.of(2026, 12, 20))), leaderId);
+        teamService.addMember(teamId, authorId);
+        teamService.addMember(teamId, otherId);
+        calendarService.upsertAutoEvent(teamId);
+
+        long eventId =
+                calendarEventService.create(
+                        authorId,
+                        teamId,
+                        new CalendarEventRequest(
+                                "  회의  ",
+                                LocalDateTime.of(2026, 11, 25, 9, 30),
+                                LocalDateTime.of(2026, 11, 26, 18, 0),
+                                true,
+                                "GREEN",
+                                "   "));
+
+        Map<String, Object> row =
+                jdbcTemplate.queryForMap(
+                        "SELECT title, start_at, end_at, all_day, color, memo, created_by,"
+                                + " auto_type FROM calendar_event WHERE id = ?",
+                        eventId);
+        assertThat(row.get("title")).isEqualTo("회의");
+        assertThat(row.get("start_at")).isEqualTo(LocalDateTime.of(2026, 11, 25, 0, 0));
+        assertThat(row.get("end_at")).isEqualTo(LocalDateTime.of(2026, 11, 26, 0, 0));
+        assertThat(row.get("all_day")).isEqualTo(true);
+        assertThat(row.get("color")).isEqualTo("GREEN");
+        assertThat(row.get("memo")).isNull();
+        assertThat(((Number) row.get("created_by")).longValue()).isEqualTo(authorId);
+        assertThat(row.get("auto_type")).isNull();
+
+        CalendarEventResponse detail = calendarEventQueryService.getEvent(otherId, eventId);
+        assertThat(detail.canEdit()).isFalse();
+        assertThat(detail.createdAt()).isNotNull();
+        CalendarEventRequest change =
+                new CalendarEventRequest(
+                        "팀장이 고침",
+                        LocalDateTime.of(2026, 11, 27, 14, 0),
+                        LocalDateTime.of(2026, 11, 27, 15, 0),
+                        false,
+                        null,
+                        "메모");
+        assertThatThrownBy(() -> calendarEventService.update(otherId, eventId, change))
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.NOT_EVENT_AUTHOR);
+
+        calendarEventService.update(leaderId, eventId, change);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT title FROM calendar_event WHERE id = ?",
+                                String.class,
+                                eventId))
+                .isEqualTo("팀장이 고침");
+
+        Long autoId =
+                jdbcTemplate.queryForObject(
+                        "SELECT id FROM calendar_event WHERE team_id = ? AND auto_type IS NOT NULL",
+                        Long.class,
+                        teamId);
+        assertThatThrownBy(() -> calendarEventService.delete(leaderId, autoId))
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.AUTO_EVENT_NOT_EDITABLE);
+
+        calendarEventService.delete(leaderId, eventId);
+        assertThat(countEvents(teamId)).isEqualTo(1); // 자동 일정만 남음
     }
 }

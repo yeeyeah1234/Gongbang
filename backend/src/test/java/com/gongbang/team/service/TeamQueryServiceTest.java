@@ -12,6 +12,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.team.dto.WorkspaceSummaryResponse;
 import com.gongbang.team.repository.TeamRepository;
 import com.gongbang.team.repository.TeamWorkspaceSummary;
+import java.math.BigInteger;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -41,10 +42,20 @@ class TeamQueryServiceTest {
 
     private static TeamWorkspaceSummary summary(
             String teamName, String contestTitle, Object deadline) {
+        return summary(teamName, null, contestTitle, deadline);
+    }
+
+    private static TeamWorkspaceSummary summary(
+            String teamName, Number contestId, String contestTitle, Object deadline) {
         return new TeamWorkspaceSummary() {
             @Override
             public String getTeamName() {
                 return teamName;
+            }
+
+            @Override
+            public Number getContestId() {
+                return contestId;
             }
 
             @Override
@@ -76,10 +87,16 @@ class TeamQueryServiceTest {
     }
 
     @Test
-    @DisplayName("팀장이면 팀 이름·공모전명·마감일·isLeader true·내 memberId를 돌려준다")
+    @DisplayName("팀장이면 팀 이름·공모전 ID·공모전명·마감일·isLeader true·내 memberId를 돌려준다")
     void 팀장이면_요약과_isLeader_true를_돌려준다() {
         given(teamRepository.findWorkspaceSummary(TEAM_ID))
-                .willReturn(Optional.of(summary("공방팀", "공공데이터 공모전", LocalDate.of(2026, 12, 1))));
+                .willReturn(
+                        Optional.of(
+                                summary(
+                                        "공방팀",
+                                        BigInteger.valueOf(55L),
+                                        "공공데이터 공모전",
+                                        LocalDate.of(2026, 12, 1))));
         given(teamMemberService.isLeader(TEAM_ID, MEMBER_ID)).willReturn(true);
 
         WorkspaceSummaryResponse response =
@@ -90,6 +107,7 @@ class TeamQueryServiceTest {
                         new WorkspaceSummaryResponse(
                                 TEAM_ID,
                                 "공방팀",
+                                55L,
                                 "공공데이터 공모전",
                                 LocalDate.of(2026, 12, 1),
                                 true,
@@ -122,6 +140,7 @@ class TeamQueryServiceTest {
                 teamQueryService.getWorkspaceSummary(TEAM_ID, MEMBER_ID);
 
         assertThat(response.teamName()).isEqualTo("공방팀");
+        assertThat(response.contestId()).isNull();
         assertThat(response.contestTitle()).isNull();
         assertThat(response.deadline()).isNull();
     }

@@ -33,6 +33,7 @@ public class TeamQueryService {
         return new WorkspaceSummaryResponse(
                 teamId,
                 summary.getTeamName(),
+                summary.contestIdOrNull(),
                 summary.getContestTitle(),
                 summary.deadlineDate(),
                 teamMemberService.isLeader(teamId, memberId),
