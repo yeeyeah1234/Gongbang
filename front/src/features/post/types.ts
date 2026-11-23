@@ -64,12 +64,23 @@ export interface PostDetailContest {
   url: string | null // 외부 공모전 링크 (서비스 공모전이면 null)
 }
 
+// API 명세서 PST-007 공모전 사진 (외부 공모전 모집글만, 최대 3장, 첫 장이 대표)
+export interface PostImage {
+  imageId: number
+  url: string
+}
+
+export interface PostImagesResponse {
+  images: PostImage[]
+}
+
 export interface PostDetail {
   postId: number
   title: string
   content: string
   contest: PostDetailContest
-  imageUrl: string | null
+  imageUrl: string | null // 대표 이미지: 올린 사진 첫 장 → og:image → 서비스 공모전 썸네일
+  images: PostImage[] // 올린 공모전 사진 (서비스 공모전이면 [])
   author: PostAuthor & { profileImageUrl: string | null }
   createdAt: string // 한국 시간 YYYY-MM-DDTHH:mm:ss
   viewCount: number
