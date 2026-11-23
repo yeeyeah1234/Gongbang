@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useWorkspace } from '../context'
+import { workspaceKeys } from '../hooks'
 import { createEvent, deleteEvent, fetchEvents, updateEvent } from './api'
 import type { CalendarEventRequest } from './types'
 
@@ -10,7 +11,9 @@ export interface CalendarRange {
 }
 
 export const calendarKeys = {
-  all: (teamId: number) => ['calendarEvents', teamId] as const,
+  // ['workspace', teamId, 'calendar']: 실시간 훅(useWorkspaceRealtime)이 EVENT_CREATED·UPDATED·DELETED에
+  // 이 키를 invalidate한다. range 키는 이 뒤에 붙으므로 prefix로 함께 다시 불러온다
+  all: (teamId: number) => [...workspaceKeys.all(teamId), 'calendar'] as const,
   range: (teamId: number, { from, to }: CalendarRange) =>
     [...calendarKeys.all(teamId), from, to] as const,
 }
