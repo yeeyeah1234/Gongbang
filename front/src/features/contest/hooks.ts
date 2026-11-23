@@ -71,15 +71,56 @@ export function useCategories() {
   })
 }
 
+// 캐시 안의 공모전(카드·상세)에서 contestId가 같은 것의 isBookmarked만 바꾼다.
+// 목록(무한 스크롤 페이지), 인기 목록, 검색 결과, 상세는 모양이 달라서 안쪽까지 찾아 바꾼다.
+function withBookmark(data: unknown, contestId: number, isBookmarked: boolean): unknown {
+  if (Array.isArray(data)) return data.map((item) => withBookmark(item, contestId, isBookmarked))
+  if (data === null || typeof data !== 'object') return data
+  const record = data as Record<string, unknown>
+  if (record.contestId === contestId && typeof record.isBookmarked === 'boolean') {
+    return { ...record, isBookmarked }
+  }
+  let changed = false
+  const next: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(record)) {
+    next[key] = withBookmark(value, contestId, isBookmarked)
+    if (next[key] !== value) changed = true
+  }
+  return changed ? next : data
+}
+
+// 북마크를 보여 주는 캐시: 공모전 목록·인기('contests'), 검색 결과('search'), 상세('contest-detail')
+const BOOKMARK_CACHE_KEYS = [contestKeys.all, ['search'], ['contest-detail']] as const
+
+// MAIN-06 ③·MAIN-02 ④: 누르는 즉시 화면의 북마크 표시를 바꾸고(응답을 기다리지 않음), 실패하면 되돌린다.
 export function useToggleBookmark() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: ({ contestId, isBookmarked }: { contestId: number; isBookmarked: boolean }) =>
       updateBookmark(contestId, !isBookmarked),
+    onMutate: async ({ contestId, isBookmarked }) => {
+      await Promise.all(
+        BOOKMARK_CACHE_KEYS.map((queryKey) => queryClient.cancelQueries({ queryKey })),
+      )
+      const snapshots = BOOKMARK_CACHE_KEYS.flatMap((queryKey) =>
+        queryClient.getQueriesData({ queryKey }),
+      )
+      for (const queryKey of BOOKMARK_CACHE_KEYS) {
+        queryClient.setQueriesData({ queryKey }, (old: unknown) =>
+          withBookmark(old, contestId, !isBookmarked),
+        )
+      }
+      return { snapshots }
+    },
+    onError: (_error, _variables, context) => {
+      context?.snapshots.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey, data))
+    },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: contestKeys.all })
-      // 검색 결과 카드도 같은 북마크 값을 보여 준다 (SRCH-02)
-      void queryClient.invalidateQueries({ queryKey: ['search'] })
+      // 화면은 이미 바꿨으니 목록·검색은 다시 부르지 않고 오래된 값으로만 표시해 둔다(다음에 열 때 새로 받음).
+      void queryClient.invalidateQueries({ queryKey: contestKeys.all, refetchType: 'none' })
+      void queryClient.invalidateQueries({ queryKey: ['search'], refetchType: 'none' })
+      // 마이페이지 북마크 목록(MY-03)에 바로 반영되게 한다
+      void queryClient.invalidateQueries({ queryKey: ['members', 'me', 'bookmarks'] })
     },
   })
 }

@@ -15,6 +15,8 @@ export const WORKSPACE_TABS: ReadonlyArray<{ key: WorkspaceTabKey; label: string
 export interface WorkspaceSummary {
   teamId: number
   teamName: string
+  // 캘린더 자동 일정의 「공모전 상세 보기」 링크용. 외부 공모전을 직접 입력했거나 모집글이 없으면 null
+  contestId: number | null
   // 모집글이나 값이 없으면 null
   contestTitle: string | null
   // 'YYYY-MM-DD'. 없으면 null

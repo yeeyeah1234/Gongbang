@@ -6,6 +6,7 @@ import { AuthBootstrap } from './features/auth/AuthBootstrap'
 import { queryClient } from './lib/queryClient'
 import { router } from './router'
 import './styles/theme.css'
+import './styles/vendor-overrides.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

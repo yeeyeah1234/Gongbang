@@ -142,7 +142,10 @@ function createHandler(view: PreviewView) {
   return ({ url = '', method = 'get', params, data }: InternalAxiosRequestConfig): Result => {
     if (url === `/api/teams/${PREVIEW_TEAM_ID}`) {
       const summary = { teamId: PREVIEW_TEAM_ID, teamName: '공방팀', isLeader, myMemberId: me }
-      return { status: 200, data: { ...summary, contestTitle: null, deadline: null } }
+      return {
+        status: 200,
+        data: { ...summary, contestId: null, contestTitle: null, deadline: null },
+      }
     }
     if (view === 'error') return { status: 500, code: 'INTERNAL_SERVER_ERROR' }
     if (method !== 'get') return write(method, url, data ? JSON.parse(data) : {})

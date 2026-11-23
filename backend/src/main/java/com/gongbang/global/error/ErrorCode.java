@@ -95,6 +95,11 @@ public enum ErrorCode {
     NOT_APPLICANT(HttpStatus.FORBIDDEN, "NOT_APPLICANT", "본인의 지원만 취소할 수 있어요"),
     // REC-001 ③ 문구
     CANNOT_APPLY_OWN_POST(HttpStatus.FORBIDDEN, "CANNOT_APPLY_OWN_POST", "내가 쓴 모집글에는 지원할 수 없어요"),
+    // BRD-003 ① 문구
+    NOT_BOARD_POST_AUTHOR(HttpStatus.FORBIDDEN, "NOT_BOARD_POST_AUTHOR", "글 작성자만 할 수 있어요"),
+    // BRD-007 ③ 문구
+    CANNOT_LIKE_OWN_BOARD_POST(
+            HttpStatus.FORBIDDEN, "CANNOT_LIKE_OWN_BOARD_POST", "내 글에는 좋아요를 누를 수 없어요"),
     NOT_EVENT_AUTHOR(HttpStatus.FORBIDDEN, "NOT_EVENT_AUTHOR", "작성자나 팀장만 바꿀 수 있어요"),
     AUTO_EVENT_NOT_EDITABLE(HttpStatus.FORBIDDEN, "AUTO_EVENT_NOT_EDITABLE", "자동 일정은 바꿀 수 없어요"),
     // TODO(확인 필요): 기능정의서 문구 미정 (NET-04, NET-05)
@@ -105,6 +110,11 @@ public enum ErrorCode {
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "삭제되었거나 없는 모집글이에요"),
     // REC-002 ⑥ 문구 (11/13 추가)
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "APPLICATION_NOT_FOUND", "이미 취소되었거나 없는 지원이에요"),
+    // BRD-003 ⑤ 문구
+    BOARD_POST_NOT_FOUND(HttpStatus.NOT_FOUND, "BOARD_POST_NOT_FOUND", "삭제되었거나 없는 글이에요"),
+    // BRD-006 ④ 문구
+    BOARD_POST_IMAGE_NOT_FOUND(
+            HttpStatus.NOT_FOUND, "BOARD_POST_IMAGE_NOT_FOUND", "삭제되었거나 없는 사진이에요"),
     // PST-007 ④ 문구
     POST_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_IMAGE_NOT_FOUND", "삭제되었거나 없는 사진이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (API 명세서 MAIN-02)
@@ -155,6 +165,8 @@ public enum ErrorCode {
     POST_COMPLETED(HttpStatus.CONFLICT, "POST_COMPLETED", "모집이 완료된 게시글입니다"),
     // PST-007 ② 문구
     POST_IMAGE_LIMIT(HttpStatus.CONFLICT, "POST_IMAGE_LIMIT", "사진은 3장까지 올릴 수 있어요"),
+    // BRD-006 ② 문구 (PST-007 ②와 같음)
+    BOARD_POST_IMAGE_LIMIT(HttpStatus.CONFLICT, "BOARD_POST_IMAGE_LIMIT", "사진은 3장까지 올릴 수 있어요"),
     // REC-001 ③ 문구 (11/10 김수형 결정, 제안값)
     RECRUIT_PERIOD_ENDED(HttpStatus.CONFLICT, "RECRUIT_PERIOD_ENDED", "모집 기간이 종료된 게시글입니다"),
     // REC-001 ③ 문구
