@@ -2,6 +2,7 @@ package com.gongbang.team.repository;
 
 import com.gongbang.team.domain.TeamMember;
 import com.gongbang.team.domain.TeamRole;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +22,10 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
 
     /** 현재 팀원 목록 (joinedAt 오름차순). */
     List<TeamMember> findAllByTeamIdAndLeftAtIsNullOrderByJoinedAtAscIdAsc(Long teamId);
+
+    /** WS-08 팀 목록: 여러 팀의 현재 팀원을 한 번에 (팀 안에서는 입장 순). */
+    List<TeamMember> findAllByTeamIdInAndLeftAtIsNullOrderByJoinedAtAscIdAsc(
+            Collection<Long> teamIds);
 
     /** 특정 회원의 현재 팀원 행 조회. */
     java.util.Optional<TeamMember> findByTeamIdAndMemberIdAndLeftAtIsNull(

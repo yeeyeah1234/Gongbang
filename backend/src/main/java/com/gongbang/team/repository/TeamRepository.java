@@ -2,6 +2,7 @@ package com.gongbang.team.repository;
 
 import com.gongbang.team.domain.Team;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -51,4 +52,26 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
                             + " WHERE t.id = :teamId",
             nativeQuery = true)
     Optional<TeamWorkspaceSummary> findWorkspaceSummary(@Param("teamId") Long teamId);
+
+    /**
+     * WS-08 워크스페이스 팀 목록: 내가 현재 팀원(left_at IS NULL)인 팀. 공모전명·마감일 기준은 {@link #findWorkspaceSummary}와
+     * 같다. 정렬은 service가 진행 중·종료로 나눈 뒤 한다.
+     */
+    @Query(
+            value =
+                    "SELECT t.id AS teamId,"
+                            + " t.name AS teamName,"
+                            + " CASE WHEN rp.contest_id IS NOT NULL THEN c.title"
+                            + " ELSE rp.ext_contest_title END AS contestTitle,"
+                            + " CASE WHEN rp.contest_id IS NOT NULL THEN c.end_date"
+                            + " ELSE rp.ext_deadline END AS deadline,"
+                            + " t.last_activity_at AS lastActivityAt,"
+                            + " tm.role AS myRole"
+                            + " FROM team_member tm"
+                            + " JOIN team t ON t.id = tm.team_id"
+                            + " LEFT JOIN recruit_post rp ON rp.id = t.post_id"
+                            + " LEFT JOIN contest c ON c.id = rp.contest_id"
+                            + " WHERE tm.member_id = :memberId AND tm.left_at IS NULL",
+            nativeQuery = true)
+    List<MyTeamRow> findMyTeams(@Param("memberId") Long memberId);
 }
