@@ -66,6 +66,8 @@ public enum ErrorCode {
     // NET-04, NET-06 (API 명세서)
     CANNOT_CHAT_SELF(HttpStatus.BAD_REQUEST, "CANNOT_CHAT_SELF", "자기 자신과는 1:1 채팅을 할 수 없어요"),
     CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST, "CANNOT_KICK_SELF", "자기 자신은 강제 퇴장할 수 없어요"),
+    // NET-02 신고 (API 명세서)
+    CANNOT_REPORT_SELF(HttpStatus.BAD_REQUEST, "CANNOT_REPORT_SELF", "자기 자신은 신고할 수 없어요"),
 
     // 401 Unauthorized
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요하거나 만료되었습니다."),
