@@ -1,10 +1,18 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
-import { fetchNoticeUnreadCount, fetchPinnedNotice, fetchWorkspaceSummary } from './api'
+import {
+  fetchMyTeams,
+  fetchNoticeUnreadCount,
+  fetchPinnedNotice,
+  fetchWorkspaceSummary,
+  renameTeam,
+} from './api'
 
 // 공지 화면(NTC)에서 고정·작성·삭제 뒤에는 workspaceKeys.notice(teamId)를 invalidate하면
 // 고정 공지 배너와 공지 탭 배지가 함께 다시 불러와진다 (useRefreshNoticeIndicators).
 export const workspaceKeys = {
+  // WS-08 워크스페이스 팀 목록
+  myTeams: () => ['workspace', 'my-teams'] as const,
   all: (teamId: number) => ['workspace', teamId] as const,
   summary: (teamId: number) => ['workspace', teamId, 'summary'] as const,
   notice: (teamId: number) => ['workspace', teamId, 'notice'] as const,
@@ -48,4 +56,22 @@ export function useRefreshNoticeIndicators(teamId: number) {
     () => queryClient.invalidateQueries({ queryKey: workspaceKeys.notice(teamId) }),
     [queryClient, teamId],
   )
+}
+
+// WS-08 워크스페이스 팀 목록
+export function useMyTeams() {
+  return useQuery({ queryKey: workspaceKeys.myTeams(), queryFn: fetchMyTeams })
+}
+
+// WS-08 ⑧ 팀 이름 변경: 저장하면 팀 목록과 그 팀 워크스페이스 헤더를 다시 불러온다
+// 다른 팀원 화면은 TEAM_RENAMED 팀 이벤트(워크스페이스 안) 또는 목록을 다시 열 때 바뀐다
+export function useRenameTeam() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ teamId, name }: { teamId: number; name: string }) => renameTeam(teamId, name),
+    onSuccess: (_data, { teamId }) => {
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
+    },
+  })
 }

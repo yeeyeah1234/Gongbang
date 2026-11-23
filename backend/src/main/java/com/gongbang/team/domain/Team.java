@@ -44,4 +44,14 @@ public class Team {
     public static Team create(Long postId, String name) {
         return new Team(postId, name);
     }
+
+    /** WS-08 ⑥⑦ 팀 이름 변경. 1~20자 검사는 부르는 쪽(TeamService.validateName)이 먼저 한다. */
+    public void rename(String name) {
+        this.name = name;
+    }
+
+    /** 팀 내 활동 시각(채팅 전송 등)을 갱신한다. */
+    public void touchLastActivity(LocalDateTime activityAt) {
+        this.lastActivityAt = activityAt != null ? activityAt : LocalDateTime.now();
+    }
 }

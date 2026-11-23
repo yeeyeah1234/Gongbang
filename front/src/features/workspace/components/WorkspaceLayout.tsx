@@ -18,11 +18,13 @@
  * 5. 본문 영역은 flex 세로 칸이고 남은 높이를 채운다(flex-1, min-h-0). 탭 화면 맨 바깥은 flex-1로 두면 된다.
  */
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { getApiError } from '../../../api/errors'
 import { Button } from '../../../components/ui/Button'
 import { useLoginMember } from '../../auth/store'
+import { useChatRooms } from '../../chat/hooks'
+import { useWorkspaceRealtime } from '../../chat/useWorkspaceRealtime'
 import type { WorkspaceOutletContext } from '../context'
 import {
   useNoticeUnreadCount,
@@ -67,6 +69,18 @@ export function WorkspaceLayout({
   const pinned = usePinnedNotice(teamId, ready)
   const noticeUnread = useNoticeUnreadCount(teamId, ready)
   const refreshNoticeIndicators = useRefreshNoticeIndicators(teamId)
+  const chatRoomsQuery = useChatRooms(teamId, ready)
+  const totalChatUnread = useMemo(() => {
+    if (!chatRoomsQuery.data) return chatUnreadCount
+    return chatRoomsQuery.data.reduce((sum, room) => sum + room.unreadCount, 0)
+  }, [chatRoomsQuery.data, chatUnreadCount])
+
+  const realtime = useWorkspaceRealtime({
+    teamId,
+    myMemberId: summary?.myMemberId ?? null,
+    enabled: ready,
+    onRefreshNotice: refreshNoticeIndicators,
+  })
   // 조회 실패(공지 API 머지 전 등)면 data가 없어 배너도 펼치기 버튼도 숨긴다
   const pinnedNotice = pinned.data ?? null
   const [pinnedCollapsed, setPinnedCollapsed] = usePinnedCollapsed(
@@ -122,7 +136,12 @@ export function WorkspaceLayout({
     )
   }
 
-  const context: WorkspaceOutletContext = { teamId, summary, refreshNoticeIndicators }
+  const context: WorkspaceOutletContext = {
+    teamId,
+    summary,
+    refreshNoticeIndicators,
+    realtime,
+  }
   // 헤더 맨 앞의 나: 닉네임은 로그인 상태, memberId·팀장 여부는 팀 요약에서
   const self: WorkspaceOnlineMember | null = loginMember
     ? {
@@ -145,7 +164,7 @@ export function WorkspaceLayout({
       />
       <WorkspaceTabs
         basePath={basePath}
-        chatUnreadCount={chatUnreadCount}
+        chatUnreadCount={totalChatUnread}
         noticeUnreadCount={noticeUnread.data ?? 0}
         onExpandPinned={
           pinnedNotice && pinnedCollapsed ? () => setPinnedCollapsed(false) : undefined

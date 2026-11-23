@@ -3,7 +3,8 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { getApiError } from '../../api/errors'
 import { Badge } from '../../components/ui/Badge'
 import { PostForm } from '../../features/post/components/PostForm'
-import { usePostDetail, useUpdatePost } from '../../features/post/hooks'
+import { PostImagePicker } from '../../features/post/components/PostImagePicker'
+import { usePostDetail, useSavePostImages, useUpdatePost } from '../../features/post/hooks'
 import {
   MESSAGES,
   toEditFormValues,
@@ -11,6 +12,8 @@ import {
   validatePostEditForm,
 } from '../../features/post/postForm'
 import type { PostFormErrors, PostFormValues } from '../../features/post/postForm'
+import { POST_IMAGE_MESSAGES, toDrafts } from '../../features/post/postImages'
+import type { PostImageDraft } from '../../features/post/postImages'
 import type { PostDetail } from '../../features/post/types'
 
 const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
@@ -70,6 +73,9 @@ export default function PostEditPage() {
 function PostEditForm({ post }: { post: PostDetail }) {
   const navigate = useNavigate()
   const updatePost = useUpdatePost()
+  const saveImages = useSavePostImages()
+  // PST-003 ②, PST-007 ③ 외부 공모전 사진 추가·삭제·순서 (「수정 완료」 때 반영)
+  const [images, setImages] = useState<PostImageDraft[]>(() => toDrafts(post.images))
   const [initial] = useState(() => toEditFormValues(post))
   const [values, setValues] = useState<PostFormValues>(initial)
   const [submitted, setSubmitted] = useState(false)
@@ -99,8 +105,22 @@ function PostEditForm({ post }: { post: PostDetail }) {
     updatePost.mutate(
       { postId: post.postId, body: toUpdateRequest(values, initial) },
       {
-        // ⑥ 저장하면 상세 화면으로
-        onSuccess: () => navigate(detailPath, { replace: true }),
+        // ⑥ 저장하면 상세 화면으로. 사진이 바뀌었으면 반영한 뒤에 간다 (PST-007)
+        onSuccess: () => {
+          if (!post.contest.isExternal || !imagesChanged(post.images, images)) {
+            navigate(detailPath, { replace: true })
+            return
+          }
+          const goDetail = (failed: number) =>
+            navigate(detailPath, {
+              replace: true,
+              state: failed > 0 ? { notice: POST_IMAGE_MESSAGES.failed } : undefined,
+            })
+          saveImages.mutate(
+            { postId: post.postId, saved: post.images, drafts: images },
+            { onSuccess: ({ failed }) => goDetail(failed), onError: () => goDetail(1) },
+          )
+        },
         onError: (error) => {
           const { code, message } = getApiError(error)
           const fieldErrors = serverErrorToField(code)
@@ -117,16 +137,27 @@ function PostEditForm({ post }: { post: PostDetail }) {
       <h1 className="text-title font-bold text-text">모집글 수정</h1>
       <PostForm
         contestField={<LockedContest contest={post.contest} />}
+        imageField={
+          post.contest.isExternal && <PostImagePicker drafts={images} onChange={setImages} />
+        }
         values={values}
         errors={errors}
         onChange={update}
         formError={formError}
         submitLabel="수정 완료"
-        submitting={updatePost.isPending}
+        submitting={updatePost.isPending || saveImages.isPending}
         onSubmit={submit}
         onCancel={() => navigate(detailPath)}
       />
     </main>
+  )
+}
+
+// 사진을 하나라도 더하거나 빼거나 순서를 바꿨는지
+function imagesChanged(saved: PostDetail['images'], drafts: PostImageDraft[]) {
+  return (
+    saved.length !== drafts.length ||
+    drafts.some((draft, i) => draft.kind !== 'saved' || draft.imageId !== saved[i].imageId)
   )
 }
 

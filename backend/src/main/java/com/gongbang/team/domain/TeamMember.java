@@ -74,4 +74,15 @@ public class TeamMember {
     public static TeamMember member(Team team, Long memberId, int colorIndex) {
         return new TeamMember(team, memberId, TeamRole.MEMBER, colorIndex);
     }
+
+    /** 팀원을 강제 퇴장 처리한다. */
+    public void kick(LocalDateTime leftAt) {
+        this.leftAt = leftAt != null ? leftAt : LocalDateTime.now();
+        this.leaveType = LeaveType.KICKED;
+    }
+
+    /** 팀원 역할을 변경한다 (팀장 위임 등). */
+    public void changeRole(TeamRole newRole) {
+        this.role = newRole;
+    }
 }

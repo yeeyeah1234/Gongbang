@@ -46,3 +46,26 @@ export interface WorkspaceOnlineMember {
   colorIndex: MemberColorIndex
   isLeader: boolean
 }
+
+// GET /api/teams (WS-08 워크스페이스 팀 목록 카드)
+// TODO(확인 필요): API 명세서의 lastMessage·unreadCount는 채팅(김건우) 데이터라 아직 내려오지 않는다
+export interface MyTeam {
+  teamId: number
+  name: string
+  // 모집글이나 값이 없으면 null
+  contestTitle: string | null
+  // 'YYYY-MM-DD'. 없으면 null
+  deadline: string | null
+  // 마감일 - 오늘(KST). 마감일이 없으면 null, 지나면 음수
+  dDay: number | null
+  isEnded: boolean
+  isLeader: boolean
+  memberCount: number
+  members: Array<{
+    memberId: number
+    nickname: string
+    profileImageUrl: string | null
+    colorIndex: MemberColorIndex
+  }>
+  lastActivityAt: string
+}

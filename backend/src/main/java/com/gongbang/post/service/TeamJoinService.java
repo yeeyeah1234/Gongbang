@@ -1,8 +1,10 @@
 package com.gongbang.post.service;
 
 import com.gongbang.application.service.ApplicationCloseService;
+import com.gongbang.chat.service.ChatMembershipService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.global.websocket.TeamEventPublisher;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.team.service.TeamService;
@@ -36,6 +38,8 @@ public class TeamJoinService {
     private final ApplicationCloseService applicationCloseService;
     private final RecruitNotifier recruitNotifier;
     private final CalendarService calendarService;
+    private final ChatMembershipService chatMembershipService;
+    private final TeamEventPublisher teamEventPublisher;
 
     /**
      * memberId를 이 글 팀의 확정 팀원으로 넣는다. 첫 확정이면 팀을 만들고 작성자를 팀장으로 넣는다 (INT-006 ①). 확정 인원이 목표에 닿으면 자동
@@ -55,8 +59,8 @@ public class TeamJoinService {
 
         Long teamId = teamService.findTeamIdByPostId(postId).orElseGet(() -> createTeam(post));
         teamService.addMember(teamId, memberId);
-        // TODO(확인 필요): 김건우 채팅이 생기면 확정 즉시 팀 채팅방에 넣는다 (INT-006 ②). 팀 이벤트 MEMBER_JOINED 발행도 같은 때
-        // (TeamEventPublisher, 김건우 global).
+        chatMembershipService.addMemberToTeamRoom(teamId, memberId);
+        teamEventPublisher.publish(teamId, "MEMBER_JOINED", memberId, memberId);
         post.addConfirmedMember();
 
         if (post.isFull()) {
@@ -73,7 +77,7 @@ public class TeamJoinService {
     private Long createTeam(RecruitPost post) {
         Long teamId =
                 teamService.createTeam(post.getId(), teamName(post.getTitle()), post.getAuthorId());
-        // TODO(확인 필요): 김건우 채팅이 생기면 여기서 팀 채팅방을 만든다 (INT-006 ①).
+        chatMembershipService.createTeamRoom(teamId, post.getAuthorId());
         // CAL-06: 공모전 마감 자동 일정. 이 트랜잭션에 합류하고, 마감일이 없으면 아무것도 하지 않는다 (예외 없음)
         calendarService.upsertAutoEvent(teamId);
         return teamId;

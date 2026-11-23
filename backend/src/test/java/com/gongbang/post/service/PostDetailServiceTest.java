@@ -22,10 +22,12 @@ import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.MyStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.PostDetailResponse;
+import com.gongbang.post.dto.PostImageResponse;
 import com.gongbang.post.repository.RecruitPostRepository;
 import com.gongbang.post.service.PostMembershipService.Membership;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -51,6 +53,7 @@ class PostDetailServiceTest {
     @Mock private ApplicationQueryService applicationQueryService;
     @Mock private PostMembershipService postMembershipService;
     @Mock private MemberService memberService;
+    @Mock private PostImageService postImageService;
 
     private PostDetailService postDetailService;
 
@@ -62,7 +65,10 @@ class PostDetailServiceTest {
                         contestLookupService,
                         applicationQueryService,
                         postMembershipService,
-                        memberService);
+                        memberService,
+                        postImageService);
+        // 기본은 올린 사진 없음 (PST-007, 사진이 있는 경우는 각 테스트에서 바꾼다)
+        lenient().when(postImageService.findImages(anyLong())).thenReturn(List.of());
         // 기본은 팀과 관계없는 회원 (팀원·나간 팀원 경우는 각 테스트에서 바꾼다)
         lenient()
                 .when(postMembershipService.membership(anyLong(), anyLong()))
@@ -282,6 +288,41 @@ class PostDetailServiceTest {
         assertThat(response.contest().categoryName()).isEqualTo("기타");
         assertThat(response.contest().url()).isEqualTo("https://hack.example.com");
         assertThat(response.imageUrl()).isEqualTo("https://hack.example.com/og.png");
+    }
+
+    @Test
+    @DisplayName("외부 공모전 글에 올린 사진이 있으면 첫 장이 대표 이미지이고 사진 목록을 함께 준다 (PST-007 ⑤)")
+    void 올린_사진이_og_image보다_먼저() {
+        ExternalContest external =
+                ExternalContest.of("외부 해커톤", 5L, DEADLINE, "https://hack.example.com");
+        ReflectionTestUtils.setField(external, "imageUrl", "https://hack.example.com/og.png");
+        RecruitPost post =
+                RecruitPost.withExternalContest(
+                        AUTHOR_ID, external, "해커톤", "내용", 3, NOW.toLocalDate(), DEADLINE, null);
+        ReflectionTestUtils.setField(post, "id", POST_ID);
+        given(recruitPostRepository.findById(POST_ID)).willReturn(Optional.of(post));
+        given(contestLookupService.findCategoryNames(Set.of(5L))).willReturn(Map.of(5L, "기타"));
+        List<PostImageResponse> images =
+                List.of(
+                        new PostImageResponse(11L, "/uploads/post/first.png"),
+                        new PostImageResponse(12L, "/uploads/post/second.png"));
+        given(postImageService.findImages(POST_ID)).willReturn(images);
+
+        PostDetailResponse response = postDetailService.getPost(POST_ID, null, NOW);
+
+        assertThat(response.imageUrl()).isEqualTo("/uploads/post/first.png");
+        assertThat(response.images()).containsExactlyElementsOf(images);
+    }
+
+    @Test
+    @DisplayName("서비스 공모전 글은 사진 목록이 비어 있고 사진을 찾지 않는다 (PST-007 ①)")
+    void 서비스_공모전_글은_사진_목록이_비어_있다() {
+        givenContestPost(5);
+
+        PostDetailResponse response = postDetailService.getPost(POST_ID, null, NOW);
+
+        assertThat(response.images()).isEmpty();
+        verify(postImageService, never()).findImages(anyLong());
     }
 
     @Test

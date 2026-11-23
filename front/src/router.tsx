@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import WorkspaceCalendarRoute from './pages/WorkspaceCalendarRoute'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
+import WorkspaceListPage from './pages/WorkspaceListPage'
 import WorkspaceNoticePage from './pages/WorkspaceNoticePage'
 import { RequireLogin } from './features/auth/RequireLogin'
 import { RequireGuest } from './features/auth/RequireGuest'
@@ -150,12 +151,12 @@ export const router = createBrowserRouter([
           // PST-003 모집글 수정 (작성자가 아니면 화면이 막고, 서버도 403)
           { path: '/posts/:postId/edit', element: <PostEditPage /> },
           { path: '/service-notices/:serviceNoticeId', element: <ServiceNoticePage /> },
+          // WS-08 워크스페이스 팀 목록 (GNB 「워크스페이스」). 팀을 고르면 아래 /workspaces/:teamId로
+          { path: '/workspaces', element: <WorkspaceListPage /> },
         ],
       },
     ],
   },
-  // 워크스페이스는 사이트 GNB 없이 자기 헤더를 쓴다 (WS-02 ②)
-  { path: '/teams/:teamId/chat', element: <WorkspaceChatPage /> },
   {
     // WS-02 워크스페이스 공통 틀 (GNB 없음). 탭은 URL로 정한다: /workspaces/:teamId/{chat|docs|board|calendar|notice}
     // 각 탭 담당자는 아래 element를 자기 화면으로 바꾼다 (WorkspaceLayout.tsx 맨 위 주석 참고)
@@ -167,8 +168,7 @@ export const router = createBrowserRouter([
         children: [
           // 첫 입장은 채팅 탭
           { index: true, element: <Navigate to="chat" replace /> },
-          // TODO(확인 필요): 채팅(김건우)은 지금 /teams/:teamId/chat에 따로 있다. 합칠 때 여기로 옮긴다
-          { path: 'chat', element: <WorkspacePlaceholder tab="chat" /> },
+          { path: 'chat', element: <WorkspaceChatPage /> },
           { path: 'docs', element: <WorkspacePlaceholder tab="docs" /> },
           { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
           // CAL-01·03·04·05·08 월간 캘린더 (WorkspaceCalendarRoute가 lazy로 불러온다)

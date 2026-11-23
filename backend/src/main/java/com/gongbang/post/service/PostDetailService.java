@@ -37,6 +37,7 @@ public class PostDetailService {
     private final ApplicationQueryService applicationQueryService;
     private final PostMembershipService postMembershipService;
     private final MemberService memberService;
+    private final PostImageService postImageService;
 
     /**
      * PST-005 모집글 상세. 없거나 삭제된 글이면 404 POST_NOT_FOUND (PST-004 ⑤).
@@ -81,7 +82,14 @@ public class PostDetailService {
                             .findCategoryNames(Set.of(post.getExternalContest().getCategoryId()))
                             .get(post.getExternalContest().getCategoryId());
             return PostDetailResponse.of(
-                    post, categoryName, author, viewCount, myStatus, myApplicationId, today);
+                    post,
+                    categoryName,
+                    postImageService.findImages(post.getId()),
+                    author,
+                    viewCount,
+                    myStatus,
+                    myApplicationId,
+                    today);
         }
         ContestSummary contest =
                 contestLookupService

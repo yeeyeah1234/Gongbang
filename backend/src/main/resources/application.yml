@@ -32,8 +32,9 @@ spring:
   # MY-01 프로필 사진 5MB (서버에서 5MB를 넘으면 친절한 문구로 막고, 그보다 훨씬 큰 요청만 여기서 끊는다)
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
+      # 앞단 nginx·BunkerWeb 업로드 한도(20MB)와 맞춘다. 기능별 한도는 각 service가 확인한다 (MY-01 5MB, PST-007 10MB)
+      max-file-size: 20MB
+      max-request-size: 20MB
 
   jackson:
     time-zone: Asia/Seoul
@@ -93,6 +94,8 @@ app:
     real-name-key: ${REAL_NAME_KEY:}
   # 메일 링크·OAuth 콜백에 쓰는 프론트 주소
   front-base-url: ${FRONT_BASE_URL:http://localhost:5173}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,https://gongbang.apple-farm.online}
   # 보내는 사람 주소. 비우면 MAIL_USERNAME(이메일 형식일 때)을 쓴다
   mail-from: ${MAIL_FROM:}
   # MY-01 프로필 사진을 저장하는 폴더 (깃에 안 올라감). 배포 서버에서는 지워지지 않는 경로로
