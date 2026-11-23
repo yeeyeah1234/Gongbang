@@ -25,7 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * REC-004 지원자 수락을 실제 MySQL에서 동시에 보내 모집글 행 잠금을 확인한다 (AGENTS.md 7 「동시 요청 테스트」).
  *
  * <p>환경 변수 TEST_DATASOURCE_URL이 있을 때만 돈다 (TeamMysqlTest와 같은 방식). 반드시 테스트 전용 스키마(이름에 _test)를 가리키게
- * 한다. 테스트가 끝나면 이 테스트가 넣은 회원·공모전·모집글·지원·팀·알림 행을 지운다.
+ * 한다. 테스트가 끝나면 이 테스트가 넣은 회원·공모전·모집글·지원·팀·채팅방·알림 행을 지운다.
  *
  * <pre>
  * TEST_DATASOURCE_URL=jdbc:mysql://localhost:3306/gongbang_test?serverTimezone=Asia/Seoul
@@ -88,6 +88,22 @@ class ApplicationAcceptMysqlTest {
         String members = "(910001, 910011, 910012, 910013)";
         jdbcTemplate.update("DELETE FROM email_outbox WHERE receiver_id IN " + members);
         jdbcTemplate.update("DELETE FROM notification WHERE receiver_id IN " + members);
+        // 첫 수락 때 팀 채팅방이 함께 생긴다 (INT-006 ①, #99). 채팅 행이 team·member를 가리키므로 먼저 지운다
+        String teamRooms =
+                "SELECT cr.id FROM chat_room cr JOIN team t ON cr.team_id = t.id WHERE t.post_id = ?";
+        jdbcTemplate.update(
+                "DELETE FROM chat_message WHERE chat_room_id IN (SELECT id FROM ("
+                        + teamRooms
+                        + ") r)",
+                postId);
+        jdbcTemplate.update(
+                "DELETE FROM chat_room_member WHERE chat_room_id IN (SELECT id FROM ("
+                        + teamRooms
+                        + ") r)",
+                postId);
+        jdbcTemplate.update(
+                "DELETE cr FROM chat_room cr JOIN team t ON cr.team_id = t.id WHERE t.post_id = ?",
+                postId);
         jdbcTemplate.update(
                 "DELETE tm FROM team_member tm JOIN team t ON tm.team_id = t.id WHERE t.post_id = ?",
                 postId);
