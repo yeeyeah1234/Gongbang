@@ -121,8 +121,6 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  // 워크스페이스는 사이트 GNB 없이 자기 헤더를 쓴다 (WS-02 ②)
-  { path: '/teams/:teamId/chat', element: <WorkspaceChatPage /> },
   {
     // WS-02 워크스페이스 공통 틀 (GNB 없음). 탭은 URL로 정한다: /workspaces/:teamId/{chat|docs|board|calendar|notice}
     // 각 탭 담당자는 아래 element를 자기 화면으로 바꾼다 (WorkspaceLayout.tsx 맨 위 주석 참고)
@@ -134,8 +132,7 @@ export const router = createBrowserRouter([
         children: [
           // 첫 입장은 채팅 탭
           { index: true, element: <Navigate to="chat" replace /> },
-          // TODO(확인 필요): 채팅(김건우)은 지금 /teams/:teamId/chat에 따로 있다. 합칠 때 여기로 옮긴다
-          { path: 'chat', element: <WorkspacePlaceholder tab="chat" /> },
+          { path: 'chat', element: <WorkspaceChatPage /> },
           { path: 'docs', element: <WorkspacePlaceholder tab="docs" /> },
           { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
           { path: 'calendar', element: <WorkspacePlaceholder tab="calendar" /> },

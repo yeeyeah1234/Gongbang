@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /** 요청 형식 오류가 500이 아니라 400·404로 나가는지 (11/17 팀 합의). 재현했던 경우를 하나씩 보낸다. */
@@ -66,6 +67,12 @@ class GlobalExceptionHandlerTest {
             // 실제 서버에서 정적 리소스 처리기가 없는 주소에 던지는 예외
             throw new NoResourceFoundException(
                     org.springframework.http.HttpMethod.GET, "wp-login.php");
+        }
+
+        @PostMapping("/test/upload")
+        ApiResponse<Void> upload() {
+            // 실제 서버에서 multipart 요청이 spring.servlet.multipart 한도를 넘으면 던지는 예외
+            throw new MaxUploadSizeExceededException(20L * 1024 * 1024);
         }
 
         @GetMapping("/test/boom")
@@ -141,6 +148,12 @@ class GlobalExceptionHandlerTest {
     @DisplayName("지원하지 않는 메서드(405)도 400 INVALID_INPUT")
     void 지원하지_않는_메서드() throws Exception {
         expectInvalidInput(mockMvc.perform(put("/test/items/1")));
+    }
+
+    @Test
+    @DisplayName("업로드 한도(20MB)를 넘는 요청도 500이 아니라 400 INVALID_INPUT")
+    void 업로드_한도_초과() throws Exception {
+        expectInvalidInput(mockMvc.perform(post("/test/upload")));
     }
 
     @Test

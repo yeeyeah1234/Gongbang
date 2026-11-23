@@ -44,4 +44,9 @@ public class Team {
     public static Team create(Long postId, String name) {
         return new Team(postId, name);
     }
+
+    /** 팀 내 활동 시각(채팅 전송 등)을 갱신한다. */
+    public void touchLastActivity(LocalDateTime activityAt) {
+        this.lastActivityAt = activityAt != null ? activityAt : LocalDateTime.now();
+    }
 }

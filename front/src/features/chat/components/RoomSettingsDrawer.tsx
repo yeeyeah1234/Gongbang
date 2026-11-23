@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { CrownIcon, MoreHorizontalIcon, PlusIcon } from '../../../components/icons/Icons'
+import { CrownIcon, MoreHorizontalIcon } from '../../../components/icons/Icons'
 import { Avatar } from '../../../components/ui/Avatar'
 import { Badge } from '../../../components/ui/Badge'
-import { Button } from '../../../components/ui/Button'
 import { Drawer } from '../../../components/ui/Drawer'
 import type { ChatRoom, TeamMember } from '../types'
 
@@ -11,13 +10,12 @@ interface RoomSettingsDrawerProps {
   room: ChatRoom | undefined
   members: TeamMember[]
   currentUserId: number
+  isLeader: boolean
   onClose: () => void
   onRequestDelegateLeader: (member: TeamMember) => void
   onStartDirectChat: (member: TeamMember) => void
   onRequestKickMember: (member: TeamMember) => void
   onRequestReportMember: (member: TeamMember) => void
-  onRequestInviteMember: () => void
-  onRequestDeleteRoom: () => void
 }
 
 /** STYLE_GUIDE.md 5-7 우측 방 설정 / 팀원 관리 서랍 */
@@ -26,24 +24,21 @@ export function RoomSettingsDrawer({
   room,
   members,
   currentUserId,
+  isLeader,
   onClose,
   onRequestDelegateLeader,
   onStartDirectChat,
   onRequestKickMember,
   onRequestReportMember,
-  onRequestInviteMember,
-  onRequestDeleteRoom,
 }: RoomSettingsDrawerProps) {
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
   const [openMenuMemberId, setOpenMenuMemberId] = useState<number | null>(null)
   const menuContainerRef = useRef<HTMLDivElement | null>(null)
 
-  const currentUser = members.find((member) => member.id === currentUserId)
-  const isLeader = currentUser?.role === 'LEADER'
-
-  const roomMembers = room
-    ? members.filter((member) => room.memberIds.includes(member.id))
-    : members
+  const roomMembers =
+    room?.type === 'DIRECT' && room.partnerId !== null
+      ? members.filter((member) => member.id === currentUserId || member.id === room.partnerId)
+      : members
 
   useEffect(() => {
     if (openMenuMemberId === null) return
@@ -180,28 +175,6 @@ export function RoomSettingsDrawer({
             )
           })}
         </ul>
-
-        {isLeader && (
-          <>
-            <hr className="my-5 border-t border-divider" />
-
-            <div className="space-y-3">
-              <h3 className="text-body font-bold text-text">팀장 전용 관리 메뉴</h3>
-              <Button
-                variant="outline"
-                size="md"
-                onClick={onRequestInviteMember}
-                className="w-full"
-              >
-                <PlusIcon className="h-4 w-4" />
-                <span>새 팀원 초대하기</span>
-              </Button>
-              <Button variant="danger" size="md" onClick={onRequestDeleteRoom} className="w-full">
-                채팅방 삭제 (팀장 전용)
-              </Button>
-            </div>
-          </>
-        )}
       </div>
     </Drawer>
   )

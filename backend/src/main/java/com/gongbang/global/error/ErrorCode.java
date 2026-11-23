@@ -63,6 +63,9 @@ public enum ErrorCode {
     // AUTH-10 ③: 1회용 키가 없거나 1분이 지남 (문구는 ⑧과 같은 뜻으로 임시)
     OAUTH_CODE_INVALID(
             HttpStatus.BAD_REQUEST, "OAUTH_CODE_INVALID", "간편 로그인을 완료하지 못했어요. 다시 시도해 주세요"),
+    // NET-04, NET-06 (API 명세서)
+    CANNOT_CHAT_SELF(HttpStatus.BAD_REQUEST, "CANNOT_CHAT_SELF", "자기 자신과는 1:1 채팅을 할 수 없어요"),
+    CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST, "CANNOT_KICK_SELF", "자기 자신은 강제 퇴장할 수 없어요"),
 
     // 401 Unauthorized
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "UNAUTHORIZED", "인증이 필요하거나 만료되었습니다."),
@@ -94,14 +97,20 @@ public enum ErrorCode {
     CANNOT_APPLY_OWN_POST(HttpStatus.FORBIDDEN, "CANNOT_APPLY_OWN_POST", "내가 쓴 모집글에는 지원할 수 없어요"),
     NOT_EVENT_AUTHOR(HttpStatus.FORBIDDEN, "NOT_EVENT_AUTHOR", "작성자나 팀장만 바꿀 수 있어요"),
     AUTO_EVENT_NOT_EDITABLE(HttpStatus.FORBIDDEN, "AUTO_EVENT_NOT_EDITABLE", "자동 일정은 바꿀 수 없어요"),
+    // TODO(확인 필요): 기능정의서 문구 미정 (NET-04, NET-05)
+    NOT_CHAT_ROOM_MEMBER(HttpStatus.FORBIDDEN, "NOT_CHAT_ROOM_MEMBER", "채팅방 참여자만 접근할 수 있습니다."),
 
     // 404 Not Found
     // PST-004 ⑤ 문구
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "삭제되었거나 없는 모집글이에요"),
     // REC-002 ⑥ 문구 (11/13 추가)
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "APPLICATION_NOT_FOUND", "이미 취소되었거나 없는 지원이에요"),
+    // PST-007 ④ 문구
+    POST_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_IMAGE_NOT_FOUND", "삭제되었거나 없는 사진이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (API 명세서 MAIN-02)
     CONTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTEST_NOT_FOUND", "존재하지 않는 공모전입니다."),
+    // TODO(확인 필요): 기능정의서 문구 미정 (NET-05)
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "존재하지 않는 채팅방입니다."),
 
     // ---- 정진우 404 ----
     // AUTH-01 ②, AUTH-02 ⑥ 문구
@@ -144,6 +153,8 @@ public enum ErrorCode {
     DOCUMENT_LIMIT(HttpStatus.CONFLICT, "DOCUMENT_LIMIT", "문서 개수 제한을 초과했습니다."),
     // REC-001 ③, REC-006 ③ 문구
     POST_COMPLETED(HttpStatus.CONFLICT, "POST_COMPLETED", "모집이 완료된 게시글입니다"),
+    // PST-007 ② 문구
+    POST_IMAGE_LIMIT(HttpStatus.CONFLICT, "POST_IMAGE_LIMIT", "사진은 3장까지 올릴 수 있어요"),
     // REC-001 ③ 문구 (11/10 김수형 결정, 제안값)
     RECRUIT_PERIOD_ENDED(HttpStatus.CONFLICT, "RECRUIT_PERIOD_ENDED", "모집 기간이 종료된 게시글입니다"),
     // REC-001 ③ 문구

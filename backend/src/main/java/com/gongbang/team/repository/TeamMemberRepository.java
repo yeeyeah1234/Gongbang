@@ -26,6 +26,13 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     /** 나간 기록이 하나라도 있는지 (leave_type은 보지 않는다, PST-006 ⑨). */
     boolean existsByTeamIdAndMemberIdAndLeftAtIsNotNull(Long teamId, Long memberId);
 
+    /** 현재 팀원 목록 (joinedAt 오름차순). */
+    List<TeamMember> findAllByTeamIdAndLeftAtIsNullOrderByJoinedAtAscIdAsc(Long teamId);
+
+    /** 특정 회원의 현재 팀원 행 조회. */
+    java.util.Optional<TeamMember> findByTeamIdAndMemberIdAndLeftAtIsNull(
+            Long teamId, Long memberId);
+
     /** 현재 팀원들이 쓰고 있는 색 번호. */
     @Query(
             "select tm.colorIndex from TeamMember tm where tm.team.id = :teamId and tm.leftAt is null")

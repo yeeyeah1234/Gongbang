@@ -12,8 +12,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.gongbang.application.service.ApplicationCloseService;
+import com.gongbang.chat.service.ChatMembershipService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.global.websocket.TeamEventPublisher;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
@@ -46,6 +48,8 @@ class TeamJoinServiceTest {
     @Mock private ApplicationCloseService applicationCloseService;
     @Mock private RecruitNotifier recruitNotifier;
     @Mock private CalendarService calendarService;
+    @Mock private ChatMembershipService chatMembershipService;
+    @Mock private TeamEventPublisher teamEventPublisher;
 
     private TeamJoinService teamJoinService;
 
@@ -57,7 +61,9 @@ class TeamJoinServiceTest {
                         teamService,
                         applicationCloseService,
                         recruitNotifier,
-                        calendarService);
+                        calendarService,
+                        chatMembershipService,
+                        teamEventPublisher);
     }
 
     /** 목표 targetCount명, 확정 currentCount명인 글을 잠금 조회로 돌려준다. */
@@ -89,6 +95,9 @@ class TeamJoinServiceTest {
         TeamJoinResult result = teamJoinService.join(POST_ID, MEMBER_ID, NOW);
 
         verify(teamService).addMember(TEAM_ID, MEMBER_ID);
+        verify(chatMembershipService).createTeamRoom(TEAM_ID, AUTHOR_ID);
+        verify(chatMembershipService).addMemberToTeamRoom(TEAM_ID, MEMBER_ID);
+        verify(teamEventPublisher).publish(TEAM_ID, "MEMBER_JOINED", MEMBER_ID, MEMBER_ID);
         // CAL-06: 팀을 만들 때 공모전 마감 자동 일정을 넣는다
         verify(calendarService).upsertAutoEvent(TEAM_ID);
         assertThat(result).isEqualTo(new TeamJoinResult(TEAM_ID, 2, 4, PostStatus.RECRUITING));
@@ -105,6 +114,9 @@ class TeamJoinServiceTest {
         TeamJoinResult result = teamJoinService.join(POST_ID, MEMBER_ID, NOW);
 
         verify(teamService, never()).createTeam(anyLong(), anyString(), anyLong());
+        verify(chatMembershipService, never()).createTeamRoom(anyLong(), anyLong());
+        verify(chatMembershipService).addMemberToTeamRoom(TEAM_ID, MEMBER_ID);
+        verify(teamEventPublisher).publish(TEAM_ID, "MEMBER_JOINED", MEMBER_ID, MEMBER_ID);
         // 자동 일정은 팀을 만들 때 한 번만 넣는다
         verify(calendarService, never()).upsertAutoEvent(anyLong());
         verify(teamService).addMember(TEAM_ID, MEMBER_ID);
@@ -169,5 +181,6 @@ class TeamJoinServiceTest {
 
         assertThat(errorOf()).isEqualTo(ErrorCode.ALREADY_TEAM_MEMBER);
         assertThat(post.getCurrentCount()).isEqualTo(2);
+        verifyNoInteractions(chatMembershipService, teamEventPublisher);
     }
 }

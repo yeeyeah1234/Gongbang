@@ -8,6 +8,7 @@ import com.gongbang.post.domain.RecruitPost;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 /** PST-005 모집글 상세 (API 명세서 GET /api/posts/{postId}). */
 public record PostDetailResponse(
@@ -16,6 +17,7 @@ public record PostDetailResponse(
         String content,
         ContestInfo contest,
         String imageUrl,
+        List<PostImageResponse> images,
         AuthorInfo author,
         LocalDateTime createdAt,
         int viewCount,
@@ -70,7 +72,7 @@ public record PostDetailResponse(
 
     public record AuthorInfo(Long memberId, String nickname, String profileImageUrl) {}
 
-    /** 서비스 공모전 글. 대표 이미지는 공모전 썸네일 (⑤). */
+    /** 서비스 공모전 글. 대표 이미지는 공모전 썸네일이고 올린 사진은 없다 (⑤, PST-007 ①). */
     public static PostDetailResponse of(
             RecruitPost post,
             ContestSummary contest,
@@ -83,16 +85,18 @@ public record PostDetailResponse(
                 post,
                 ContestInfo.of(contest, today),
                 contest.thumbnailUrl(),
+                List.of(),
                 author,
                 viewCount,
                 myStatus,
                 myApplicationId);
     }
 
-    /** 외부 공모전 글. 대표 이미지는 링크에서 불러온 og:image (⑤). */
+    /** 외부 공모전 글. 대표 이미지는 올린 사진 첫 장, 없으면 링크에서 불러온 og:image (⑤, PST-007 ⑤). */
     public static PostDetailResponse of(
             RecruitPost post,
             String categoryName,
+            List<PostImageResponse> images,
             AuthorInfo author,
             int viewCount,
             MyStatus myStatus,
@@ -102,7 +106,8 @@ public record PostDetailResponse(
         return of(
                 post,
                 ContestInfo.of(external, categoryName, today),
-                external.getImageUrl(),
+                images.isEmpty() ? external.getImageUrl() : images.get(0).url(),
+                images,
                 author,
                 viewCount,
                 myStatus,
@@ -113,6 +118,7 @@ public record PostDetailResponse(
             RecruitPost post,
             ContestInfo contest,
             String imageUrl,
+            List<PostImageResponse> images,
             AuthorInfo author,
             int viewCount,
             MyStatus myStatus,
@@ -123,6 +129,7 @@ public record PostDetailResponse(
                 post.getContent(),
                 contest,
                 imageUrl,
+                images,
                 author,
                 post.getCreatedAt(),
                 viewCount,

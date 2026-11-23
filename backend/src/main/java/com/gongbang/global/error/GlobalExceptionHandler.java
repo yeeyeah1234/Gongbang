@@ -13,6 +13,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -43,15 +44,17 @@ public class GlobalExceptionHandler {
 
     /**
      * 요청 형식 오류: 깨진 JSON·본문 타입 불일치·본문 없음, 경로·쿼리 값 타입 불일치, 필수 쿼리 누락, 지원하지 않는
-     * 메서드(405)·Content-Type(415). 모두 400 INVALID_INPUT으로 합친다 (11/17 팀 합의). 아래 Exception 처리기가 500으로
-     * 바꾸지 않도록 따로 잡는다. 요청 본문에 이메일·비밀번호가 있을 수 있어 예외 이름만 남긴다 (AGENTS.md 9).
+     * 메서드(405)·Content-Type(415), 업로드 한도(spring.servlet.multipart, 20MB) 초과. 모두 400 INVALID_INPUT으로
+     * 합친다 (11/17 팀 합의, 업로드 한도는 11/23 추가). 아래 Exception 처리기가 500으로 바꾸지 않도록 따로 잡는다. 요청 본문에 이메일·비밀번호가
+     * 있을 수 있어 예외 이름만 남긴다 (AGENTS.md 9).
      */
     @ExceptionHandler({
         HttpMessageNotReadableException.class,
         MethodArgumentTypeMismatchException.class,
         MissingServletRequestParameterException.class,
         HttpRequestMethodNotSupportedException.class,
-        HttpMediaTypeNotSupportedException.class
+        HttpMediaTypeNotSupportedException.class,
+        MaxUploadSizeExceededException.class
     })
     public ResponseEntity<ApiResponse<Void>> handleBadRequest(Exception e) {
         log.warn("Bad request: {}", e.getClass().getSimpleName());
