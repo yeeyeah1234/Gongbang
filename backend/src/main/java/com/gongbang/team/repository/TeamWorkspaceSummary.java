@@ -8,6 +8,17 @@ public interface TeamWorkspaceSummary {
 
     String getTeamName();
 
+    /**
+     * contest.id는 BIGINT UNSIGNED라 드라이버에 따라 BigInteger나 Long으로 온다. 받은 그대로 두고 {@link
+     * #contestIdOrNull()}에서 Long으로 바꾼다. 외부 공모전·모집글 없음이면 null.
+     */
+    Number getContestId();
+
+    default Long contestIdOrNull() {
+        Number value = getContestId();
+        return value == null ? null : value.longValue();
+    }
+
     String getContestTitle();
 
     /**

@@ -132,7 +132,8 @@ class TeamSummaryMysqlTest {
     @Test
     @DisplayName("서비스 공모전 팀: contest.title·end_date, 팀장은 isLeader true")
     void 서비스_공모전_팀은_contest_제목과_마감일() {
-        long teamId = team(servicePost(contest("공공데이터 공모전", LocalDate.of(2026, 12, 1))), "공방팀");
+        long contestId = contest("공공데이터 공모전", LocalDate.of(2026, 12, 1));
+        long teamId = team(servicePost(contestId), "공방팀");
 
         WorkspaceSummaryResponse response = teamQueryService.getWorkspaceSummary(teamId, LEADER_ID);
 
@@ -141,6 +142,7 @@ class TeamSummaryMysqlTest {
                         new WorkspaceSummaryResponse(
                                 teamId,
                                 "공방팀",
+                                contestId,
                                 "공공데이터 공모전",
                                 LocalDate.of(2026, 12, 1),
                                 true,
@@ -155,6 +157,7 @@ class TeamSummaryMysqlTest {
 
         WorkspaceSummaryResponse response = teamQueryService.getWorkspaceSummary(teamId, MEMBER_ID);
 
+        assertThat(response.contestId()).isNull();
         assertThat(response.contestTitle()).isEqualTo("외부 공모전");
         assertThat(response.deadline()).isEqualTo(LocalDate.of(2026, 12, 5));
         assertThat(response.isLeader()).isFalse();
@@ -181,6 +184,7 @@ class TeamSummaryMysqlTest {
         WorkspaceSummaryResponse response = teamQueryService.getWorkspaceSummary(teamId, LEADER_ID);
 
         assertThat(response.teamName()).isEqualTo("고아팀");
+        assertThat(response.contestId()).isNull();
         assertThat(response.contestTitle()).isNull();
         assertThat(response.deadline()).isNull();
     }
