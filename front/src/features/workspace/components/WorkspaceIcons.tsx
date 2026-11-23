@@ -21,3 +21,23 @@ export function LockIcon({ className = 'h-6 w-6', ...props }: IconProps) {
     </svg>
   )
 }
+
+// WS-08 ⑥ 팀 이름 수정 펜 (같은 24px 선 아이콘 형식)
+export function PencilIcon({ className = 'h-4 w-4', ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+      {...props}
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  )
+}

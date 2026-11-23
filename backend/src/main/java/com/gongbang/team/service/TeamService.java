@@ -98,7 +98,7 @@ public class TeamService {
     }
 
     // TODO(확인 필요): 앞뒤 공백을 지우고 셀지 문서에서 확인 필요. 지금은 받은 그대로 센다(공백만 있으면 오류).
-    private static void validateName(String name) {
+    static void validateName(String name) {
         if (name == null || name.isBlank()) {
             throw new BusinessException(ErrorCode.TEAM_NAME_INVALID);
         }
