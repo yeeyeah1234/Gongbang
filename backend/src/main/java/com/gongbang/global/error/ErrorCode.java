@@ -105,6 +105,8 @@ public enum ErrorCode {
     POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_NOT_FOUND", "삭제되었거나 없는 모집글이에요"),
     // REC-002 ⑥ 문구 (11/13 추가)
     APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "APPLICATION_NOT_FOUND", "이미 취소되었거나 없는 지원이에요"),
+    // PST-007 ④ 문구
+    POST_IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "POST_IMAGE_NOT_FOUND", "삭제되었거나 없는 사진이에요"),
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (API 명세서 MAIN-02)
     CONTEST_NOT_FOUND(HttpStatus.NOT_FOUND, "CONTEST_NOT_FOUND", "존재하지 않는 공모전입니다."),
     // TODO(확인 필요): 기능정의서 문구 미정 (NET-05)
@@ -151,6 +153,8 @@ public enum ErrorCode {
     DOCUMENT_LIMIT(HttpStatus.CONFLICT, "DOCUMENT_LIMIT", "문서 개수 제한을 초과했습니다."),
     // REC-001 ③, REC-006 ③ 문구
     POST_COMPLETED(HttpStatus.CONFLICT, "POST_COMPLETED", "모집이 완료된 게시글입니다"),
+    // PST-007 ② 문구
+    POST_IMAGE_LIMIT(HttpStatus.CONFLICT, "POST_IMAGE_LIMIT", "사진은 3장까지 올릴 수 있어요"),
     // REC-001 ③ 문구 (11/10 김수형 결정, 제안값)
     RECRUIT_PERIOD_ENDED(HttpStatus.CONFLICT, "RECRUIT_PERIOD_ENDED", "모집 기간이 종료된 게시글입니다"),
     // REC-001 ③ 문구

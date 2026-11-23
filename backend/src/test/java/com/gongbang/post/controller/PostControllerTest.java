@@ -6,6 +6,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -19,9 +20,12 @@ import com.gongbang.member.domain.MemberRole;
 import com.gongbang.post.dto.PostCompleteResponse;
 import com.gongbang.post.dto.PostCreateRequest;
 import com.gongbang.post.dto.PostCreateResponse;
+import com.gongbang.post.dto.PostImageResponse;
+import com.gongbang.post.dto.PostImagesResponse;
 import com.gongbang.post.dto.PostUpdateRequest;
 import com.gongbang.post.service.PostCommandService;
 import com.gongbang.post.service.PostDetailService;
+import com.gongbang.post.service.PostImageService;
 import com.gongbang.post.service.PostQueryService;
 import java.time.LocalDate;
 import java.util.List;
@@ -34,6 +38,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
@@ -52,6 +57,7 @@ class PostControllerTest {
     @Mock private PostQueryService postQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private PostCommandService postCommandService;
+    @Mock private PostImageService postImageService;
 
     private MockMvc mockMvc;
 
@@ -60,7 +66,10 @@ class PostControllerTest {
         mockMvc =
                 MockMvcBuilders.standaloneSetup(
                                 new PostController(
-                                        postQueryService, postDetailService, postCommandService))
+                                        postQueryService,
+                                        postDetailService,
+                                        postCommandService,
+                                        postImageService))
                         .setControllerAdvice(new GlobalExceptionHandler())
                         .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                         .build();
@@ -179,5 +188,42 @@ class PostControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("NOT_POST_AUTHOR"));
+    }
+
+    @Test
+    @DisplayName("사진 올리기: multipart file을 로그인 회원·경로의 글 ID와 함께 넘기고 사진 목록을 돌려준다 (PST-007)")
+    void 사진_올리기() throws Exception {
+        login();
+        MockMultipartFile file =
+                new MockMultipartFile("file", "poster.png", "image/png", new byte[] {1, 2, 3});
+        given(postImageService.upload(eq(MEMBER_ID), eq(10L), any()))
+                .willReturn(
+                        new PostImagesResponse(
+                                List.of(new PostImageResponse(5L, "/uploads/post/a.png"))));
+
+        mockMvc.perform(multipart("/api/posts/10/images").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.images[0].imageId").value(5))
+                .andExpect(jsonPath("$.data.images[0].url").value("/uploads/post/a.png"));
+    }
+
+    @Test
+    @DisplayName("사진 삭제·순서 변경: 경로의 사진 ID와 본문의 imageIds를 그대로 넘긴다 (PST-007)")
+    void 사진_삭제와_순서_변경() throws Exception {
+        login();
+        given(postImageService.delete(MEMBER_ID, 10L, 5L))
+                .willReturn(new PostImagesResponse(List.of()));
+        given(postImageService.reorder(MEMBER_ID, 10L, List.of(7L, 6L)))
+                .willReturn(new PostImagesResponse(List.of()));
+
+        mockMvc.perform(delete("/api/posts/10/images/5")).andExpect(status().isOk());
+        mockMvc.perform(
+                        patch("/api/posts/10/images/order")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"imageIds\":[7,6]}"))
+                .andExpect(status().isOk());
+
+        verify(postImageService).delete(MEMBER_ID, 10L, 5L);
+        verify(postImageService).reorder(MEMBER_ID, 10L, List.of(7L, 6L));
     }
 }
