@@ -3,20 +3,30 @@ import { Button } from '../../../../components/ui/Button'
 import type { useNoticeList } from '../hooks'
 import type { NoticeListItemData } from '../types'
 import { NoticeListItem } from './NoticeListItem'
-import { NoticeError, NoticeSkeleton } from './NoticeStates'
+import { NoticeCreateButton, NoticeError, NoticeSkeleton } from './NoticeStates'
 
 interface NoticeListProps {
   query: ReturnType<typeof useNoticeList>
   items: NoticeListItemData[]
   basePath: string
   selectedId: number | null
+  busy: boolean
+  // 팀장일 때만 넘긴다
+  onCreate?: () => void
 }
 
 // 끝에서 한 칸쯤 남았을 때부터 부른다. 0이면 몇 px만 덜 내려도 안 불러온다
 const LOAD_MORE_MARGIN = '0px 0px 120px 0px'
 
 // NTC-01 왼쪽 목록 (340px). 끝까지 내리면 10개씩 더 불러온다
-export function NoticeList({ query, items, basePath, selectedId }: NoticeListProps) {
+export function NoticeList({
+  query,
+  items,
+  basePath,
+  selectedId,
+  busy,
+  onCreate,
+}: NoticeListProps) {
   const {
     data,
     dataUpdatedAt,
@@ -53,6 +63,12 @@ export function NoticeList({ query, items, basePath, selectedId }: NoticeListPro
       aria-label="공지 목록"
       className="flex shrink-0 flex-col border-b border-line lg:min-h-0 lg:w-[340px] lg:border-r lg:border-b-0"
     >
+      {onCreate && (
+        <div className="flex shrink-0 flex-col items-start gap-2 border-b border-divider p-4">
+          <NoticeCreateButton disabled={busy} onClick={onCreate} />
+          <p className="text-small text-text-sub">작성 버튼은 팀장에게만 보여요</p>
+        </div>
+      )}
       <div
         ref={scrollRef}
         className="relative max-h-80 min-h-0 overflow-y-auto p-2 lg:max-h-none lg:flex-1"

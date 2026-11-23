@@ -43,7 +43,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
         element: <Navigate to="/dev/notice-preview/leader" replace />,
       },
       {
-        // NTC-01 공지 조회를 백엔드·로그인 없이 본다: {leader|member|empty|error}
+        // NTC-01~04 공지 조회·쓰기를 백엔드·로그인 없이 본다: {leader|member|empty|single|conflict|forbidden|error}
         path: '/dev/notice-preview/:view',
         lazy: async () => ({
           Component: (await import('./pages/dev/NoticePreviewPage')).default,

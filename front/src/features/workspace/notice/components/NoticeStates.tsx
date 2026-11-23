@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PinIcon } from '../../../../components/icons/Icons'
+import { PinIcon, PlusIcon } from '../../../../components/icons/Icons'
 import { Button } from '../../../../components/ui/Button'
 
 // STYLE_GUIDE 5-10: 1초가 넘으면 스켈레톤
@@ -35,11 +35,29 @@ export function NoticeError({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-export function NoticeEmpty() {
+// NTC-02 「+ 공지 작성」 (목록 위, 빈 화면)
+export function NoticeCreateButton({
+  disabled,
+  onClick,
+}: {
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <Button variant="primary" disabled={disabled} onClick={onClick}>
+      <PlusIcon />
+      공지 작성
+    </Button>
+  )
+}
+
+// onCreate는 팀장일 때만 넘긴다
+export function NoticeEmpty({ onCreate }: { onCreate?: () => void }) {
   return (
     <section className="flex flex-1 flex-col items-center justify-center gap-4 rounded-card border border-line bg-surface p-12 text-center">
       <PinIcon className="h-12 w-12 text-text-disabled" />
       <p className="text-body text-text-sub">아직 공지가 없어요</p>
+      {onCreate && <NoticeCreateButton onClick={onCreate} />}
     </section>
   )
 }
