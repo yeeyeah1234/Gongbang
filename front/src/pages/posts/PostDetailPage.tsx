@@ -12,6 +12,7 @@ import { PostApplyPanel, StatusBadge } from '../../features/post/components/Post
 import { usePostDetail } from '../../features/post/hooks'
 import { isHttpUrl } from '../../features/post/postForm'
 import type { PostDetail } from '../../features/post/types'
+import { MemberActionPopover } from '../../features/report/components/MemberActionPopover'
 import { useTimedToast } from '../../hooks/useTimedToast'
 
 const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
@@ -91,7 +92,7 @@ export default function PostDetailPage() {
               </div>
             )}
           </div>
-          <AuthorLine post={post} />
+          <AuthorLine post={post} onReportSuccess={toast.show} />
 
           <dl className="mt-6 grid grid-cols-[120px_minmax(0,1fr)] gap-x-6 gap-y-3 border-t border-line-strong pt-6 text-body">
             <InfoRow label="모집 인원">
@@ -210,15 +211,21 @@ function ContestCard({ contest }: { contest: PostDetail['contest'] }) {
 }
 
 // 작성자, 작성일, 조회수
-function AuthorLine({ post }: { post: PostDetail }) {
+function AuthorLine({
+  post,
+  onReportSuccess,
+}: {
+  post: PostDetail
+  onReportSuccess: (message: string) => void
+}) {
   const nickname = post.author.nickname ?? '탈퇴한 사용자'
   return (
     <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-body text-text-sub">
-      {/* ③ 닉네임 팝오버(프로필 보기·팀 초대·신고)는 김건우 담당이라, 생기기 전까지 공개 프로필(MY-05)로 바로 보낸다 */}
-      {/* TODO(확인 필요): 닉네임 팝오버 컴포넌트로 바꾸기 */}
-      <Link
-        to={`/members/${post.author.memberId}`}
-        className="inline-flex items-center gap-2 font-bold text-text hover:underline"
+      <MemberActionPopover
+        memberId={post.author.memberId}
+        nickname={nickname}
+        redirectTo={`/posts/${post.postId}`}
+        onReportSuccess={onReportSuccess}
       >
         <MemberPhoto
           url={post.author.profileImageUrl}
@@ -226,7 +233,7 @@ function AuthorLine({ post }: { post: PostDetail }) {
           className="size-8 text-caption"
         />
         {nickname}
-      </Link>
+      </MemberActionPopover>
       <span aria-hidden="true">·</span>
       <time dateTime={post.createdAt}>{formatDateTime(post.createdAt)}</time>
       <span aria-hidden="true">·</span>
