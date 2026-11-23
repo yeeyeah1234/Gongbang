@@ -197,6 +197,7 @@ public class ChatQueryService {
                 members.stream()
                         .filter(crm -> Objects.equals(crm.getId().getMemberId(), myMemberId))
                         .map(ChatRoomMember::getLastReadMessageId)
+                        .filter(Objects::nonNull)
                         .findFirst()
                         .orElse(null);
 
@@ -212,7 +213,7 @@ public class ChatQueryService {
             List<ChatRoomMember> members, Long myMemberId) {
         return members.stream()
                 .map(crm -> crm.getId().getMemberId())
-                .filter(id -> !Objects.equals(id, myMemberId))
+                .filter(id -> id != null && !Objects.equals(id, myMemberId))
                 .findFirst();
     }
 

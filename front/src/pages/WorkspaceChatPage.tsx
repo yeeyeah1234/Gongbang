@@ -223,6 +223,10 @@ export default function WorkspaceChatPage() {
         selectedRoomId={activeRoomId}
         sortOrder={sortOrder}
         isLoading={roomsQuery.isLoading}
+        isError={roomsQuery.isError}
+        onRetry={() => {
+          void roomsQuery.refetch()
+        }}
         onChangeSortOrder={setSortOrder}
         onSelectRoom={handleSelectRoom}
       />

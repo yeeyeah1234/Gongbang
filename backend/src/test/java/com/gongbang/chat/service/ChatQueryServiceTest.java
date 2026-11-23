@@ -149,4 +149,30 @@ class ChatQueryServiceTest {
                         BusinessException.class, () -> service.getMessages(100L, 3L, null, 30));
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NOT_CHAT_ROOM_MEMBER);
     }
+
+    @Test
+    @DisplayName("메시지가 있는 방을 한 번도 읽지 않아 lastReadMessageId가 null이어도 NPE 없이 전체 개수를 안읽음 수로 반환한다")
+    void 미열람_채팅방_안읽음수_조회() {
+        ChatRoom teamRoom = ChatRoom.create(10L, ChatRoomType.TEAM, "T:10");
+        ReflectionTestUtils.setField(teamRoom, "id", 100L);
+        ChatRoomMember unreadMember = ChatRoomMember.create(100L, 1L);
+        ChatMessage systemMsg = ChatMessage.system(100L, "팀원이 입장했습니다.");
+        ReflectionTestUtils.setField(systemMsg, "id", 5L);
+        ReflectionTestUtils.setField(systemMsg, "createdAt", LocalDateTime.of(2026, 11, 23, 21, 0));
+
+        given(chatRoomRepository.findJoinedRoomsOrderByRecent(10L, 1L))
+                .willReturn(List.of(teamRoom));
+        given(chatRoomMemberRepository.findAllByIdChatRoomIdIn(List.of(100L)))
+                .willReturn(List.of(unreadMember));
+        given(chatMessageRepository.findLatestMessagesByRoomIds(List.of(100L)))
+                .willReturn(List.of(systemMsg));
+        given(chatMessageRepository.countByChatRoomId(100L)).willReturn(3L);
+        given(teamService.getTeamName(10L)).willReturn("김건우 구함");
+
+        List<ChatRoomResponse> result = service.getChatRooms(10L, 1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).unreadCount()).isEqualTo(3L);
+        assertThat(result.get(0).lastMessage().content()).isEqualTo("팀원이 입장했습니다.");
+    }
 }
