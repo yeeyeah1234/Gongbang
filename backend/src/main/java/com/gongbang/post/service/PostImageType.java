@@ -4,7 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 /** PST-007 ②: 올릴 수 있는 사진 형식 (브라우저가 라이브러리 없이 띄우는 형식). 파일 이름·Content-Type은 믿지 않고 파일 앞부분 바이트로 판단한다. */
-enum PostImageType {
+public enum PostImageType {
     JPG("jpg", "image/jpeg"),
     PNG("png", "image/png"),
     WEBP("webp", "image/webp"),
@@ -12,7 +12,7 @@ enum PostImageType {
     AVIF("avif", "image/avif");
 
     /** 판단에 필요한 앞부분 길이. AVIF의 ftyp 상자에서 호환 브랜드까지 본다. */
-    static final int HEAD_BYTES = 32;
+    public static final int HEAD_BYTES = 32;
 
     private static final byte[] PNG_SIGNATURE = {
         (byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'
@@ -26,16 +26,16 @@ enum PostImageType {
         this.contentType = contentType;
     }
 
-    String extension() {
+    public String extension() {
         return extension;
     }
 
-    String contentType() {
+    public String contentType() {
         return contentType;
     }
 
     /** 파일 앞부분(head)으로 형식을 판단한다. 아니면 비어 있다. */
-    static Optional<PostImageType> detect(byte[] head) {
+    public static Optional<PostImageType> detect(byte[] head) {
         if (head == null) {
             return Optional.empty();
         }
