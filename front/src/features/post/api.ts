@@ -9,6 +9,7 @@ import type {
   PostCreateResponse,
   PostCompleteResponse,
   PostDetail,
+  PostImagesResponse,
   PostListItem,
   PostUpdateRequest,
 } from './types'
@@ -83,6 +84,41 @@ export async function rejectApplication(applicationId: number) {
 export async function completePost(postId: number) {
   const response = await apiClient.patch<ApiResponse<PostCompleteResponse>>(
     `/api/posts/${postId}/complete`,
+  )
+  return response.data.data
+}
+
+// PST-007 공모전 사진 한 장 올리기 (작성자, 외부 공모전만). 맨 뒤에 붙고 남은 사진 전체를 돌려준다.
+export async function uploadPostImage({ postId, file }: { postId: number; file: File }) {
+  const form = new FormData()
+  form.append('file', file)
+  const response = await apiClient.post<ApiResponse<PostImagesResponse>>(
+    `/api/posts/${postId}/images`,
+    form,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return response.data.data
+}
+
+// PST-007 ④ 공모전 사진 삭제 (소프트 삭제)
+export async function deletePostImage({ postId, imageId }: { postId: number; imageId: number }) {
+  const response = await apiClient.delete<ApiResponse<PostImagesResponse>>(
+    `/api/posts/${postId}/images/${imageId}`,
+  )
+  return response.data.data
+}
+
+// PST-007 ③ 공모전 사진 순서 변경: 남은 사진 ID 전부를 새 순서대로
+export async function reorderPostImages({
+  postId,
+  imageIds,
+}: {
+  postId: number
+  imageIds: number[]
+}) {
+  const response = await apiClient.patch<ApiResponse<PostImagesResponse>>(
+    `/api/posts/${postId}/images/order`,
+    { imageIds },
   )
   return response.data.data
 }

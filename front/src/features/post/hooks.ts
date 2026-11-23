@@ -14,6 +14,7 @@ import {
   rejectApplication,
   updatePost,
 } from './api'
+import { savePostImages } from './postImages'
 import type { ApplicantList, ApplicantStatus, PostDetail } from './types'
 
 // PST-001 ⑦: 20개씩 페이지로 나눈다
@@ -167,6 +168,17 @@ export function useUpdatePost() {
       cache.patchDetail(postId, () => updated)
     },
     onSettled: cache.refresh,
+  })
+}
+
+// PST-007 공모전 사진 저장(삭제·올리기·순서). 글 작성·수정이 끝난 뒤 부르고, 끝나면 상세를 새로 받는다.
+export function useSavePostImages() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: savePostImages,
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: postKeys.details() })
+    },
   })
 }
 
