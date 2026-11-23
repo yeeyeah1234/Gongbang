@@ -3,6 +3,7 @@ import { SiteLayout } from './components/layout/SiteLayout'
 import ContestDetailPage from './pages/ContestDetailPage'
 import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
+import WorkspaceCalendarRoute from './pages/WorkspaceCalendarRoute'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
 import WorkspaceNoticePage from './pages/WorkspaceNoticePage'
 import { RequireLogin } from './features/auth/RequireLogin'
@@ -67,6 +68,38 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             path: '*',
             lazy: async () => ({
               Component: (await import('./pages/dev/NoticePreviewPage')).NoticePreviewRedirect,
+            }),
+          },
+        ],
+      },
+      {
+        path: '/dev/calendar-preview',
+        element: <Navigate to="/dev/calendar-preview/leader" replace />,
+      },
+      {
+        // CAL-01·03·04·05·08 캘린더를 백엔드·로그인 없이 본다: {leader|member|empty|error}
+        path: '/dev/calendar-preview/:view',
+        lazy: async () => ({
+          Component: (await import('./pages/dev/CalendarPreviewPage')).default,
+        }),
+        children: [
+          {
+            path: 'calendar',
+            lazy: async () => ({
+              Component: (await import('./pages/WorkspaceCalendarPage')).default,
+            }),
+          },
+          {
+            // 첫 진입과 다른 탭은 캘린더 탭으로
+            index: true,
+            lazy: async () => ({
+              Component: (await import('./pages/dev/CalendarPreviewPage')).CalendarPreviewRedirect,
+            }),
+          },
+          {
+            path: '*',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/CalendarPreviewPage')).CalendarPreviewRedirect,
             }),
           },
         ],
@@ -138,7 +171,8 @@ export const router = createBrowserRouter([
           { path: 'chat', element: <WorkspacePlaceholder tab="chat" /> },
           { path: 'docs', element: <WorkspacePlaceholder tab="docs" /> },
           { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
-          { path: 'calendar', element: <WorkspacePlaceholder tab="calendar" /> },
+          // CAL-01·03·04·05·08 월간 캘린더 (WorkspaceCalendarRoute가 lazy로 불러온다)
+          { path: 'calendar', element: <WorkspaceCalendarRoute /> },
           // NTC-01: noticeId가 없으면 목록의 첫 공지로 옮긴다
           { path: 'notice/:noticeId?', element: <WorkspaceNoticePage /> },
         ],

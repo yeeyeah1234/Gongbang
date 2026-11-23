@@ -1,0 +1,104 @@
+/*
+ * 라이브러리별 섹션: FullCalendar (이후 Tiptap·Excalidraw 추가)
+ *
+ * 외부 라이브러리 기본 CSS 중 꼭 바꿔야 하는 부분만 여기 모은다 (AGENTS.md 2-1).
+ * 선택자는 라이브러리를 감싼 우리 클래스 아래로만 좁혀 다른 화면에 번지지 않게 한다.
+ * 값은 theme.css 토큰 변수만 쓴다 (STYLE_GUIDE 7).
+ */
+
+/* ───────── FullCalendar (CAL-01, features/workspace/calendar/components/TeamCalendar.tsx) ─────────
+ * v6은 기본 CSS를 JS가 <head>에 넣는다. 날짜 숫자·요일·막대 내용은 컴포넌트가 Tailwind로 그리고,
+ * 여기서는 기본 색·테두리·여백만 정리한다. */
+
+.gb-calendar {
+  --fc-border-color: var(--color-divider);
+  --fc-page-bg-color: var(--color-surface);
+  /* 오늘은 칸 배경 대신 날짜 숫자의 파란 원으로 표시한다 (CAL-01 ②) */
+  --fc-today-bg-color: transparent;
+  /* 막대 색은 내용(eventContent)이 칠한다 */
+  --fc-event-bg-color: transparent;
+  --fc-event-border-color: transparent;
+  --fc-event-text-color: inherit;
+}
+
+/* 바깥 테두리는 감싸는 카드(rounded-card border-line)가 그린다 */
+.gb-calendar .fc-theme-standard .fc-scrollgrid {
+  border: 0;
+}
+.gb-calendar .fc .fc-scrollgrid-section > * {
+  border-right-width: 0;
+  border-bottom-width: 0;
+}
+
+/* 요일 줄: 세로선 없이 왼쪽 정렬 (W-03) */
+.gb-calendar .fc-theme-standard th.fc-col-header-cell {
+  border-right-width: 0;
+  border-left-width: 0;
+  text-align: left;
+}
+.gb-calendar .fc .fc-col-header-cell-cushion {
+  padding: 12px;
+}
+
+/* 날짜 칸: 숫자는 왼쪽 위, 다른 달 날짜는 글자색으로만 흐리게 (기본 opacity 대신) */
+.gb-calendar .fc .fc-daygrid-day {
+  cursor: pointer;
+}
+.gb-calendar .fc .fc-daygrid-day-frame {
+  /* 막대 3개 + 「+N개」가 들어가는 높이 */
+  min-height: 136px;
+}
+.gb-calendar .fc .fc-daygrid-day-top {
+  flex-direction: row;
+}
+.gb-calendar .fc .fc-day-other .fc-daygrid-day-top {
+  opacity: 1;
+}
+.gb-calendar .fc .fc-daygrid-day-number {
+  padding: 8px;
+}
+
+/* 일정 막대 */
+.gb-calendar .fc .fc-daygrid-event {
+  margin-top: 2px;
+  border-radius: 4px;
+  font-size: inherit;
+  cursor: pointer;
+}
+.gb-calendar .fc-direction-ltr .fc-daygrid-event.fc-event-start {
+  margin-left: 8px;
+}
+.gb-calendar .fc-direction-ltr .fc-daygrid-event.fc-event-end {
+  margin-right: 8px;
+}
+/* 기본 포커스 표시(어두운 덮개·그림자) 대신 primary 테두리 */
+.gb-calendar .fc-event:focus,
+.gb-calendar .fc-event-selected {
+  box-shadow: none;
+}
+.gb-calendar .fc-event:focus::after,
+.gb-calendar .fc-event-selected::after {
+  background: transparent;
+}
+.gb-calendar .fc-event:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+/* 「+N개」 */
+.gb-calendar .fc .fc-daygrid-day-bottom {
+  margin: 2px 8px 0;
+  font-size: inherit;
+}
+.gb-calendar .fc .fc-daygrid-more-link {
+  padding: 2px 4px;
+  border-radius: 4px;
+  color: var(--color-text-sub);
+  font-size: var(--text-small);
+  line-height: var(--text-small--line-height);
+  font-weight: 500;
+}
+.gb-calendar .fc .fc-daygrid-more-link:hover {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
