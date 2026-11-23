@@ -11,6 +11,7 @@ import com.gongbang.member.domain.Member;
 import com.gongbang.member.domain.MemberStatus;
 import com.gongbang.member.domain.TermsAgreement;
 import com.gongbang.member.domain.TermsType;
+import com.gongbang.member.dto.MemberProfileSummary;
 import com.gongbang.member.dto.MyProfileResponse;
 import com.gongbang.member.dto.PublicProfileResponse;
 import com.gongbang.member.dto.UpdateProfileRequest;
@@ -25,9 +26,11 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -93,6 +96,43 @@ public class MemberService {
     @Transactional(readOnly = true)
     public List<Long> findActiveMemberIds() {
         return memberRepository.findIdsByStatus(MemberStatus.ACTIVE);
+    }
+
+    /** 채팅·팀원 목록 등 다른 도메인이 여러 회원의 닉네임·프로필·희망 역할을 한 번에 읽는다. */
+    @Transactional(readOnly = true)
+    public Map<Long, MemberProfileSummary> getProfileSummaries(Collection<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, MemberProfileSummary> result = new HashMap<>();
+        for (Member member : memberRepository.findAllById(memberIds)) {
+            result.put(member.getId(), toProfileSummary(member));
+        }
+        for (Long memberId : memberIds) {
+            result.putIfAbsent(
+                    memberId, new MemberProfileSummary(memberId, "탈퇴한 사용자", null, List.of()));
+        }
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public MemberProfileSummary getProfileSummary(Long memberId) {
+        if (memberId == null) {
+            return null;
+        }
+        return memberRepository
+                .findById(memberId)
+                .map(MemberService::toProfileSummary)
+                .orElseGet(() -> new MemberProfileSummary(memberId, "탈퇴한 사용자", null, List.of()));
+    }
+
+    private static MemberProfileSummary toProfileSummary(Member member) {
+        if (!member.isActive()) {
+            return new MemberProfileSummary(member.getId(), "탈퇴한 사용자", null, List.of());
+        }
+        List<String> roles = member.getDesiredRoles().stream().map(DesiredRole::name).toList();
+        return new MemberProfileSummary(
+                member.getId(), member.getNickname(), member.getProfileImageUrl(), roles);
     }
 
     // ---------- AUTH ----------

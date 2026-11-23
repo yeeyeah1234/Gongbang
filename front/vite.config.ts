@@ -14,6 +14,11 @@ export default defineConfig({
       '/login/oauth2': 'http://localhost:8080',
       // MY-01 올린 프로필 사진
       '/uploads': 'http://localhost:8080',
+      // NET-04·05·06 실시간 채팅·팀 이벤트 STOMP WebSocket
+      '/ws': {
+        target: 'http://localhost:8080',
+        ws: true,
+      },
     },
   },
 })

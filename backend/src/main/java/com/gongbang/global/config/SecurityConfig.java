@@ -92,14 +92,17 @@ public class SecurityConfig {
                                                 "/api/auth/oauth/token",
                                                 "/api/auth/oauth/signup")
                                         .permitAll()
+                                        // STOMP WebSocket 핸드셰이크는 열어 두고 JWT 검증은
+                                        // StompChannelInterceptor가 수행한다.
+                                        .requestMatchers("/ws", "/ws/**")
+                                        .permitAll()
                                         .requestMatchers("/api/admin/**")
                                         .hasRole("ADMIN")
                                         // 그 밖의 /api/**는 로그인 필요 (글쓰기·댓글·북마크·채팅·워크스페이스·마이페이지·알림)
                                         .requestMatchers("/api/**")
                                         .authenticated()
                                         .anyRequest()
-                                        .permitAll() // TODO: JWT 인증 구현 후 접근 권한 세분화
-                        );
+                                        .permitAll());
 
         return http.build();
     }

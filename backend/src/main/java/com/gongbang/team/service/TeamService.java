@@ -72,6 +72,31 @@ public class TeamService {
         return teamRepository.findByPostId(postId).map(Team::getId);
     }
 
+    /** 팀 이름을 조회한다. 팀이 없으면 서버 상태 오류를 던진다. */
+    @Transactional(readOnly = true)
+    public String getTeamName(Long teamId) {
+        return teamRepository
+                .findById(teamId)
+                .map(Team::getName)
+                .orElseThrow(() -> new IllegalStateException("없는 팀입니다: teamId=" + teamId));
+    }
+
+    /** 팀의 현재 활성 팀원 ID 목록을 조회한다. */
+    @Transactional(readOnly = true)
+    public java.util.List<Long> findActiveMemberIds(Long teamId) {
+        return teamMemberRepository
+                .findAllByTeamIdAndLeftAtIsNullOrderByJoinedAtAscIdAsc(teamId)
+                .stream()
+                .map(TeamMember::getMemberId)
+                .toList();
+    }
+
+    /** 팀 최근 활동 시각을 갱신한다. */
+    @Transactional
+    public void touchLastActivity(Long teamId, java.time.LocalDateTime activityAt) {
+        teamRepository.findById(teamId).ifPresent(team -> team.touchLastActivity(activityAt));
+    }
+
     // TODO(확인 필요): 앞뒤 공백을 지우고 셀지 문서에서 확인 필요. 지금은 받은 그대로 센다(공백만 있으면 오류).
     private static void validateName(String name) {
         if (name == null || name.isBlank()) {
