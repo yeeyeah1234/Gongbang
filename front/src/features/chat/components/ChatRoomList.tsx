@@ -5,10 +5,11 @@ import type { ChatRoom, RoomSortOrder } from '../types'
 
 interface ChatRoomListProps {
   rooms: ChatRoom[]
-  selectedRoomId: string
+  selectedRoomId: number | null
   sortOrder: RoomSortOrder
+  isLoading?: boolean
   onChangeSortOrder: (sort: RoomSortOrder) => void
-  onSelectRoom: (roomId: string) => void
+  onSelectRoom: (roomId: number) => void
 }
 
 const SORT_LABELS: Record<RoomSortOrder, string> = {
@@ -21,6 +22,7 @@ export function ChatRoomList({
   rooms,
   selectedRoomId,
   sortOrder,
+  isLoading = false,
   onChangeSortOrder,
   onSelectRoom,
 }: ChatRoomListProps) {
@@ -84,7 +86,11 @@ export function ChatRoomList({
         </div>
       </div>
 
-      {rooms.length === 0 ? (
+      {isLoading && rooms.length === 0 ? (
+        <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
+          <p className="text-body text-text-sub">채팅방을 불러오고 있어요…</p>
+        </div>
+      ) : rooms.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 py-12 text-center">
           <MessageSquareIcon className="h-12 w-12 text-text-disabled" />
           <p className="text-body text-text-sub">참여 중인 채팅방이 없습니다</p>
