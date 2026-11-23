@@ -11,26 +11,29 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * PST-007: app.upload-dir/post 폴더에 저장하고 /uploads/post/… 주소로 보여 준다 (global UploadConfig가
- * /uploads/**를 연다).
+ * PST-007·BRD-006: app.upload-dir/{post|board} 폴더에 저장하고 /uploads/{post|board}/… 주소로 보여 준다 (global
+ * UploadConfig가 /uploads/**를 연다).
  */
 @Component
 @ConditionalOnProperty(name = "app.profile-storage", havingValue = "local", matchIfMissing = true)
 public class LocalPostImageStorage implements PostImageStorage {
 
     static final String URL_PREFIX = "/uploads/post/";
+    private static final String UPLOADS = "/uploads/";
     private static final String NAME_PATTERN = "[0-9]+-[0-9a-fA-F-]{36}\\.(jpg|png|webp|gif|avif)";
 
-    private final Path directory;
+    private final Path root;
 
     public LocalPostImageStorage(@Value("${app.upload-dir:./uploads}") String root) {
-        directory = Paths.get(root, "post").toAbsolutePath().normalize();
+        this.root = Paths.get(root).toAbsolutePath().normalize();
     }
 
     @Override
-    public String store(Long postId, PostImageType type, MultipartFile file) throws IOException {
+    public String store(ImageFolder folder, Long ownerId, PostImageType type, MultipartFile file)
+            throws IOException {
+        Path directory = root.resolve(folder.path());
         Files.createDirectories(directory);
-        String name = postId + "-" + UUID.randomUUID() + "." + type.extension();
+        String name = ownerId + "-" + UUID.randomUUID() + "." + type.extension();
         Path target = directory.resolve(name);
         try {
             file.transferTo(target);
@@ -38,18 +41,20 @@ public class LocalPostImageStorage implements PostImageStorage {
             Files.deleteIfExists(target);
             throw e;
         }
-        return URL_PREFIX + name;
+        return UPLOADS + folder.path() + "/" + name;
     }
 
     @Override
     public void delete(String url) throws IOException {
-        if (url == null || !url.startsWith(URL_PREFIX)) {
+        if (url == null || !url.startsWith(UPLOADS)) {
             return;
         }
-        String name = url.substring(URL_PREFIX.length());
-        if (!name.matches(NAME_PATTERN)) {
+        String[] parts = url.substring(UPLOADS.length()).split("/", -1);
+        if (parts.length != 2
+                || !ImageFolder.isKnown(parts[0])
+                || !parts[1].matches(NAME_PATTERN)) {
             return;
         }
-        Files.deleteIfExists(directory.resolve(name));
+        Files.deleteIfExists(root.resolve(parts[0]).resolve(parts[1]));
     }
 }

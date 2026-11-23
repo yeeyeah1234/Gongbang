@@ -74,6 +74,9 @@ public class SecurityConfig {
                                                 "/api/search/**",
                                                 "/api/posts",
                                                 "/api/posts/**",
+                                                // BRD-001·004·008 커뮤니티 게시판 보기 (비회원 가능)
+                                                "/api/board-posts",
+                                                "/api/board-posts/**",
                                                 "/api/members/*/profile",
                                                 "/api/members/check-nickname",
                                                 "/api/auth/find-email",

@@ -8,11 +8,11 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-/** PST-007: 공개 버킷의 post/{postId}/ 아래에 저장한다 (프로필 사진 S3 저장과 같은 버킷·주소 규칙). */
+/** PST-007·BRD-006: 공개 버킷의 {post|board}/{id}/ 아래에 저장한다 (프로필 사진 S3 저장과 같은 버킷·주소 규칙). */
 public class S3PostImageStorage implements PostImageStorage {
 
     private static final String KEY_PATTERN =
-            "post/[0-9]+/[0-9a-fA-F-]{36}\\.(jpg|png|webp|gif|avif)";
+            "(post|board)/[0-9]+/[0-9a-fA-F-]{36}\\.(jpg|png|webp|gif|avif)";
     private static final int MAX_URL_LENGTH = 500;
 
     private final S3Client client;
@@ -26,8 +26,10 @@ public class S3PostImageStorage implements PostImageStorage {
     }
 
     @Override
-    public String store(Long postId, PostImageType type, MultipartFile file) throws IOException {
-        String key = "post/" + postId + "/" + UUID.randomUUID() + "." + type.extension();
+    public String store(ImageFolder folder, Long ownerId, PostImageType type, MultipartFile file)
+            throws IOException {
+        String key =
+                folder.path() + "/" + ownerId + "/" + UUID.randomUUID() + "." + type.extension();
         String url = base + "/" + key;
         if (url.length() > MAX_URL_LENGTH) {
             throw new IllegalArgumentException("Post image URL exceeds column size");
