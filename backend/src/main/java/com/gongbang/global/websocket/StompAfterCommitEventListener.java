@@ -2,6 +2,8 @@ package com.gongbang.global.websocket;
 
 import com.gongbang.workspace.calendar.domain.CalendarEventChangeType;
 import com.gongbang.workspace.calendar.domain.CalendarEventChangedEvent;
+import com.gongbang.workspace.document.domain.DocumentChangeType;
+import com.gongbang.workspace.document.domain.DocumentChangedEvent;
 import com.gongbang.workspace.notice.domain.NoticeChangeType;
 import com.gongbang.workspace.notice.domain.NoticeChangedEvent;
 import java.time.LocalDateTime;
@@ -11,7 +13,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/** 트랜잭션 커밋 뒤(`AFTER_COMMIT`)에만 팀·개인·공지·일정 STOMP 메시지를 브로커로 보낸다. */
+/** 트랜잭션 커밋 뒤(`AFTER_COMMIT`)에만 팀·개인·공지·일정·문서 STOMP 메시지를 브로커로 보낸다. */
 @Component
 @RequiredArgsConstructor
 public class StompAfterCommitEventListener {
@@ -57,6 +59,19 @@ public class StompAfterCommitEventListener {
         messagingTemplate.convertAndSend(teamEventsDestination(event.teamId()), message);
     }
 
+    /** 문서 변경 이벤트를 팀 이벤트(`/sub/teams/{teamId}/events`)로 브리지한다. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onDocumentChanged(DocumentChangedEvent event) {
+        TeamEventMessage message =
+                new TeamEventMessage(
+                        toDocumentEventType(event.type()),
+                        event.teamId(),
+                        event.documentId(),
+                        null,
+                        LocalDateTime.now());
+        messagingTemplate.convertAndSend(teamEventsDestination(event.teamId()), message);
+    }
+
     static String teamEventsDestination(Long teamId) {
         return "/sub/teams/" + teamId + "/events";
     }
@@ -79,6 +94,15 @@ public class StompAfterCommitEventListener {
             case CREATED -> "EVENT_CREATED";
             case UPDATED -> "EVENT_UPDATED";
             case DELETED -> "EVENT_DELETED";
+        };
+    }
+
+    private static String toDocumentEventType(DocumentChangeType type) {
+        return switch (type) {
+            case CREATED -> "DOCUMENT_CREATED";
+            case RENAMED -> "DOCUMENT_RENAMED";
+            case DELETED -> "DOCUMENT_DELETED";
+            case SAVED -> "DOCUMENT_SAVED";
         };
     }
 }

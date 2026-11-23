@@ -130,4 +130,25 @@ class TeamServiceTest {
         assertThat(e.getErrorCode().getHttpStatus().value()).isEqualTo(409);
         verify(teamMemberRepository, never()).save(any());
     }
+
+    @Test
+    @DisplayName("lockTeam: 팀 행을 FOR UPDATE로 읽는다")
+    void lockTeam은_팀_행을_잠근다() {
+        given(teamRepository.findByIdForUpdate(TEAM_ID)).willReturn(Optional.of(savedTeam()));
+
+        teamService.lockTeam(TEAM_ID);
+
+        verify(teamRepository).findByIdForUpdate(TEAM_ID);
+    }
+
+    @Test
+    @DisplayName("lockTeam: 없는 팀이면 404 RESOURCE_NOT_FOUND")
+    void lockTeam_없는_팀이면_404() {
+        given(teamRepository.findByIdForUpdate(TEAM_ID)).willReturn(Optional.empty());
+
+        BusinessException e =
+                assertThrows(BusinessException.class, () -> teamService.lockTeam(TEAM_ID));
+
+        assertThat(e.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+    }
 }

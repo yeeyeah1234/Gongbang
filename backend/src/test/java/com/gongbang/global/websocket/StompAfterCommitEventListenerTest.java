@@ -6,6 +6,8 @@ import static org.mockito.Mockito.verify;
 
 import com.gongbang.workspace.calendar.domain.CalendarEventChangeType;
 import com.gongbang.workspace.calendar.domain.CalendarEventChangedEvent;
+import com.gongbang.workspace.document.domain.DocumentChangeType;
+import com.gongbang.workspace.document.domain.DocumentChangedEvent;
 import com.gongbang.workspace.notice.domain.NoticeChangeType;
 import com.gongbang.workspace.notice.domain.NoticeChangedEvent;
 import java.time.LocalDateTime;
@@ -92,5 +94,28 @@ class StompAfterCommitEventListenerTest {
                 .containsExactly(
                         org.assertj.core.groups.Tuple.tuple("EVENT_CREATED", 3L, 200L),
                         org.assertj.core.groups.Tuple.tuple("EVENT_DELETED", 3L, 200L));
+    }
+
+    @Test
+    @DisplayName("문서 변경 이벤트는 DOCUMENT_* 팀 이벤트로 브리지한다")
+    void 문서이벤트_브리지() {
+        for (DocumentChangeType type : DocumentChangeType.values()) {
+            listener.onDocumentChanged(new DocumentChangedEvent(3L, 300L, type));
+        }
+
+        ArgumentCaptor<TeamEventMessage> captor = ArgumentCaptor.forClass(TeamEventMessage.class);
+        verify(messagingTemplate, org.mockito.Mockito.times(4))
+                .convertAndSend(eq("/sub/teams/3/events"), captor.capture());
+
+        assertThat(captor.getAllValues())
+                .extracting(
+                        TeamEventMessage::type,
+                        TeamEventMessage::teamId,
+                        TeamEventMessage::targetId)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("DOCUMENT_CREATED", 3L, 300L),
+                        org.assertj.core.groups.Tuple.tuple("DOCUMENT_RENAMED", 3L, 300L),
+                        org.assertj.core.groups.Tuple.tuple("DOCUMENT_DELETED", 3L, 300L),
+                        org.assertj.core.groups.Tuple.tuple("DOCUMENT_SAVED", 3L, 300L));
     }
 }

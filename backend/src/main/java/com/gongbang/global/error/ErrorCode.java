@@ -102,6 +102,8 @@ public enum ErrorCode {
             HttpStatus.FORBIDDEN, "CANNOT_LIKE_OWN_BOARD_POST", "내 글에는 좋아요를 누를 수 없어요"),
     NOT_EVENT_AUTHOR(HttpStatus.FORBIDDEN, "NOT_EVENT_AUTHOR", "작성자나 팀장만 바꿀 수 있어요"),
     AUTO_EVENT_NOT_EDITABLE(HttpStatus.FORBIDDEN, "AUTO_EVENT_NOT_EDITABLE", "자동 일정은 바꿀 수 없어요"),
+    // TODO(확인 필요): 기능정의서 문구를 찾지 못해 임시로 정함 (DOC-04)
+    NOT_DOCUMENT_AUTHOR(HttpStatus.FORBIDDEN, "NOT_DOCUMENT_AUTHOR", "작성자나 팀장만 지울 수 있어요"),
     // TODO(확인 필요): 기능정의서 문구 미정 (NET-04, NET-05)
     NOT_CHAT_ROOM_MEMBER(HttpStatus.FORBIDDEN, "NOT_CHAT_ROOM_MEMBER", "채팅방 참여자만 접근할 수 있습니다."),
 
