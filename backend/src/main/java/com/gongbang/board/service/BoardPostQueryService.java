@@ -61,6 +61,14 @@ public class BoardPostQueryService {
     private final MemberService memberService;
     private final BoardPostImageService boardPostImageService;
 
+    /** 다른 도메인(댓글 BRD-005 등)용: 삭제되지 않은 커뮤니티 게시글. 없거나 삭제됐으면 404 BOARD_POST_NOT_FOUND. */
+    public BoardPost getActivePost(Long boardPostId) {
+        return boardPostRepository
+                .findById(boardPostId)
+                .filter(found -> !found.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.BOARD_POST_NOT_FOUND));
+    }
+
     /** BRD-001 목록. sort는 latest(기본) 또는 popular, 그 밖의 값이면 400. */
     public PageResponse<BoardPostListItemResponse> getPosts(
             BoardCategory category, Long contestId, String sort, int page, int size) {
