@@ -9,6 +9,7 @@ import {
 import { ChatRoomList } from '../features/chat/components/ChatRoomList'
 import { ChatTimeline } from '../features/chat/components/ChatTimeline'
 import { RoomSettingsDrawer } from '../features/chat/components/RoomSettingsDrawer'
+import { uploadChatImage } from '../features/chat/api'
 import { mapChatMessage, mapChatRoom, mapTeamMember } from '../features/chat/format'
 import {
   useChatMessages,
@@ -163,14 +164,47 @@ export default function WorkspaceChatPage() {
     setSelectedRoomId(roomId)
   }
 
-  const handleSendMessage = (content: string): boolean => {
+  const handleSendMessage = async ({
+    content,
+    file,
+  }: {
+    content: string
+    file: File | null
+  }): Promise<boolean> => {
     if (activeRoomId === null) return false
-    const sent = realtime?.sendRoomMessage(activeRoomId, { type: 'TEXT', content }) ?? false
-    if (!sent) {
+    const roomId = activeRoomId
+    if (!realtime?.connected) {
       showToast('실시간 채팅 서버에 연결 중입니다. 잠시 후 다시 시도해 주세요')
       return false
     }
-    return true
+
+    const trimmed = content.trim()
+    if (!file) {
+      if (!trimmed) return false
+      const sent = realtime.sendRoomMessage(roomId, { type: 'TEXT', content: trimmed })
+      if (!sent) {
+        showToast('실시간 채팅 서버에 연결 중입니다. 잠시 후 다시 시도해 주세요')
+        return false
+      }
+      return true
+    }
+
+    try {
+      const uploaded = await uploadChatImage(file)
+      const sent = realtime.sendRoomMessage(roomId, {
+        type: 'IMAGE',
+        fileId: uploaded.fileId,
+        content: trimmed || null,
+      })
+      if (!sent) {
+        showToast('채팅 서버 연결이 끊어져 이미지를 보내지 못했어요. 다시 시도해 주세요')
+        return false
+      }
+      return true
+    } catch (error) {
+      showToast(getErrorMessage(error, '이미지를 업로드하지 못했어요'))
+      return false
+    }
   }
 
   const handleStartDirectChat = (targetMember: TeamMember) => {
@@ -250,7 +284,7 @@ export default function WorkspaceChatPage() {
         onDismissAutoAlert={() => setShowAutoAlert(false)}
         onOpenSettings={() => setDrawerOpen(true)}
         onSendMessage={handleSendMessage}
-        onUnsupportedFeature={showToast}
+        onValidationError={showToast}
       />
 
       <RoomSettingsDrawer

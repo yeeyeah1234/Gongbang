@@ -40,6 +40,7 @@ class ChatRealtimeServiceTest {
     @Mock private ChatMessageRepository chatMessageRepository;
     @Mock private TeamMemberService teamMemberService;
     @Mock private TeamService teamService;
+    @Mock private com.gongbang.file.service.FileUploadService fileUploadService;
     @Mock private ApplicationEventPublisher eventPublisher;
 
     private ChatRealtimeService service;
@@ -53,6 +54,7 @@ class ChatRealtimeServiceTest {
                         chatMessageRepository,
                         teamMemberService,
                         teamService,
+                        fileUploadService,
                         eventPublisher);
     }
 
