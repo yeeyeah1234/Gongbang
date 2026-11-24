@@ -165,7 +165,7 @@ export function RoomSettingsDrawer({
                         setOpenMenuMemberId(null)
                         onRequestReportMember(member)
                       }}
-                      className="flex h-[38px] w-full cursor-pointer items-center rounded-[6px] px-[13px] text-left text-[14px] leading-[17px] text-text transition-colors hover:bg-surface-sub"
+                      className="flex h-[38px] w-full cursor-pointer items-center rounded-[6px] px-[13px] text-left text-[14px] leading-[17px] text-danger transition-colors hover:bg-surface-sub"
                     >
                       신고하기
                     </button>
