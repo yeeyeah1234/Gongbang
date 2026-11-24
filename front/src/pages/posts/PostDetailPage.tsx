@@ -14,6 +14,7 @@ import { usePostDetail } from '../../features/post/hooks'
 import { isHttpUrl } from '../../features/post/postForm'
 import type { PostDetail } from '../../features/post/types'
 import { MemberActionPopover } from '../../features/report/components/MemberActionPopover'
+import { PostModerationSection } from '../../features/report/components/PostModerationSection'
 import { useTimedToast } from '../../hooks/useTimedToast'
 
 const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
@@ -117,8 +118,7 @@ export default function PostDetailPage() {
             {post.content}
           </div>
 
-          {/* ⑦ 댓글 영역 (INT-004) */}
-          {/* TODO(확인 필요): 김건우 댓글·대댓글 컴포넌트가 생기면 여기에 붙인다 */}
+          <PostModerationSection postId={post.postId} authorId={post.author.memberId} nickname={post.author.nickname ?? '작성자'} />
         </article>
 
         {/* PST-005 ⑤ 사진은 공모전 상세(MAIN-02 ③) 포스터 칸과 같은 세로 3:4로 위에 두고,

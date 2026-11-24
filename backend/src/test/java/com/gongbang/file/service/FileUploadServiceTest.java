@@ -193,4 +193,20 @@ class FileUploadServiceTest {
         assertThat(urls).containsExactlyEntriesOf(Map.of(10L, "/uploads/chat/7/1.png"));
         assertThat(service.getFileUrls(List.of())).isEmpty();
     }
+
+    @Test
+    void 비공개_증빙은_공개_URL을_생성하지_않는다() {
+        UploadedFile proof =
+                UploadedFile.create(
+                        7L,
+                        FilePurpose.PROOF,
+                        "local:proof/test",
+                        "proof.pdf",
+                        "application/pdf",
+                        10L);
+        ReflectionTestUtils.setField(proof, "id", 11L);
+        given(uploadedFileRepository.findAllById(List.of(11L))).willReturn(List.of(proof));
+        assertThat(service.getFileUrls(List.of(11L))).isEmpty();
+        org.mockito.Mockito.verifyNoInteractions(fileStorage);
+    }
 }

@@ -60,4 +60,8 @@ public class Award {
         this.proofFileId = proofFileId;
         this.verifyStatus = VerifyStatus.PENDING;
     }
+
+    public void review(VerifyStatus status) {
+        this.verifyStatus = status;
+    }
 }

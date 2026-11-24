@@ -21,7 +21,8 @@ public record MyProfileResponse(
         List<String> desiredRoles,
         List<String> skillTags,
         String portfolioUrl,
-        LocalDateTime createdAt) {
+        LocalDateTime createdAt,
+        boolean nicknameChangeRequired) {
 
     public static MyProfileResponse of(Member m, List<String> interestCodes) {
         return new MyProfileResponse(
@@ -39,6 +40,7 @@ public record MyProfileResponse(
                 m.getDesiredRoles().stream().map(DesiredRole::name).toList(),
                 List.copyOf(m.getSkillTags()),
                 m.getPortfolioUrl(),
-                m.getCreatedAt());
+                m.getCreatedAt(),
+                m.isNicknameChangeRequired());
     }
 }

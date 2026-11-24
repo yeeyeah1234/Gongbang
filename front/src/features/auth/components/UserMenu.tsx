@@ -62,7 +62,10 @@ export function UserMenu() {
           role="menu"
           className="absolute right-0 z-40 mt-2 w-[200px] rounded-popover border border-line bg-surface py-2 shadow-pop"
         >
-          {ITEMS.map((item) => (
+          {(member?.role === 'ADMIN'
+            ? [...ITEMS, { to: '/admin/verifications', label: '관리자 페이지' }]
+            : ITEMS
+          ).map((item) => (
             <li key={item.to} role="none">
               <Link
                 role="menuitem"

@@ -21,6 +21,7 @@ public class ReportService {
 
     private final ReportRepository reportRepository;
     private final MemberService memberService;
+    private final ReportTargetValidationService targets;
 
     /** 신고를 검증하고 저장한다. 본인 신고는 400 `CANNOT_REPORT_SELF`, 없는/탈퇴 회원은 404 `MEMBER_NOT_FOUND`. */
     @Transactional
@@ -35,6 +36,7 @@ public class ReportService {
             throw new BusinessException(ErrorCode.MEMBER_NOT_FOUND, "신고 대상 회원을 찾을 수 없어요");
         }
 
+        targets.validate(reporterId, request);
         String normalizedDetail = normalizeDetail(request.detail());
         Report saved =
                 reportRepository.save(

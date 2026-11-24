@@ -133,6 +133,11 @@ public class RecruitPost {
         this.deletedAt = now;
     }
 
+    public void forceHide(LocalDateTime now) {
+        this.deletedAt = now;
+        this.status = PostStatus.CLOSED;
+    }
+
     public boolean isRecruiting() {
         return status == PostStatus.RECRUITING;
     }

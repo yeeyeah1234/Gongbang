@@ -103,6 +103,14 @@ export default function MyProfilePage() {
       }
     >
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        {profile.nicknameChangeRequired && (
+          <div
+            role="alert"
+            className="rounded-card border border-danger-line bg-danger-soft p-4 text-danger xl:col-span-2"
+          >
+            관리자가 닉네임 변경을 요청했습니다. 프로필 수정에서 새 닉네임으로 변경해 주세요.
+          </div>
+        )}
         {editing ? (
           <ProfileEditCard
             profile={profile}
@@ -200,6 +208,15 @@ export default function MyProfilePage() {
       )}
       {historyModal?.kind === 'award' && (
         <AwardModal
+          onRequestVerify={(a) => {
+            setHistoryModal(null)
+            setVerifyTarget({
+              kind: 'awards',
+              id: a.awardId,
+              title: `${a.contestName} · ${a.awardName}`,
+              proofFileId: a.proofFileId,
+            })
+          }}
           open
           item={historyModal.item}
           onClose={() => setHistoryModal(null)}
@@ -210,6 +227,7 @@ export default function MyProfilePage() {
         />
       )}
       <VerifyRequestModal
+        key={verifyTarget ? `${verifyTarget.kind}-${verifyTarget.id}` : 'closed'}
         target={verifyTarget}
         onClose={() => setVerifyTarget(null)}
         onDone={(m) => {

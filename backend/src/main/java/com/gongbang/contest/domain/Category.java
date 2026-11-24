@@ -28,4 +28,9 @@ public class Category {
 
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
+
+    public void update(String name, int sortOrder) {
+        this.name = name;
+        this.sortOrder = sortOrder;
+    }
 }

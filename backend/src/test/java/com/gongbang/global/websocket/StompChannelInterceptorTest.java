@@ -89,6 +89,8 @@ class StompChannelInterceptorTest {
     @Test
     @DisplayName("SUBSCRIBE 팀 이벤트와 채팅방 구독은 각각 팀원·채팅방 참여자만 허용한다")
     void subscribe_권한검증() {
+        given(memberService.findActiveMember(10L)).willReturn(Optional.of(activeMember));
+        given(memberService.findActiveMember(99L)).willReturn(Optional.of(activeMember));
         Message<byte[]> teamSub =
                 frame(
                         StompCommand.SUBSCRIBE,
@@ -128,6 +130,7 @@ class StompChannelInterceptorTest {
     @Test
     @DisplayName("SUBSCRIBE 개인 이벤트·채팅방 목록은 본인만 허용하고 미허용 경로는 차단한다")
     void subscribe_본인경로와_미허용경로() {
+        given(memberService.findActiveMember(10L)).willReturn(Optional.of(activeMember));
         StompPrincipal user = new StompPrincipal(10L, MemberRole.USER);
 
         interceptor.preSend(frame(StompCommand.SUBSCRIBE, "/sub/members/10/events", user), channel);
@@ -161,6 +164,7 @@ class StompChannelInterceptorTest {
     @Test
     @DisplayName("SEND 시 채팅방 송신 경로는 방 참여자만 허용한다")
     void send_권한검증() {
+        given(memberService.findActiveMember(10L)).willReturn(Optional.of(activeMember));
         StompPrincipal user = new StompPrincipal(10L, MemberRole.USER);
         Message<byte[]> sendMsg = frame(StompCommand.SEND, "/pub/chat-rooms/7/send", user);
 
@@ -170,6 +174,21 @@ class StompChannelInterceptorTest {
 
         given(chatRoomAccessChecker.canAccessRoom(7L, 10L)).willReturn(false);
         assertThrows(MessageDeliveryException.class, () -> interceptor.preSend(sendMsg, channel));
+    }
+
+    @Test
+    void suspendedMemberCannotSendOnExistingSession() {
+        given(memberService.findActiveMember(10L)).willReturn(Optional.of(activeMember));
+        given(activeMember.isSuspended()).willReturn(true);
+        assertThrows(
+                MessageDeliveryException.class,
+                () ->
+                        interceptor.preSend(
+                                frame(
+                                        StompCommand.SEND,
+                                        "/pub/chat-rooms/7/send",
+                                        new StompPrincipal(10L, MemberRole.USER)),
+                                channel));
     }
 
     private static Message<byte[]> frame(

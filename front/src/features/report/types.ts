@@ -1,4 +1,4 @@
-export type ReportTargetType = 'MEMBER' | 'COMMENT' | 'MESSAGE'
+export type ReportTargetType = 'MEMBER' | 'COMMENT' | 'MESSAGE' | 'POST'
 
 export type ReportReasonCode = 'ABUSE' | 'HATE' | 'BAD_NICKNAME'
 

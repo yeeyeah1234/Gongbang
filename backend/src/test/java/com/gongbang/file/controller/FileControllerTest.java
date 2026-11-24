@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.gongbang.auth.domain.LoginMember;
 import com.gongbang.file.dto.FileUploadResponse;
 import com.gongbang.file.service.FileUploadService;
+import com.gongbang.file.service.ProofFileService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.GlobalExceptionHandler;
 import com.gongbang.global.error.exception.BusinessException;
@@ -36,13 +37,15 @@ class FileControllerTest {
     private static final Long MEMBER_ID = 7L;
 
     @Mock private FileUploadService fileUploadService;
+    @Mock private ProofFileService proofFileService;
 
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc =
-                MockMvcBuilders.standaloneSetup(new FileController(fileUploadService))
+                MockMvcBuilders.standaloneSetup(
+                                new FileController(fileUploadService, proofFileService))
                         .setControllerAdvice(new GlobalExceptionHandler())
                         .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                         .build();
@@ -55,6 +58,20 @@ class FileControllerTest {
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void proofUsesPrivateStorage() throws Exception {
+        MockMultipartFile file =
+                new MockMultipartFile(
+                        "file", "proof.pdf", "application/pdf", "%PDF-1.7".getBytes());
+        given(proofFileService.upload(eq(MEMBER_ID), eq("PROOF"), any()))
+                .willReturn(new ProofFileService.UploadResult(66L, "/api/files/66"));
+        mockMvc.perform(multipart("/api/files").file(file).param("purpose", "PROOF"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.fileId").value(66))
+                .andExpect(jsonPath("$.data.url").value("/api/files/66"));
+        org.mockito.Mockito.verifyNoInteractions(fileUploadService);
     }
 
     @Test

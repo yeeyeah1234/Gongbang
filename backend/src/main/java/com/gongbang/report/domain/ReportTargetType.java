@@ -4,5 +4,6 @@ package com.gongbang.report.domain;
 public enum ReportTargetType {
     MEMBER,
     COMMENT,
-    MESSAGE
+    MESSAGE,
+    POST
 }

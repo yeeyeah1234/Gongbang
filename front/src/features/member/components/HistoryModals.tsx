@@ -9,6 +9,7 @@ import { addHistory, requestVerify, updateHistory } from '../api'
 import { memberKeys } from '../hooks'
 import type { Award, Career, Certificate } from '../types'
 import { VerifyBadge } from './VerifyBadge'
+import { ProofFileInput } from './ProofFileInput'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -49,21 +50,6 @@ function DateInput({
         onChange={(e) => onChange(e.target.value)}
         className="h-12 rounded-input border border-line-input bg-surface px-4 text-body text-text focus:border-2 focus:border-primary focus:outline-none disabled:bg-surface-sub disabled:text-text-disabled"
       />
-    </div>
-  )
-}
-
-// 증빙 파일 칸 (MY-08 ②). TODO(확인 필요): 파일 업로드 모듈(uploaded_file, 담당 미정)이 생기면 실제로 올린다
-function ProofFileBox() {
-  return (
-    <div className="flex flex-col">
-      <span className="mb-2 text-small font-bold text-text">증빙 파일 (선택)</span>
-      <div className="rounded-input border border-dashed border-line-dashed bg-bg px-4 py-5 text-center text-small text-text-sub">
-        파일을 끌어다 놓거나 클릭해서 업로드
-        <p className="mt-1 text-caption">
-          상장·확인서 · PDF, JPG, PNG · 5MB 이하 (파일 업로드 준비 중)
-        </p>
-      </div>
     </div>
   )
 }
@@ -231,9 +217,11 @@ export function CertificateModal({
   const [issuer, setIssuer] = useState(item?.issuer ?? '')
   const [acquiredDate, setAcquiredDate] = useState(item?.acquiredDate ?? '')
   const [certNumber, setCertNumber] = useState(item?.certNumber ?? '')
+  const [proofFileId, setProofFileId] = useState(item?.proofFileId ?? null)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const ready = name.trim() && issuer.trim() && acquiredDate
+  const ready = name.trim() && issuer.trim() && acquiredDate && !uploading
 
   const save = async () => {
     setSaving(true)
@@ -243,7 +231,7 @@ export function CertificateModal({
       issuer: issuer.trim(),
       acquiredDate,
       certNumber: certNumber.trim() || null,
-      proofFileId: item?.proofFileId ?? null,
+      proofFileId,
     }
     try {
       if (item) await updateHistory('certificates', item.certificateId, input)
@@ -311,7 +299,7 @@ export function CertificateModal({
           value={certNumber}
           onChange={(e) => setCertNumber(e.target.value)}
         />
-        <ProofFileBox />
+        <ProofFileInput value={proofFileId} onChange={setProofFileId} onBusy={setUploading} />
         <div className="flex items-center justify-between rounded-input border border-line px-4 py-3">
           <span className="flex items-center gap-2 text-small text-text-sub">
             <VerifyBadge status={item?.verifyStatus ?? 'NONE'} />
@@ -324,7 +312,7 @@ export function CertificateModal({
               !item ||
               item.verifyStatus === 'PENDING' ||
               item.verifyStatus === 'VERIFIED' ||
-              item.proofFileId === null
+              uploading
             }
             onClick={() => item && onRequestVerify(item)}
           >
@@ -343,14 +331,22 @@ export function CertificateModal({
 }
 
 // Figma 17 이력 추가/수정 모달 · 수상 경력 (MY-09)
-export function AwardModal({ open, item, onClose, onSaved }: ModalBaseProps<Award>) {
+export function AwardModal({
+  open,
+  item,
+  onClose,
+  onSaved,
+  onRequestVerify,
+}: ModalBaseProps<Award> & { onRequestVerify?: (item: Award) => void }) {
   const refresh = useRefresh('awards')
   const [contestName, setContestName] = useState(item?.contestName ?? '')
   const [awardName, setAwardName] = useState(item?.awardName ?? '')
   const [awardedDate, setAwardedDate] = useState(item?.awardedDate ?? '')
+  const [proofFileId, setProofFileId] = useState(item?.proofFileId ?? null)
+  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const ready = contestName.trim() && awardName.trim() && awardedDate
+  const ready = contestName.trim() && awardName.trim() && awardedDate && !uploading
 
   const save = async () => {
     setSaving(true)
@@ -359,7 +355,7 @@ export function AwardModal({ open, item, onClose, onSaved }: ModalBaseProps<Awar
       contestName: contestName.trim(),
       awardName: awardName.trim(),
       awardedDate,
-      proofFileId: item?.proofFileId ?? null,
+      proofFileId,
     }
     try {
       if (item) await updateHistory('awards', item.awardId, input)
@@ -418,7 +414,20 @@ export function AwardModal({ open, item, onClose, onSaved }: ModalBaseProps<Awar
             max={today()}
           />
         </div>
-        <ProofFileBox />
+        <ProofFileInput value={proofFileId} onChange={setProofFileId} onBusy={setUploading} />
+        {onRequestVerify && (
+          <Button
+            disabled={
+              !item ||
+              uploading ||
+              item.verifyStatus === 'PENDING' ||
+              item.verifyStatus === 'VERIFIED'
+            }
+            onClick={() => item && onRequestVerify(item)}
+          >
+            {item?.verifyStatus === 'REJECTED' ? '다시 제출' : '인증 요청'}
+          </Button>
+        )}
         {error && <p className="text-small text-danger">{error}</p>}
       </div>
     </Modal>
@@ -442,6 +451,8 @@ export function VerifyRequestModal({
 }) {
   const queryClient = useQueryClient()
   const [realName, setRealName] = useState('')
+  const [proofFileId, setProofFileId] = useState(target?.proofFileId ?? null)
+  const [uploading, setUploading] = useState(false)
   const [agree, setAgree] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -451,7 +462,7 @@ export function VerifyRequestModal({
     setSaving(true)
     setError(null)
     try {
-      await requestVerify(target.kind, target.id, realName.trim(), target.proofFileId)
+      await requestVerify(target.kind, target.id, realName.trim(), proofFileId)
       void queryClient.invalidateQueries({ queryKey: memberKeys.history(target.kind) })
       onDone('인증을 요청했어요. 결과는 알림과 이메일로 알려 드려요')
     } catch (e) {
@@ -475,7 +486,7 @@ export function VerifyRequestModal({
           <Button
             variant="primary"
             size="lg"
-            disabled={!realName.trim() || !agree}
+            disabled={!realName.trim() || !agree || !proofFileId || uploading}
             loading={saving}
             onClick={submit}
           >
@@ -500,6 +511,7 @@ export function VerifyRequestModal({
           onChange={(e) => setRealName(e.target.value)}
           helperText="실명은 인증 검토에만 쓰이고 프로필에 공개되지 않아요."
         />
+        <ProofFileInput value={proofFileId} onChange={setProofFileId} onBusy={setUploading} />
         <Checkbox
           label="[필수] 인증을 위한 실명 수집·이용에 동의합니다."
           checked={agree}

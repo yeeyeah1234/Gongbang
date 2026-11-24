@@ -92,6 +92,7 @@ public class FileUploadService {
         }
         Map<Long, String> result = new LinkedHashMap<>();
         for (UploadedFile file : uploadedFileRepository.findAllById(fileIds)) {
+            if (file.getPurpose() == FilePurpose.PROOF) continue;
             result.put(file.getId(), fileStorage.resolveUrl(file.getStorageKey()));
         }
         return result;

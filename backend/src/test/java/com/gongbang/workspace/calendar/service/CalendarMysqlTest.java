@@ -221,10 +221,10 @@ class CalendarMysqlTest {
 
     // ---------- 조회 ----------
 
-    private List<Map<String, Object>> autoEvents(long teamId) {
+    private List<Map<String, Object>> autoDeadlineEvents(long teamId) {
         return jdbcTemplate.queryForList(
                 "SELECT id, title, all_day, color, created_by, auto_type FROM calendar_event"
-                        + " WHERE team_id = ? AND auto_type IS NOT NULL",
+                        + " WHERE team_id = ? AND auto_type = 'CONTEST_DEADLINE'",
                 teamId);
     }
 
@@ -258,7 +258,7 @@ class CalendarMysqlTest {
 
         calendarService.upsertAutoEvent(teamId);
 
-        List<Map<String, Object>> events = autoEvents(teamId);
+        List<Map<String, Object>> events = autoDeadlineEvents(teamId);
         assertThat(events).hasSize(1);
         Map<String, Object> event = events.get(0);
         assertThat(event.get("title")).isEqualTo("공모전 접수 마감");
@@ -268,6 +268,7 @@ class CalendarMysqlTest {
         assertThat(event.get("auto_type")).isEqualTo("CONTEST_DEADLINE");
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2026, 12, 20, 0, 0));
         assertThat(autoEndAt(teamId)).isEqualTo(LocalDateTime.of(2026, 12, 20, 0, 0));
+        assertMilestones(teamId, LocalDate.of(2026, 12, 20));
     }
 
     @Test
@@ -276,22 +277,35 @@ class CalendarMysqlTest {
         long contestId = contest(LocalDate.of(2026, 12, 20));
         long teamId = team(servicePost(contestId));
         calendarService.upsertAutoEvent(teamId);
-        Object idBefore = autoEvents(teamId).get(0).get("id");
+        Object idBefore = autoDeadlineEvents(teamId).get(0).get("id");
 
         changeContestEndDate(contestId, LocalDate.of(2027, 1, 5));
         calendarService.upsertAutoEvent(teamId);
 
-        List<Map<String, Object>> events = autoEvents(teamId);
+        List<Map<String, Object>> events = autoDeadlineEvents(teamId);
         assertThat(events).hasSize(1);
         assertThat(events.get(0).get("id")).isEqualTo(idBefore);
         assertThat(events.get(0).get("title")).isEqualTo("공모전 접수 마감");
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2027, 1, 5, 0, 0));
         assertThat(autoEndAt(teamId)).isEqualTo(LocalDateTime.of(2027, 1, 5, 0, 0));
+        assertMilestones(teamId, LocalDate.of(2027, 1, 5));
+    }
+
+    private void assertMilestones(long teamId, LocalDate deadline) {
+        for (int days : new int[] {7, 1}) {
+            List<LocalDateTime> starts =
+                    jdbcTemplate.queryForList(
+                            "SELECT start_at FROM calendar_event WHERE team_id = ? AND auto_type = ?",
+                            LocalDateTime.class,
+                            teamId,
+                            "CONTEST_D" + days);
+            assertThat(starts).containsExactly(deadline.minusDays(days).atStartOfDay());
+        }
     }
 
     @Test
-    @DisplayName("두 번 불러도 자동 일정은 1개")
-    void 두_번_불러도_1개() {
+    @DisplayName("두 번 불러도 자동 일정은 종류별 1개씩 총 3개")
+    void 두_번_불러도_종류별_1개() {
         long teamId = team(servicePost(contest(LocalDate.of(2026, 12, 20))));
 
         calendarService.upsertAutoEvent(teamId);
@@ -307,7 +321,7 @@ class CalendarMysqlTest {
 
         calendarService.upsertAutoEvent(teamId);
 
-        assertThat(autoEvents(teamId)).hasSize(1);
+        assertThat(autoDeadlineEvents(teamId)).hasSize(1);
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2026, 12, 25, 0, 0));
     }
 
@@ -320,7 +334,7 @@ class CalendarMysqlTest {
 
         calendarService.upsertAutoEvent(teamId);
 
-        assertThat(autoEvents(teamId)).hasSize(1);
+        assertThat(autoDeadlineEvents(teamId)).hasSize(1);
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2026, 12, 20, 0, 0));
     }
 
@@ -360,8 +374,8 @@ class CalendarMysqlTest {
     }
 
     @Test
-    @DisplayName("두 스레드가 같은 팀을 동시에 불러도 오류 없이 1개")
-    void 동시에_불러도_1개() throws Exception {
+    @DisplayName("두 스레드가 같은 팀을 동시에 불러도 오류 없이 종류별 1개")
+    void 동시에_불러도_종류별_1개() throws Exception {
         long teamId = team(servicePost(contest(LocalDate.of(2026, 12, 20))));
         int threads = 2;
         ExecutorService executor = Executors.newFixedThreadPool(threads);
@@ -402,8 +416,8 @@ class CalendarMysqlTest {
         insertNormalEvent(teamId, "회의 2");
         calendarService.upsertAutoEvent(teamId);
 
-        assertThat(countEvents(teamId)).isEqualTo(3);
-        assertThat(autoEvents(teamId)).hasSize(1);
+        assertThat(countEvents(teamId)).isEqualTo(5);
+        assertThat(autoDeadlineEvents(teamId)).hasSize(1);
     }
 
     @Test
@@ -422,7 +436,7 @@ class CalendarMysqlTest {
                         });
         teamIds.add(teamId);
 
-        assertThat(autoEvents(teamId)).hasSize(1);
+        assertThat(autoDeadlineEvents(teamId)).hasSize(1);
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2026, 12, 20, 0, 0));
     }
 
@@ -510,7 +524,7 @@ class CalendarMysqlTest {
                                 teamId,
                                 LocalDate.of(2026, 12, 1),
                                 LocalDate.of(2026, 12, 31)))
-                .containsExactly("달 경계 종일", "12월 회의", "공모전 접수 마감");
+                .containsExactly("달 경계 종일", "12월 회의", "공모전 마감 D-7", "공모전 마감 D-1", "공모전 접수 마감");
     }
 
     @Test
@@ -575,7 +589,7 @@ class CalendarMysqlTest {
 
         Long autoId =
                 jdbcTemplate.queryForObject(
-                        "SELECT id FROM calendar_event WHERE team_id = ? AND auto_type IS NOT NULL",
+                        "SELECT id FROM calendar_event WHERE team_id = ? AND auto_type = 'CONTEST_DEADLINE'",
                         Long.class,
                         teamId);
         assertThatThrownBy(() -> calendarEventService.delete(leaderId, autoId))

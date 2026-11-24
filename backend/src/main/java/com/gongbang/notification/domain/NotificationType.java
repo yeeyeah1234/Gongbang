@@ -21,7 +21,9 @@ public enum NotificationType {
     VERIFY_RESULT(null, SendMode.IMMEDIATE, Category.NOTICE),
     // NOTI-07: 끌 수 없음. 이메일 발송 여부는 협의 중이라 메일 없음
     SERVICE_NOTICE(null, null, Category.NOTICE),
-    WELCOME(null, null, Category.NOTICE);
+    WELCOME(null, null, Category.NOTICE),
+    NICKNAME_CHANGE_REQUIRED(null, null, Category.NOTICE),
+    ACCOUNT_SANCTION(null, null, Category.NOTICE);
 
     /** NOTI-01 ② 종류 필터: 댓글, 팀 빌딩(지원·초대), 워크스페이스, 마감 임박, 공지 */
     public enum Category {

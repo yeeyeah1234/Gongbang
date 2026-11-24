@@ -277,6 +277,8 @@ public class AuthService {
     }
 
     private LoginResult issue(Member member, boolean rememberMe) {
+        if (member.isSuspended())
+            throw new BusinessException(ErrorCode.ACCOUNT_LOCKED, "이용 정지된 계정입니다");
         String rawRefresh = UUID.randomUUID() + "." + UUID.randomUUID();
         Duration refreshTtl = Duration.ofDays(rememberMe ? rememberMeDays : refreshDays);
         refreshTokenRepository.save(
