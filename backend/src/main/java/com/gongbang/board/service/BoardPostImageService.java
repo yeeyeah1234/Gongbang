@@ -7,11 +7,11 @@ import com.gongbang.board.dto.BoardPostDetailResponse.ImageInfo;
 import com.gongbang.board.dto.BoardPostImagesResponse;
 import com.gongbang.board.repository.BoardPostImageRepository;
 import com.gongbang.board.repository.BoardPostRepository;
+import com.gongbang.file.service.AllowedImageType;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.service.ImageFolder;
-import com.gongbang.post.service.PostImageStorage;
-import com.gongbang.post.service.PostImageType;
+import com.gongbang.post.service.PostImageUploader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDateTime;
@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,8 +28,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -54,7 +53,7 @@ public class BoardPostImageService {
 
     private final BoardPostRepository boardPostRepository;
     private final BoardPostImageRepository boardPostImageRepository;
-    private final PostImageStorage storage;
+    private final PostImageUploader uploader;
 
     /** 상세(BRD-004)용: 삭제되지 않은 사진을 보여 주는 순서대로. */
     @Transactional(readOnly = true)
@@ -81,8 +80,8 @@ public class BoardPostImageService {
         if (file.getSize() > MAX_BYTES) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, SIZE_MESSAGE);
         }
-        PostImageType type =
-                PostImageType.detect(readHead(file))
+        AllowedImageType type =
+                detectType(file)
                         .orElseThrow(
                                 () -> new BusinessException(ErrorCode.INVALID_INPUT, TYPE_MESSAGE));
 
@@ -92,8 +91,6 @@ public class BoardPostImageService {
         }
 
         String url = store(boardPostId, type, file);
-        // DB 저장이 되돌려지면 방금 저장한 파일을 지운다
-        deleteFileOnRollback(url);
         images.add(
                 boardPostImageRepository.save(BoardPostImage.of(boardPostId, url, images.size())));
         return new BoardPostImagesResponse(toInfos(images));
@@ -169,39 +166,20 @@ public class BoardPostImageService {
                 .toList();
     }
 
-    private static byte[] readHead(MultipartFile file) {
+    private static Optional<AllowedImageType> detectType(MultipartFile file) {
         try (InputStream in = file.getInputStream()) {
-            return in.readNBytes(PostImageType.HEAD_BYTES);
+            return AllowedImageType.detect(in);
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, STORE_FAILED_MESSAGE);
         }
     }
 
-    private String store(Long boardPostId, PostImageType type, MultipartFile file) {
+    private String store(Long boardPostId, AllowedImageType type, MultipartFile file) {
         try {
-            return storage.store(ImageFolder.BOARD, boardPostId, type, file);
+            return uploader.store(ImageFolder.BOARD, boardPostId, type, file);
         } catch (IOException | RuntimeException e) {
             log.warn("Board post image upload failed boardPostId={}", boardPostId);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, STORE_FAILED_MESSAGE);
         }
-    }
-
-    private void deleteFileOnRollback(String url) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCompletion(int status) {
-                        if (status == STATUS_ROLLED_BACK) {
-                            try {
-                                storage.delete(url);
-                            } catch (IOException | RuntimeException e) {
-                                log.warn("Board post image cleanup failed");
-                            }
-                        }
-                    }
-                });
     }
 }

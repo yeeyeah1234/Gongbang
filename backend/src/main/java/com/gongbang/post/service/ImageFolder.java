@@ -14,13 +14,4 @@ public enum ImageFolder {
     public String path() {
         return path;
     }
-
-    static boolean isKnown(String path) {
-        for (ImageFolder folder : values()) {
-            if (folder.path.equals(path)) {
-                return true;
-            }
-        }
-        return false;
-    }
 }

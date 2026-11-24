@@ -47,9 +47,12 @@ class PostImageMysqlTest {
 
     // 다른 테스트 데이터와 겹치지 않게 큰 번호를 쓴다
     private static final long AUTHOR_ID = 930_001L;
+    private static final byte[] PNG = {
+        (byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 0, 0, 0, 13
+    };
+    // app.upload-dir. 사진은 그 아래 post/{모집글 ID}/{uuid}.{확장자}에 저장된다 (PostImageUploader)
     private static final Path UPLOAD_DIR =
-            Paths.get(
-                    System.getProperty("java.io.tmpdir"), "gongbang-post-image-mysql-test", "post");
+            Paths.get(System.getProperty("java.io.tmpdir"), "gongbang-post-image-mysql-test");
 
     @Autowired private PostImageService postImageService;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -71,20 +74,24 @@ class PostImageMysqlTest {
     void tearDown() throws IOException {
         jdbcTemplate.update("DELETE FROM recruit_post_image WHERE post_id = ?", postId);
         jdbcTemplate.update("DELETE FROM recruit_post WHERE id = ?", postId);
-        if (Files.isDirectory(UPLOAD_DIR)) {
-            try (Stream<Path> files = Files.list(UPLOAD_DIR)) {
-                for (Path file :
-                        files.filter(f -> f.getFileName().toString().startsWith(postId + "-"))
-                                .toList()) {
+        Path postDir = postDir();
+        if (Files.isDirectory(postDir)) {
+            try (Stream<Path> files = Files.list(postDir)) {
+                for (Path file : files.toList()) {
                     Files.deleteIfExists(file);
                 }
             }
+            Files.deleteIfExists(postDir);
         }
+    }
+
+    private Path postDir() {
+        return UPLOAD_DIR.resolve("post").resolve(String.valueOf(postId));
     }
 
     private static MockMultipartFile png() {
         byte[] bytes = new byte[64];
-        System.arraycopy(PostImageTypeTest.PNG, 0, bytes, 0, PostImageTypeTest.PNG.length);
+        System.arraycopy(PNG, 0, bytes, 0, PNG.length);
         return new MockMultipartFile("file", "poster.png", "image/png", bytes);
     }
 
@@ -131,11 +138,8 @@ class PostImageMysqlTest {
                         postId);
         assertThat(orders).containsExactly(0, 1, 2);
         // 막힌 요청은 파일을 저장하지 않는다
-        try (Stream<Path> files = Files.list(UPLOAD_DIR)) {
-            assertThat(
-                            files.filter(f -> f.getFileName().toString().startsWith(postId + "-"))
-                                    .count())
-                    .isEqualTo(3);
+        try (Stream<Path> files = Files.list(postDir())) {
+            assertThat(files.count()).isEqualTo(3);
         }
     }
 
@@ -160,9 +164,6 @@ class PostImageMysqlTest {
                         String.class,
                         first);
         assertThat(total).isEqualTo(4);
-        assertThat(
-                        UPLOAD_DIR.resolve(
-                                deletedUrl.substring(LocalPostImageStorage.URL_PREFIX.length())))
-                .exists();
+        assertThat(UPLOAD_DIR.resolve(deletedUrl.substring("/uploads/".length()))).exists();
     }
 }

@@ -1,5 +1,6 @@
 package com.gongbang.post.service;
 
+import com.gongbang.file.service.AllowedImageType;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.RecruitPost;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -23,8 +25,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -50,7 +50,7 @@ public class PostImageService {
 
     private final RecruitPostRepository recruitPostRepository;
     private final RecruitPostImageRepository recruitPostImageRepository;
-    private final PostImageStorage storage;
+    private final PostImageUploader uploader;
 
     /** 상세(PST-005)용: 삭제되지 않은 사진을 보여 주는 순서대로. */
     @Transactional(readOnly = true)
@@ -71,8 +71,8 @@ public class PostImageService {
         if (file.getSize() > MAX_BYTES) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, SIZE_MESSAGE);
         }
-        PostImageType type =
-                PostImageType.detect(readHead(file))
+        AllowedImageType type =
+                detectType(file)
                         .orElseThrow(
                                 () -> new BusinessException(ErrorCode.INVALID_INPUT, TYPE_MESSAGE));
 
@@ -82,8 +82,6 @@ public class PostImageService {
         }
 
         String url = store(postId, type, file);
-        // DB 저장이 되돌려지면 방금 저장한 파일을 지운다 (남은 사진이 없는 파일을 가리키지 않게)
-        deleteFileOnRollback(url);
         RecruitPostImage saved =
                 recruitPostImageRepository.save(RecruitPostImage.of(postId, url, images.size()));
         images.add(saved);
@@ -157,43 +155,20 @@ public class PostImageService {
         return images.stream().map(PostImageResponse::from).toList();
     }
 
-    private static byte[] readHead(MultipartFile file) {
+    private static Optional<AllowedImageType> detectType(MultipartFile file) {
         try (InputStream in = file.getInputStream()) {
-            return in.readNBytes(PostImageType.HEAD_BYTES);
+            return AllowedImageType.detect(in);
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, STORE_FAILED_MESSAGE);
         }
     }
 
-    private String store(Long postId, PostImageType type, MultipartFile file) {
+    private String store(Long postId, AllowedImageType type, MultipartFile file) {
         try {
-            return storage.store(postId, type, file);
+            return uploader.store(ImageFolder.POST, postId, type, file);
         } catch (IOException | RuntimeException e) {
             log.warn("Post image upload failed postId={}", postId);
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, STORE_FAILED_MESSAGE);
-        }
-    }
-
-    private void deleteFileOnRollback(String url) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override
-                    public void afterCompletion(int status) {
-                        if (status == STATUS_ROLLED_BACK) {
-                            deleteQuietly(url);
-                        }
-                    }
-                });
-    }
-
-    private void deleteQuietly(String url) {
-        try {
-            storage.delete(url);
-        } catch (IOException | RuntimeException e) {
-            log.warn("Post image cleanup failed");
         }
     }
 }
