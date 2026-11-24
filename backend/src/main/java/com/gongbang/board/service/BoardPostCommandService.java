@@ -10,6 +10,7 @@ import com.gongbang.board.repository.BoardPostRepository;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.global.validation.UrlPolicy;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
@@ -160,16 +161,18 @@ public class BoardPostCommandService {
         return new Values(category, contestId, title, content, linkUrl);
     }
 
-    /** 비었으면 null, 아니면 http(s)://로 시작해야 한다 (AGENTS.md 9, javascript: 막기). */
+    /**
+     * 비었으면 null, 아니면 공통 URL 정책(#120, 대소문자 무관 http·https, 호스트 필수)에 맞아야 한다 (AGENTS.md 9, javascript:
+     * 막기). 틀리면 BRD-002 ④ 문구.
+     */
     private static String optionalUrl(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return null;
+        String url;
+        try {
+            url = UrlPolicy.validateOrNull(raw);
+        } catch (BusinessException e) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, URL_INVALID);
         }
-        String url = raw.trim();
-        String lower = url.toLowerCase();
-        boolean http = lower.startsWith("http://") && lower.length() > "http://".length();
-        boolean https = lower.startsWith("https://") && lower.length() > "https://".length();
-        if (!(http || https) || url.length() > URL_MAX) {
+        if (url != null && url.length() > URL_MAX) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, URL_INVALID);
         }
         return url;

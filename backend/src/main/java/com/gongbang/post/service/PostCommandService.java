@@ -5,6 +5,7 @@ import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.global.validation.UrlPolicy;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
@@ -15,13 +16,10 @@ import com.gongbang.post.dto.PostCreateResponse;
 import com.gongbang.post.dto.PostDetailResponse;
 import com.gongbang.post.dto.PostUpdateRequest;
 import com.gongbang.post.repository.RecruitPostRepository;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -358,25 +356,20 @@ public class PostCommandService {
         return value;
     }
 
-    /** PST-002 ④: 빈 값이면 null, 있으면 http:// 또는 https://로 시작하는 주소만 받는다 (javascript: 등 차단). */
+    /**
+     * PST-002 ④: 빈 값이면 null, 있으면 공통 URL 정책(#120, 대소문자 무관 http·https, 호스트 필수)에 맞는 주소만 받는다
+     * (javascript: 등 차단). 기능정의서에 서버 문구가 없어 INVALID_INPUT 기본 문구를 쓴다.
+     */
     private static String optionalUrl(String value) {
-        if (!StringUtils.hasText(value)) {
-            return null;
+        String url;
+        try {
+            url = UrlPolicy.validateOrNull(value);
+        } catch (BusinessException e) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
-        String url = value.strip();
-        String lower = url.toLowerCase(Locale.ROOT);
-        boolean httpScheme = lower.startsWith("http://") || lower.startsWith("https://");
-        if (!httpScheme || url.length() > URL_MAX_LENGTH || !hasHost(url)) {
+        if (url != null && url.length() > URL_MAX_LENGTH) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
         return url;
-    }
-
-    private static boolean hasHost(String url) {
-        try {
-            return new URI(url).getHost() != null;
-        } catch (URISyntaxException e) {
-            return false;
-        }
     }
 }
