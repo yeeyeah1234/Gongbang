@@ -91,6 +91,17 @@ public class TeamService {
                 .toList();
     }
 
+    /**
+     * 부르는 쪽 트랜잭션 안에서 팀 행을 잠근다 (SELECT … FOR UPDATE, AGENTS.md 7). 팀 단위 개수 제한(문서 50개 DOC-02 등)을 셀 때
+     * 쓴다. 잠금은 그 트랜잭션이 끝날 때 풀린다. 없는 팀이면 404 RESOURCE_NOT_FOUND.
+     */
+    @Transactional
+    public void lockTeam(Long teamId) {
+        teamRepository
+                .findByIdForUpdate(teamId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+    }
+
     /** 팀 최근 활동 시각을 갱신한다. */
     @Transactional
     public void touchLastActivity(Long teamId, java.time.LocalDateTime activityAt) {
