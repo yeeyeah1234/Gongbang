@@ -13,8 +13,8 @@ const COLUMNS = [
   { label: '작성일', className: 'w-[96px]' },
   { label: '조회수', className: 'w-[80px]' },
   { label: '좋아요', className: 'w-[80px]' },
+  { label: '댓글', className: 'w-[80px]' },
 ]
-// TODO(확인 필요): 댓글 수 열은 BRD-005(김건우 댓글 연결) 뒤에 붙인다 (BRD-001 ④)
 
 // BRD-001 ④⑤ 게시글 목록 표. 줄 어디를 눌러도 상세로 간다. 키보드는 제목 링크로 이동한다.
 export function BoardTable({ posts }: { posts: BoardListItem[] }) {
@@ -25,7 +25,7 @@ export function BoardTable({ posts }: { posts: BoardListItem[] }) {
       {/* 좁은 화면(lg 미만)에서는 표 대신 같은 정보를 카드로 보여 준다 */}
       <BoardCards posts={posts} />
       <div className="hidden overflow-x-auto lg:block">
-        <table className="w-full min-w-[1100px] table-fixed border-collapse text-left">
+        <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
           <thead>
             <tr className="bg-surface-sub">
               {COLUMNS.map((column) => (
@@ -68,6 +68,7 @@ export function BoardTable({ posts }: { posts: BoardListItem[] }) {
                 <td className="px-3 text-body text-text-sub">{formatPostDate(post.createdAt)}</td>
                 <td className="px-3 text-body text-text-sub">{post.viewCount}</td>
                 <td className="px-3 text-body text-text-sub">{post.likeCount}</td>
+                <td className="px-3 text-body text-text-sub">{post.commentCount}</td>
               </tr>
             ))}
           </tbody>
@@ -103,6 +104,7 @@ function BoardCards({ posts }: { posts: BoardListItem[] }) {
               <span>{formatPostDate(post.createdAt)}</span>
               <span>조회 {post.viewCount}</span>
               <span>좋아요 {post.likeCount}</span>
+              <span>댓글 {post.commentCount}</span>
             </p>
           </Link>
         </li>

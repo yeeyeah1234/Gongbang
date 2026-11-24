@@ -4,7 +4,9 @@ import com.gongbang.board.domain.BoardCategory;
 import com.gongbang.board.domain.BoardPost;
 import java.time.LocalDateTime;
 
-/** BRD-001 목록·BRD-008 인기글 항목 (API 명세서 GET /api/board-posts, /popular). */
+/**
+ * BRD-001 목록·BRD-008 인기글 항목 (API 명세서 GET /api/board-posts, /popular). commentCount는 BRD-001 ④ 댓글 수.
+ */
 public record BoardPostListItemResponse(
         Long boardPostId,
         BoardCategory category,
@@ -13,7 +15,8 @@ public record BoardPostListItemResponse(
         AuthorInfo author,
         LocalDateTime createdAt,
         int viewCount,
-        int likeCount) {
+        int likeCount,
+        long commentCount) {
 
     /** 연결된 공모전 (없으면 null). */
     public record ContestInfo(Long contestId, String title) {}
@@ -22,7 +25,7 @@ public record BoardPostListItemResponse(
     public record AuthorInfo(Long memberId, String nickname) {}
 
     public static BoardPostListItemResponse of(
-            BoardPost post, ContestInfo contest, AuthorInfo author) {
+            BoardPost post, ContestInfo contest, AuthorInfo author, long commentCount) {
         return new BoardPostListItemResponse(
                 post.getId(),
                 post.getCategory(),
@@ -31,6 +34,7 @@ public record BoardPostListItemResponse(
                 author,
                 post.getCreatedAt(),
                 post.getViewCount(),
-                post.getLikeCount());
+                post.getLikeCount(),
+                commentCount);
     }
 }

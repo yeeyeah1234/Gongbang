@@ -37,6 +37,7 @@ export function PopularPosts({ category }: { category: BoardCategory | null }) {
                 <span>{formatPostDate(post.createdAt)}</span>
                 <span>조회 {post.viewCount}</span>
                 <span>좋아요 {post.likeCount}</span>
+                <span>댓글 {post.commentCount}</span>
               </p>
             </Link>
           </li>
