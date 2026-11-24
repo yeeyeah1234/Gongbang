@@ -3,7 +3,7 @@ import { TaskItem, TaskList } from '@tiptap/extension-list'
 import type { EditorProps } from '@tiptap/pm/view'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import type { Awareness } from 'y-protocols/awareness'
 import { useLoginMember } from '../../../auth/store'
 import { useWorkspace } from '../../context'
@@ -27,6 +27,7 @@ const CARET_LABEL_IDLE_MS = 3_000
 const EDITOR_PROPS: EditorProps = {
   attributes: {
     'aria-label': '문서 본문',
+    class: 'px-6 pt-6 pb-16 lg:px-8',
   },
   // 선택 영역이 없는 상태에서 http(s) URL만 붙여넣을 때도 즉시 클릭 가능한 링크로 삽입
   handlePaste: (view, event) => {
@@ -544,6 +545,33 @@ export default function DocumentEditor({
     setLinkModalState((prev) => ({ ...prev, open: false }))
   }
 
+  const handleEditorBodyClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!isEditorAlive(editor)) return
+
+    // 세로 스크롤바 클릭은 무시한다
+    const containerRect = event.currentTarget.getBoundingClientRect()
+    if (event.clientX > containerRect.left + event.currentTarget.clientWidth) return
+
+    // 드래그로 텍스트를 선택한 직후라면 선택 영역을 유지한다
+    const domSelection = window.getSelection()
+    if (domSelection && !domSelection.isCollapsed) return
+
+    const prosemirror = editor.view.dom
+    const target = event.target
+    // 본문 블록 내부(문단·링크·체크박스 등)를 직접 클릭한 경우는 ProseMirror 기본 처리에 맡긴다
+    if (target instanceof Node && prosemirror.contains(target) && target !== prosemirror) {
+      return
+    }
+
+    // 문단 사이 간격이나 줄 좌우·상단 여백을 클릭한 경우도 끝으로 끌려가지 않게 둔다
+    const lastChild = prosemirror.lastElementChild
+    if (lastChild && event.clientY <= lastChild.getBoundingClientRect().bottom) {
+      return
+    }
+
+    editor.commands.focus('end')
+  }
+
   return (
     <div className="relative flex h-full min-h-[360px] flex-col">
       {/* 상단 고정: 문서 제목 + 서식 툴바 */}
@@ -555,14 +583,10 @@ export default function DocumentEditor({
       {/* 본문만 스크롤 */}
       <div
         ref={editorContainerRef}
-        className="gb-editor min-h-0 flex-1 overflow-y-auto px-6 py-6 pb-16 lg:px-8"
-        onClick={(event) => {
-          if (event.target === event.currentTarget && isEditorAlive(editor)) {
-            editor.commands.focus('end')
-          }
-        }}
+        className="gb-editor flex min-h-0 flex-1 cursor-text flex-col overflow-y-auto"
+        onClick={handleEditorBodyClick}
       >
-        <EditorContent editor={editor} className="min-h-full" />
+        <EditorContent editor={editor} className="flex w-full min-w-0 shrink-0 grow flex-col" />
       </div>
 
       {/* 작업 영역 오른쪽 아래: 저장 상태 (WS-04) */}

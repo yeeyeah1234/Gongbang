@@ -108,7 +108,10 @@
  * 색·글자 크기·모서리 값은 theme.css 토큰 변수만 쓴다. */
 
 .gb-editor .ProseMirror {
+  flex: 1 0 auto;
   min-height: 100%;
+  min-width: 0;
+  width: 100%;
   outline: none;
   color: var(--color-text);
   font-size: var(--text-body);
