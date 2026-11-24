@@ -22,9 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class WhiteboardQueryService {
 
-    /** 회원 행이 없거나 닉네임이 비었을 때의 표시 이름 (AGENTS.md 6, MY-11). */
-    static final String WITHDRAWN_NAME = "탈퇴한 사용자";
-
     private final WhiteboardRepository whiteboardRepository;
     private final TeamMemberService teamMemberService;
     private final MemberService memberService;
@@ -58,9 +55,7 @@ public class WhiteboardQueryService {
         if (editorId == null) {
             return null;
         }
-        MemberProfileSummary profile = editors.get(editorId);
-        String nickname =
-                profile == null || profile.nickname() == null ? WITHDRAWN_NAME : profile.nickname();
-        return new LastEditor(editorId, nickname);
+        // 탈퇴·삭제된 회원도 MemberService가 「탈퇴한 사용자」로 채워 준다 (#120에서 각자 넣던 문자열을 뺌)
+        return new LastEditor(editorId, editors.get(editorId).nickname());
     }
 }
