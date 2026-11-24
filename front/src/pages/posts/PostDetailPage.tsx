@@ -5,6 +5,7 @@ import { getApiError } from '../../api/errors'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Toast } from '../../components/ui/Toast'
+import { CommentSection } from '../../features/comment/components/CommentSection'
 import { DDayBadge, DefaultThumbnail } from '../../features/contest/components/ContestCard'
 import { ImageSlider } from '../../features/post/components/ImageSlider'
 import { MemberPhoto } from '../../features/post/components/MemberPhoto'
@@ -117,8 +118,13 @@ export default function PostDetailPage() {
             {post.content}
           </div>
 
-          {/* ⑦ 댓글 영역 (INT-004) */}
-          {/* TODO(확인 필요): 김건우 댓글·대댓글 컴포넌트가 생기면 여기에 붙인다 */}
+          {/* ⑦ 댓글 영역 (INT-004 · NET-01) */}
+          <CommentSection
+            targetKind="post"
+            targetId={post.postId}
+            redirectTo={`/posts/${post.postId}`}
+            onNotify={toast.show}
+          />
         </article>
 
         {/* PST-005 ⑤ 사진은 공모전 상세(MAIN-02 ③) 포스터 칸과 같은 세로 3:4로 위에 두고,

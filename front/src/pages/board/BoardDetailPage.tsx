@@ -9,6 +9,7 @@ import { CategoryBadge } from '../../features/board/components/BoardTable'
 import { LikeButton } from '../../features/board/components/LikeButton'
 import { useBoardDetail, useDeleteBoardPost } from '../../features/board/hooks'
 import type { BoardDetail } from '../../features/board/types'
+import { CommentSection } from '../../features/comment/components/CommentSection'
 import { DDayBadge } from '../../features/contest/components/ContestCard'
 import { ImageSlider } from '../../features/post/components/ImageSlider'
 import { MemberPhoto } from '../../features/post/components/MemberPhoto'
@@ -145,8 +146,13 @@ export default function BoardDetailPage() {
           <LikeButton post={post} onError={toast.show} />
         </div>
 
-        {/* ④ 댓글 영역 (BRD-005) */}
-        {/* TODO(확인 필요): 김건우 댓글 컴포넌트에 게시글 연결이 생기면 여기에 붙인다 */}
+        {/* ④ 댓글 영역 (BRD-005 · NET-01) */}
+        <CommentSection
+          targetKind="board-post"
+          targetId={post.boardPostId}
+          redirectTo={`/board/${post.boardPostId}`}
+          onNotify={toast.show}
+        />
       </article>
       <Toast message={toast.message} />
     </main>
