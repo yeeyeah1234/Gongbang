@@ -15,6 +15,7 @@ import com.gongbang.contest.dto.ContestBatchItem;
 import com.gongbang.contest.dto.ContestBatchResponse;
 import com.gongbang.contest.repository.CategoryRepository;
 import com.gongbang.contest.repository.ContestRepository;
+import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import java.time.LocalDate;
 import java.util.List;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -48,8 +50,28 @@ class ContestBatchServiceTest {
     }
 
     private ContestBatchItem item(String sourceUrl, LocalDate deadline) {
+        return itemWithHomepage(sourceUrl, deadline, null);
+    }
+
+    private ContestBatchItem itemWithHomepage(
+            String sourceUrl, LocalDate deadline, String homepageUrl) {
         return new ContestBatchItem(
-                sourceUrl, "WEVITY", "제목", "주최", "PLANNING", null, null, deadline, "설명", null);
+                sourceUrl,
+                "WEVITY",
+                "제목",
+                "주최",
+                "PLANNING",
+                null,
+                null,
+                deadline,
+                "설명",
+                homepageUrl);
+    }
+
+    private Contest savedContest() {
+        ArgumentCaptor<Contest> captor = ArgumentCaptor.forClass(Contest.class);
+        verify(contestRepository).save(captor.capture());
+        return captor.getValue();
     }
 
     @Test
@@ -123,5 +145,49 @@ class ContestBatchServiceTest {
         assertThat(existing.getEndDate()).isEqualTo(LocalDate.of(2026, 12, 20));
         verify(eventPublisher)
                 .publishEvent(new ContestDeadlineChangedEvent(3L, LocalDate.of(2026, 12, 20)));
+    }
+
+    @Test
+    @DisplayName("홈페이지 주소는 공통 URL 정책으로 앞뒤 공백을 지우고 대문자 스킴도 받는다 (#120)")
+    void 홈페이지_주소는_공통_정책으로_정규화한다() {
+        given(categoryRepository.findByCode("PLANNING")).willReturn(Optional.of(planningCategory));
+        given(contestRepository.findBySourceUrl("url-4")).willReturn(Optional.empty());
+
+        contestBatchService.upsert(
+                List.of(
+                        itemWithHomepage(
+                                "url-4",
+                                LocalDate.of(2026, 12, 6),
+                                "  HTTPS://Example.org/Path  ")));
+
+        assertThat(savedContest().getHomepageUrl()).isEqualTo("HTTPS://Example.org/Path");
+    }
+
+    @Test
+    @DisplayName("홈페이지 주소가 비어 있으면 null로 저장한다 (#120)")
+    void 빈_홈페이지_주소는_null로_저장한다() {
+        given(categoryRepository.findByCode("PLANNING")).willReturn(Optional.of(planningCategory));
+        given(contestRepository.findBySourceUrl("url-5")).willReturn(Optional.empty());
+
+        contestBatchService.upsert(
+                List.of(itemWithHomepage("url-5", LocalDate.of(2026, 12, 6), "   ")));
+
+        assertThat(savedContest().getHomepageUrl()).isNull();
+    }
+
+    @Test
+    @DisplayName("홈페이지 주소가 http(s)가 아니거나 호스트가 없으면 INVALID_INPUT이고 저장하지 않는다 (#120)")
+    void 잘못된_홈페이지_주소는_예외() {
+        for (String bad : List.of("javascript:alert(1)", "www.example.org", "https://")) {
+            ContestBatchItem item = itemWithHomepage("url-6", LocalDate.of(2026, 12, 6), bad);
+
+            BusinessException ex =
+                    assertThrows(
+                            BusinessException.class,
+                            () -> contestBatchService.upsert(List.of(item)));
+
+            assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
+        }
+        verify(contestRepository, never()).save(any());
     }
 }

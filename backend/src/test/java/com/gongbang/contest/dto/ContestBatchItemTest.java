@@ -27,17 +27,27 @@ class ContestBatchItemTest {
     }
 
     @Test
-    @DisplayName("홈페이지 주소는 없거나 http(s)면 통과한다")
-    void 홈페이지_주소가_없거나_http면_통과() {
+    @DisplayName("홈페이지 주소는 없거나 500자 안이면 DTO 검증을 통과한다 (형식은 서비스의 UrlPolicy가 검사)")
+    void 홈페이지_주소가_없거나_500자_안이면_통과() {
         assertThat(validator.validate(item(null))).isEmpty();
-        assertThat(validator.validate(item("https://example.org/contest"))).isEmpty();
+        assertThat(validator.validate(item("HTTPS://example.org/contest"))).isEmpty();
         assertThat(validator.validate(item("http://example.org"))).isEmpty();
     }
 
     @Test
-    @DisplayName("홈페이지 주소가 http(s)가 아니면 막는다 (javascript: 차단)")
-    void 홈페이지_주소가_http가_아니면_실패() {
-        assertThat(validator.validate(item("javascript:alert(1)"))).isNotEmpty();
-        assertThat(validator.validate(item("www.example.org"))).isNotEmpty();
+    @DisplayName("홈페이지 주소가 500자를 넘으면 막는다")
+    void 홈페이지_주소가_500자를_넘으면_실패() {
+        assertThat(validator.validate(item("https://example.org/" + "a".repeat(481)))).isNotEmpty();
+    }
+
+    @Test
+    @DisplayName("withHomepageUrl은 홈페이지 주소만 바꾸고 나머지는 그대로 둔다")
+    void withHomepageUrl은_주소만_바꾼다() {
+        ContestBatchItem original = item("  https://example.org  ");
+
+        ContestBatchItem changed = original.withHomepageUrl("https://example.org");
+
+        assertThat(changed.homepageUrl()).isEqualTo("https://example.org");
+        assertThat(changed.withHomepageUrl(original.homepageUrl())).isEqualTo(original);
     }
 }
