@@ -106,7 +106,7 @@ function ApplicantModal({
         <div
           role="tablist"
           aria-label="지원 상태"
-          className="flex gap-8 border-b border-line-strong"
+          className="flex gap-6 border-b border-line-strong sm:gap-8"
         >
           {TABS.map(({ status, label }) => {
             const selected = tab === status
@@ -231,7 +231,8 @@ function ApplicantRow({
   const intro = [member.major, member.bio].filter(Boolean).join(' · ')
 
   return (
-    <li className="flex items-center gap-4 border-b border-line py-4">
+    // 좁은 화면에서는 버튼 줄이 아래로 내려가 이름이 가려지지 않게 한다
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line py-4">
       <MemberPhoto url={member.profileImageUrl} nickname={name} className="size-12 text-body" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-body font-bold text-text">{name}</p>
@@ -240,7 +241,7 @@ function ApplicantRow({
           지원 <time dateTime={applicant.createdAt}>{applyDateTime(applicant.createdAt)}</time>
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex w-full shrink-0 items-center justify-end gap-2 sm:w-auto">
         {/* ⑤ 공개 프로필(MY-05). 탈퇴 회원은 공개 프로필이 숨겨지므로 링크를 두지 않는다 */}
         {member.nickname !== null && (
           <Link
