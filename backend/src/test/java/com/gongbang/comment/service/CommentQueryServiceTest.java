@@ -82,6 +82,49 @@ class CommentQueryServiceTest {
         List<CommentResponse> postAuthorView = queryService.getPostComments(10L, 1L);
         assertThat(postAuthorView.get(0).content()).isEqualTo("비공개 질문");
         assertThat(postAuthorView.get(0).replies().get(0).content()).isEqualTo("비공개 답변");
+
+        // 제3자(3L) 조회: 모두 null 마스킹
+        List<CommentResponse> outsiderView = queryService.getPostComments(10L, 3L);
+        assertThat(outsiderView.get(0).content()).isNull();
+        assertThat(outsiderView.get(0).replies().get(0).content()).isNull();
+    }
+
+    @Test
+    @DisplayName("비공개 원댓글에 제3자(관리자)가 답글을 단 경우에도 원댓글은 작성자·글 작성자만 볼 수 있다")
+    void 비공개_댓글_제3자_답글_열람_규칙() {
+        RecruitPost post = sampleRecruitPost(10L, 1L);
+        Comment secretRoot = Comment.forPost(10L, 2L, null, "비공개 질문", true);
+        setMeta(secretRoot, 100L, LocalDateTime.of(2026, 11, 24, 10, 0));
+        // 관리자가 비공개 원댓글에 답글을 남긴 상황 (심지어 isSecret=false로 저장된 레거시 데이터가 있어도 보호)
+        Comment adminReply = Comment.forPost(10L, 9L, 100L, "관리자 안내", false);
+        setMeta(adminReply, 101L, LocalDateTime.of(2026, 11, 24, 10, 5));
+
+        given(postQueryService.getActivePost(10L)).willReturn(post);
+        given(commentRepository.findByPostIdOrderByCreatedAtAscIdAsc(10L))
+                .willReturn(List.of(secretRoot, adminReply));
+        given(memberService.getProfileSummaries(Set.of(2L, 9L)))
+                .willReturn(
+                        Map.of(
+                                2L, new MemberProfileSummary(2L, "질문자", null, List.of()),
+                                9L, new MemberProfileSummary(9L, "관리자", null, List.of())));
+
+        // 답글을 단 관리자(9L): 원댓글 내용은 여전히 비공개(null), 본인 답글은 열람 가능
+        List<CommentResponse> adminView = queryService.getPostComments(10L, 9L);
+        assertThat(adminView.get(0).content()).isNull();
+        assertThat(adminView.get(0).replies().get(0).isSecret()).isTrue();
+        assertThat(adminView.get(0).replies().get(0).content()).isEqualTo("관리자 안내");
+
+        // 원댓글 작성자(2L)와 글 작성자(1L): 원댓글·답글 모두 열람 가능
+        assertThat(queryService.getPostComments(10L, 2L).get(0).replies().get(0).content())
+                .isEqualTo("관리자 안내");
+        assertThat(queryService.getPostComments(10L, 1L).get(0).replies().get(0).content())
+                .isEqualTo("관리자 안내");
+
+        // 무관한 제3자(3L): 모두 비공개(null)
+        List<CommentResponse> outsiderView = queryService.getPostComments(10L, 3L);
+        assertThat(outsiderView.get(0).content()).isNull();
+        assertThat(outsiderView.get(0).replies().get(0).isSecret()).isTrue();
+        assertThat(outsiderView.get(0).replies().get(0).content()).isNull();
     }
 
     @Test

@@ -20,9 +20,11 @@ import com.gongbang.comment.repository.CommentRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.dto.MemberProfileSummary;
+import com.gongbang.member.service.AdminMemberService;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.notification.domain.NotificationType;
 import com.gongbang.notification.service.NotificationService;
+import com.gongbang.post.domain.RecruitPost;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +44,7 @@ class CommentCommandServiceTest {
     @Mock private CommentRepository commentRepository;
     @Mock private com.gongbang.post.service.PostQueryService postQueryService;
     @Mock private BoardPostQueryService boardPostQueryService;
+    @Mock private AdminMemberService adminMemberService;
     @Mock private MemberService memberService;
     @Mock private NotificationService notificationService;
 
@@ -54,6 +57,7 @@ class CommentCommandServiceTest {
                         commentRepository,
                         postQueryService,
                         boardPostQueryService,
+                        adminMemberService,
                         new CommentMapper(memberService),
                         new CommentNotifier(notificationService, memberService));
     }
@@ -190,5 +194,88 @@ class CommentCommandServiceTest {
 
         commandService.deleteComment(300L, 7L);
         assertThat(comment.isDeleted()).isTrue();
+    }
+
+    @Test
+    @DisplayName("비공개 댓글의 답글은 글 작성자·댓글 작성자·관리자만 작성할 수 있고, 답글은 비공개로 유지된다")
+    void 비공개_댓글_답글_권한_검증() {
+        RecruitPost post = org.mockito.Mockito.mock(RecruitPost.class);
+        given(post.getId()).willReturn(10L);
+        given(post.getAuthorId()).willReturn(1L);
+        given(post.getTitle()).willReturn("모집글");
+
+        Comment secretParent = Comment.forPost(10L, 2L, null, "비밀 질문", true);
+        ReflectionTestUtils.setField(secretParent, "id", 100L);
+
+        given(postQueryService.getActivePost(10L)).willReturn(post);
+        given(commentRepository.findById(100L)).willReturn(Optional.of(secretParent));
+        given(adminMemberService.isAdmin(3L)).willReturn(false);
+        given(adminMemberService.isAdmin(9L)).willReturn(true);
+
+        // 제3자(일반 회원)는 답글 작성 거부
+        assertThatThrownBy(
+                        () ->
+                                commandService.createPostComment(
+                                        10L, 3L, new CommentCreateRequest("끼어들기", true, 100L)))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.NOT_COMMENT_AUTHOR);
+        verify(commentRepository, never()).save(any());
+
+        // 글 작성자(1L), 댓글 작성자(2L), 관리자(9L)는 isSecret=false로 보내도 비공개로 저장됨
+        given(commentRepository.save(any(Comment.class)))
+                .willAnswer(
+                        inv -> {
+                            Comment c = inv.getArgument(0);
+                            ReflectionTestUtils.setField(c, "id", 101L);
+                            assertThat(c.isSecret()).isTrue();
+                            return c;
+                        });
+        given(memberService.displayName(any())).willReturn("작성자");
+
+        assertThat(
+                        commandService
+                                .createPostComment(
+                                        10L, 1L, new CommentCreateRequest("팀장 답글", false, 100L))
+                                .commentId())
+                .isEqualTo(101L);
+        assertThat(
+                        commandService
+                                .createPostComment(
+                                        10L, 2L, new CommentCreateRequest("작성자 추가 답글", false, 100L))
+                                .commentId())
+                .isEqualTo(101L);
+        assertThat(
+                        commandService
+                                .createPostComment(
+                                        10L, 9L, new CommentCreateRequest("관리자 안내", false, 100L))
+                                .commentId())
+                .isEqualTo(101L);
+    }
+
+    @Test
+    @DisplayName("비공개 원댓글의 답글을 수정할 때 비공개 해제를 요청해도 비공개 상태가 유지된다")
+    void 비공개_원댓글_답글_수정시_비공개유지() {
+        BoardPost post = BoardPost.of(1L, BoardCategory.TIP, null, "제목", "내용", null);
+        ReflectionTestUtils.setField(post, "id", 20L);
+
+        Comment secretParent = Comment.forBoardPost(20L, 2L, null, "비밀 원댓글", true);
+        ReflectionTestUtils.setField(secretParent, "id", 100L);
+
+        Comment reply = Comment.forBoardPost(20L, 1L, 100L, "초기 답글", true);
+        ReflectionTestUtils.setField(reply, "id", 200L);
+        ReflectionTestUtils.setField(reply, "createdAt", LocalDateTime.of(2026, 11, 24, 12, 0));
+        ReflectionTestUtils.setField(reply, "updatedAt", LocalDateTime.of(2026, 11, 24, 12, 0));
+
+        given(commentRepository.findById(200L)).willReturn(Optional.of(reply));
+        given(commentRepository.findById(100L)).willReturn(Optional.of(secretParent));
+        given(boardPostQueryService.getActivePost(20L)).willReturn(post);
+        given(memberService.getProfileSummaries(Set.of(1L)))
+                .willReturn(Map.of(1L, new MemberProfileSummary(1L, "글쓴이", null, List.of())));
+
+        CommentResponse updated =
+                commandService.updateComment(200L, 1L, new CommentUpdateRequest("수정 답글", false));
+        assertThat(updated.isSecret()).isTrue();
+        assertThat(updated.content()).isEqualTo("수정 답글");
     }
 }

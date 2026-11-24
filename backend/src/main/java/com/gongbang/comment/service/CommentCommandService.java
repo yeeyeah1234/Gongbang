@@ -11,6 +11,7 @@ import com.gongbang.comment.repository.CommentRepository;
 import com.gongbang.comment.service.CommentNotifier.TargetInfo;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.AdminMemberService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.service.PostQueryService;
 import java.time.LocalDateTime;
@@ -33,6 +34,7 @@ public class CommentCommandService {
     private final CommentRepository commentRepository;
     private final PostQueryService postQueryService;
     private final BoardPostQueryService boardPostQueryService;
+    private final AdminMemberService adminMemberService;
     private final CommentMapper commentMapper;
     private final CommentNotifier commentNotifier;
 
@@ -44,9 +46,11 @@ public class CommentCommandService {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "댓글 내용을 입력해 주세요");
         }
         String content = validateContent(request.content());
-        boolean secret = Boolean.TRUE.equals(request.isSecret());
         Comment parent =
                 resolveParentIfPresent(request.parentId(), c -> c.belongsToPost(post.getId()));
+        requireSecretReplyPermission(parent, post.getAuthorId(), authorId);
+        boolean secret =
+                Boolean.TRUE.equals(request.isSecret()) || (parent != null && parent.isSecret());
 
         Comment saved =
                 commentRepository.save(
@@ -67,9 +71,11 @@ public class CommentCommandService {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "댓글 내용을 입력해 주세요");
         }
         String content = validateContent(request.content());
-        boolean secret = Boolean.TRUE.equals(request.isSecret());
         Comment parent =
                 resolveParentIfPresent(request.parentId(), c -> c.belongsToBoardPost(post.getId()));
+        requireSecretReplyPermission(parent, post.getAuthorId(), authorId);
+        boolean secret =
+                Boolean.TRUE.equals(request.isSecret()) || (parent != null && parent.isSecret());
 
         Comment saved =
                 commentRepository.save(
@@ -93,13 +99,14 @@ public class CommentCommandService {
         }
 
         String content = validateContent(request.content());
-        boolean secret = Boolean.TRUE.equals(request.isSecret());
-        comment.update(content, secret, LocalDateTime.now(KST));
-
         Comment parent =
                 comment.isReply()
                         ? commentRepository.findById(comment.getParentId()).orElse(null)
                         : null;
+        boolean secret =
+                Boolean.TRUE.equals(request.isSecret()) || (parent != null && parent.isSecret());
+        comment.update(content, secret, LocalDateTime.now(KST));
+
         List<Comment> activeReplies =
                 comment.isReply()
                         ? List.of()
@@ -145,6 +152,19 @@ public class CommentCommandService {
             return postQueryService.getActivePost(comment.getPostId()).getAuthorId();
         }
         return boardPostQueryService.getActivePost(comment.getBoardPostId()).getAuthorId();
+    }
+
+    private void requireSecretReplyPermission(Comment parent, Long postAuthorId, Long actorId) {
+        if (parent == null || !parent.isSecret()) {
+            return;
+        }
+        if (postAuthorId.equals(actorId)
+                || parent.isWrittenBy(actorId)
+                || adminMemberService.isAdmin(actorId)) {
+            return;
+        }
+        throw new BusinessException(
+                ErrorCode.NOT_COMMENT_AUTHOR, "비공개 댓글의 답글은 글 작성자, 댓글 작성자 또는 관리자만 작성할 수 있어요");
     }
 
     private static void requireCommentAuthor(Comment comment, Long memberId) {

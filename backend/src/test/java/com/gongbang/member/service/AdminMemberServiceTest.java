@@ -77,4 +77,26 @@ class AdminMemberServiceTest {
         assertThatThrownBy(() -> service.grant(1L, 2L)).isInstanceOf(BusinessException.class);
         verify(target, never()).grantAdmin();
     }
+
+    @Test
+    void 활성관리자여부_확인() {
+        actor(MemberRole.ADMIN);
+        assertThat(service.isAdmin(1L)).isTrue();
+
+        Member suspendedAdmin = mock(Member.class);
+        when(suspendedAdmin.isActive()).thenReturn(true);
+        when(suspendedAdmin.isSuspended()).thenReturn(true);
+        when(suspendedAdmin.getRole()).thenReturn(MemberRole.ADMIN);
+        when(repository.findById(2L)).thenReturn(Optional.of(suspendedAdmin));
+        assertThat(service.isAdmin(2L)).isFalse();
+
+        Member user = mock(Member.class);
+        when(user.isActive()).thenReturn(true);
+        when(user.getRole()).thenReturn(MemberRole.USER);
+        when(repository.findById(3L)).thenReturn(Optional.of(user));
+        assertThat(service.isAdmin(3L)).isFalse();
+
+        assertThat(service.isAdmin(null)).isFalse();
+        assertThat(service.isAdmin(999L)).isFalse();
+    }
 }

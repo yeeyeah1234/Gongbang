@@ -128,6 +128,7 @@ export default function PostDetailPage() {
           <CommentSection
             targetKind="post"
             targetId={post.postId}
+            postAuthorId={post.author.memberId}
             redirectTo={`/posts/${post.postId}`}
             onNotify={toast.show}
           />

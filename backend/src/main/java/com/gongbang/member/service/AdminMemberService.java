@@ -36,6 +36,21 @@ public class AdminMemberService {
     }
 
     @Transactional(readOnly = true)
+    public boolean isAdmin(Long id) {
+        if (id == null) {
+            return false;
+        }
+        return repository
+                .findById(id)
+                .filter(
+                        actor ->
+                                actor.isActive()
+                                        && !actor.isSuspended()
+                                        && actor.getRole() == MemberRole.ADMIN)
+                .isPresent();
+    }
+
+    @Transactional(readOnly = true)
     public Result list(Long actorId, String keyword, int page) {
         requireAdmin(actorId);
         if (page < 0 || keyword == null || keyword.length() > 100)

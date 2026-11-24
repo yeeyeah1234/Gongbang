@@ -138,14 +138,14 @@ class CommentMapper {
             Long postAuthorId,
             Long viewerId,
             Map<Long, MemberProfileSummary> profiles) {
-        boolean readable =
-                !reply.isSecret() || canReadReply(reply, parentOrNull, postAuthorId, viewerId);
+        boolean secret = reply.isSecret() || (parentOrNull != null && parentOrNull.isSecret());
+        boolean readable = !secret || canReadReply(reply, parentOrNull, postAuthorId, viewerId);
         return new CommentResponse(
                 reply.getId(),
                 toAuthor(reply.getAuthorId(), profiles),
                 reply.getAuthorId().equals(postAuthorId),
                 readable ? reply.getContent() : null,
-                reply.isSecret(),
+                secret,
                 false,
                 reply.getCreatedAt(),
                 reply.getUpdatedAt(),
