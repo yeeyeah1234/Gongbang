@@ -3,6 +3,7 @@ package com.gongbang.post.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -16,6 +17,7 @@ import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.dto.MemberProfileSummary;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
@@ -24,9 +26,12 @@ import com.gongbang.post.dto.MyPostItemResponse;
 import com.gongbang.post.dto.PostListItemResponse;
 import com.gongbang.post.repository.RecruitPostRepository;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,7 +63,20 @@ class PostQueryServiceTest {
         postQueryService =
                 new PostQueryService(recruitPostRepository, contestLookupService, memberService);
         // 닉네임을 보지 않는 테스트용 기본값
-        lenient().when(memberService.displayName(anyLong())).thenReturn("닉네임");
+        lenient()
+                .when(memberService.getProfileSummaries(anyCollection()))
+                .thenAnswer(
+                        invocation -> {
+                            Collection<Long> ids = invocation.getArgument(0);
+                            return ids.stream()
+                                    .collect(
+                                            Collectors.toMap(
+                                                    Function.identity(), id -> summary(id, "닉네임")));
+                        });
+    }
+
+    private static MemberProfileSummary summary(Long memberId, String nickname) {
+        return new MemberProfileSummary(memberId, nickname, null, List.of());
     }
 
     private static RecruitPost contestPost(Long postId, Long contestId) {
@@ -123,18 +141,20 @@ class PostQueryServiceTest {
     }
 
     @Test
-    @DisplayName("작성자 닉네임을 채우고, 같은 작성자는 한 번만 읽는다 (②, 탈퇴 회원은 「탈퇴한 사용자」)")
+    @DisplayName("작성자 닉네임을 한 번에 읽어 채운다 (②, 탈퇴 회원은 「탈퇴한 사용자」)")
     void 작성자_닉네임을_채운다() {
         givenPage(List.of(contestPost(3L, 3L), contestPost(2L, 3L), externalPost(1L, 5L)), 3);
-        given(memberService.displayName(7L)).willReturn("김팀장");
-        given(memberService.displayName(8L)).willReturn("탈퇴한 사용자");
+        given(memberService.getProfileSummaries(Set.of(7L, 8L)))
+                .willReturn(Map.of(7L, summary(7L, "김팀장"), 8L, summary(8L, "탈퇴한 사용자")));
 
         PageResponse<PostListItemResponse> result = postQueryService.getPosts(0, 20);
 
         assertThat(result.items())
                 .extracting(item -> item.author().nickname())
                 .containsExactly("김팀장", "김팀장", "탈퇴한 사용자");
-        verify(memberService, times(1)).displayName(7L);
+        // 같은 작성자가 여러 글을 써도 회원 조회는 한 번
+        verify(memberService, times(1)).getProfileSummaries(Set.of(7L, 8L));
+        verify(memberService, never()).displayName(anyLong());
     }
 
     @Test
