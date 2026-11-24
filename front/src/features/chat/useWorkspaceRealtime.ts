@@ -95,6 +95,11 @@ export function useWorkspaceRealtime({
               return
             }
 
+            if (event.type.startsWith('WHITEBOARD_')) {
+              void queryClient.invalidateQueries({ queryKey: ['workspace', teamId, 'boards'] })
+              return
+            }
+
             if (event.type.startsWith('NOTICE_')) {
               void onRefreshNoticeRef.current()
               return
