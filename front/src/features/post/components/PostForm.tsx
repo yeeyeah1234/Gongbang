@@ -57,7 +57,8 @@ export function PostForm({
         />
       </Counted>
 
-      <div className="grid grid-cols-[240px_minmax(0,1.4fr)_minmax(0,1fr)] gap-6">
+      {/* 넓은 화면은 한 줄, 중간 화면은 인원·기간 한 줄 + URL 아래 줄, 좁은 화면은 한 칸씩 */}
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1.4fr)_minmax(0,1fr)]">
         <TargetCountStepper
           value={values.targetCount}
           error={errors.targetCount}
@@ -69,16 +70,18 @@ export function PostForm({
           error={errors.period}
           onChange={onChange}
         />
-        <Input
-          id="post-related-url"
-          type="url"
-          label="관련 URL"
-          value={values.relatedUrl}
-          maxLength={URL_MAX}
-          placeholder="https:// (선택)"
-          errorText={errors.relatedUrl}
-          onChange={(event) => onChange({ relatedUrl: event.target.value })}
-        />
+        <div className="md:col-span-2 xl:col-span-1">
+          <Input
+            id="post-related-url"
+            type="url"
+            label="관련 URL"
+            value={values.relatedUrl}
+            maxLength={URL_MAX}
+            placeholder="https:// (선택)"
+            errorText={errors.relatedUrl}
+            onChange={(event) => onChange({ relatedUrl: event.target.value })}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col">
@@ -216,7 +219,7 @@ function PeriodFields({
   ) => void
 }) {
   const dateClass = [
-    'h-14 min-w-0 flex-1 rounded-input bg-surface px-4 text-body text-text focus:outline-none',
+    'h-14 min-w-0 flex-1 rounded-input bg-surface px-3 text-body sm:px-4 text-text focus:outline-none',
     error
       ? 'border-2 border-danger'
       : 'border border-line-input focus:border-2 focus:border-primary',

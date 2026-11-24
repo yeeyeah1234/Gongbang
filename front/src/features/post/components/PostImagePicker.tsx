@@ -77,7 +77,7 @@ export function PostImagePicker({ drafts, onChange, label = '공모전 사진' }
         {label}
         <span className="ml-1 font-normal text-text-sub">(선택)</span>
       </span>
-      <ul aria-labelledby="post-images-label" className="grid grid-cols-3 gap-4">
+      <ul aria-labelledby="post-images-label" className="grid grid-cols-2 gap-4 sm:grid-cols-3">
         {drafts.map((draft, index) => (
           <li
             key={draft.key}

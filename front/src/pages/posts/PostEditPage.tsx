@@ -184,7 +184,8 @@ function LockedContest({ contest }: { contest: PostDetail['contest'] }) {
           </span>
         )}
         <span className="min-w-0 flex-1 truncate text-body">{contest.title}</span>
-        <span className="shrink-0 text-small">변경할 수 없어요</span>
+        {/* 좁은 화면에서는 글자를 숨기고 자물쇠만 보여 준다 (화면 낭독기는 그대로 읽는다) */}
+        <span className="sr-only shrink-0 text-small sm:not-sr-only">변경할 수 없어요</span>
       </div>
     </div>
   )
