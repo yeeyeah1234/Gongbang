@@ -2,6 +2,7 @@ package com.gongbang.board.repository;
 
 import com.gongbang.board.domain.BoardCategory;
 import com.gongbang.board.domain.BoardPost;
+import com.gongbang.board.dto.MyBoardPostItem;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +16,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface BoardPostRepository extends JpaRepository<BoardPost, Long> {
+    @Query(
+            value =
+                    """
+            SELECT b.id AS boardPostId, b.title AS title, b.category AS category, b.created_at AS createdAt
+            FROM board_post b WHERE b.author_id = :memberId AND b.deleted_at IS NULL
+            ORDER BY b.created_at DESC, b.id DESC
+            """,
+            countQuery =
+                    """
+            SELECT COUNT(*) FROM board_post b WHERE b.author_id = :memberId AND b.deleted_at IS NULL
+            """,
+            nativeQuery = true)
+    Page<MyBoardPostItem> findMine(@Param("memberId") Long memberId, Pageable pageable);
 
     /** BRD-001 목록: 삭제되지 않은 글. 말머리·공모전은 null이면 거르지 않는다. 정렬은 Pageable로 준다. */
     @Query(
