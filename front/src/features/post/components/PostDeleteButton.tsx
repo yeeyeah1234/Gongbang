@@ -37,7 +37,7 @@ export function PostDeleteButton({ post, onError }: PostDeleteButtonProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-9 cursor-pointer items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg"
+        className="inline-flex h-10 cursor-pointer items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg lg:h-9"
       >
         삭제
       </button>

@@ -16,7 +16,7 @@ import { POST_IMAGE_MESSAGES, toDrafts } from '../../features/post/postImages'
 import type { PostImageDraft } from '../../features/post/postImages'
 import type { PostDetail } from '../../features/post/types'
 
-const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
+const PAGE_CLASS = 'mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]'
 
 // 서버가 막은 이유를 해당 칸 아래에 보여 준다 (PST-003 ④⑦)
 function serverErrorToField(code: string | null): PostFormErrors | null {
@@ -193,7 +193,7 @@ function LockedContest({ contest }: { contest: PostDetail['contest'] }) {
 
 function Blocked({ message, to, label }: { message: string; to: string; label: string }) {
   return (
-    <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center`}>
+    <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center md:py-32`}>
       <title>모집글 수정 | 공방</title>
       <p className="text-subheading font-bold text-text">{message}</p>
       <Link

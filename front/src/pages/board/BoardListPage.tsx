@@ -63,7 +63,7 @@ export default function BoardListPage() {
   }
 
   return (
-    <main className="mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]">
+    <main className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]">
       <title>커뮤니티 게시판 | 공방</title>
       <CommunityTabs />
       <div className="mt-8 flex items-center justify-between gap-6">
@@ -104,7 +104,7 @@ export default function BoardListPage() {
                 aria-pressed={sort === option.value}
                 onClick={() => move({ sort: option.value })}
                 className={[
-                  'h-9 cursor-pointer rounded-full px-3 text-small hover:bg-bg',
+                  'h-10 cursor-pointer rounded-full px-3 text-small hover:bg-bg lg:h-9',
                   sort === option.value ? 'font-bold text-text' : 'text-text-sub',
                 ].join(' ')}
               >
