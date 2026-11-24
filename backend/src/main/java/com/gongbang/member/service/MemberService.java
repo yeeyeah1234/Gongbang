@@ -5,6 +5,7 @@ import com.gongbang.auth.dto.SignupRequest;
 import com.gongbang.auth.dto.TermsItem;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.global.validation.UrlPolicy;
 import com.gongbang.member.domain.DesiredRole;
 import com.gongbang.member.domain.LoginType;
 import com.gongbang.member.domain.Member;

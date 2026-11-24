@@ -2,6 +2,7 @@ package com.gongbang.member.service;
 
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.global.validation.UrlPolicy;
 import com.gongbang.member.domain.Award;
 import com.gongbang.member.domain.Career;
 import com.gongbang.member.domain.Certificate;
