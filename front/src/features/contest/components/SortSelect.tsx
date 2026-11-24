@@ -31,7 +31,7 @@ export function SortSelect({ value, onChange }: SortSelectProps) {
         type="button"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
-        className="flex h-11 w-39 shrink-0 items-center justify-between rounded-full border border-line-strong bg-surface px-5 text-body hover:bg-bg"
+        className="flex h-11 w-39 shrink-0 items-center justify-between self-end rounded-full border border-line-strong bg-surface px-5 text-body hover:bg-bg md:self-auto"
       >
         {currentLabel}
         <ChevronDownIcon className="size-5" />

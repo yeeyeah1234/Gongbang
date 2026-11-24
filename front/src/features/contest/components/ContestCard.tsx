@@ -114,12 +114,13 @@ export function ContestCard({ contest, onToast, highlight }: ContestCardProps) {
           )}
         </div>
       </Link>
-      <div className="flex flex-col gap-2 p-6">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-2 p-4 md:p-6">
+        {/* 좁은 카드(두 칸)에서는 분야·D-day 배지가 줄을 바꿔도 되게 */}
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant="primary-soft">{contest.categoryName}</Badge>
           {!contest.isClosed && <DDayBadge dDay={contest.dDay} />}
         </div>
-        <h3 className="line-clamp-2 text-subheading font-bold">
+        <h3 className="line-clamp-2 text-body font-bold md:text-subheading">
           <Highlight text={contest.title} keyword={highlight} />
         </h3>
         <p className="truncate text-small text-text-sub">

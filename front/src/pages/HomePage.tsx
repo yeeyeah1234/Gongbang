@@ -14,13 +14,14 @@ export default function HomePage() {
   const toast = useTimedToast()
 
   return (
-    <main className="mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]">
+    <main className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]">
       <title>공모전 | 공방</title>
-      <div className="flex items-start justify-between gap-6">
+      {/* 768px 미만: 정렬 버튼을 분야 칩 위 오른쪽에 두고, 칩은 한 줄로 옆으로 넘긴다 (#117) */}
+      <div className="flex flex-col-reverse gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
         <CategoryFilter selected={category} onSelect={setCategory} />
         <SortSelect value={sort} onChange={setSort} />
       </div>
-      <section className="mt-8">
+      <section className="mt-6 md:mt-8">
         <ContestList sort={sort} category={category} onToast={toast.show} />
       </section>
       <Toast message={toast.message} />
