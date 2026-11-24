@@ -143,6 +143,21 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
         ],
       },
       {
+        // NET-04·05·06 채팅 탭을 백엔드·로그인 없이 본다 (1024px 미만 메신저형 확인용)
+        path: '/dev/chat-preview',
+        lazy: async () => ({
+          Component: (await import('./pages/dev/ChatPreviewPage')).default,
+        }),
+        children: [
+          {
+            path: '*?',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/ChatPreviewPage')).ChatPreviewTab,
+            }),
+          },
+        ],
+      },
+      {
         path: '/dev/document-preview',
         element: <Navigate to="/dev/document-preview/normal" replace />,
       },
