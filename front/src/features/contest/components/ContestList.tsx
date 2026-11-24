@@ -30,12 +30,15 @@ function ContestListSkeleton() {
   return (
     <ul
       aria-hidden="true"
-      className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4"
+      className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4"
     >
       {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-        <li key={index} className="overflow-hidden rounded-card border border-line bg-surface">
-          <div className="aspect-3/4 animate-pulse bg-surface-sub" />
-          <div className="flex flex-col gap-2 p-4 md:p-6">
+        <li
+          key={index}
+          className="flex overflow-hidden rounded-card border border-line bg-surface sm:block"
+        >
+          <div className="aspect-3/4 w-24 shrink-0 animate-pulse bg-surface-sub sm:w-auto" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 p-4 md:p-6">
             <div className="h-6 w-20 animate-pulse rounded-lg bg-surface-sub" />
             <div className="h-6 w-full animate-pulse rounded-lg bg-surface-sub" />
             <div className="h-5 w-2/3 animate-pulse rounded-lg bg-surface-sub" />
@@ -80,7 +83,7 @@ export function ContestList({ sort, category, onToast }: ContestListProps) {
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
         {contests.map((contest) => (
           <li key={contest.contestId}>
             <ContestCard contest={contest} onToast={onToast} />

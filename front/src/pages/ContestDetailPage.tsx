@@ -113,8 +113,41 @@ export default function ContestDetailPage() {
     toast.show('링크를 복사했어요')
   }
 
+  // MAIN-02 ④ 버튼. [바로가기]는 위비티가 아닌 주최 측 원래 페이지로, 주소가 없으면 비활성
+  const actionButtons = (
+    <>
+      {/* 비활성 버튼은 마우스 이벤트를 받지 않아서 안내 문구(title)는 감싼 span에 둔다 */}
+      <span className="flex flex-1" title={contest.homepageUrl ? undefined : NO_HOMEPAGE_MESSAGE}>
+        <Button
+          variant="primary"
+          className="flex-1"
+          disabled={!contest.homepageUrl}
+          onClick={() => {
+            if (contest.homepageUrl) {
+              window.open(contest.homepageUrl, '_blank', 'noopener,noreferrer')
+            }
+          }}
+        >
+          바로가기
+        </Button>
+      </span>
+      <Button variant="outline" aria-pressed={contest.isBookmarked} onClick={handleBookmark}>
+        <span
+          className={`inline-flex items-center gap-1.5 ${contest.isBookmarked ? 'text-primary' : ''}`}
+        >
+          <BookmarkIcon filled={contest.isBookmarked} />
+          북마크
+        </span>
+      </Button>
+      <Button variant="outline" onClick={handleCopyLink}>
+        복사
+      </Button>
+    </>
+  )
+
   return (
-    <main className={PAGE_CLASS}>
+    // 768px 미만은 아래 고정 버튼 줄(높이 약 68px)에 본문 끝이 가리지 않게 아래 여백을 더 둔다
+    <main className={`${PAGE_CLASS} max-md:pb-28`}>
       <title>{`${contest.title} | 공방`}</title>
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
         {/* 1024px 미만에서는 article을 contents로 풀어 「제목·기간 → 포스터·버튼 → 본문」 순서로 놓는다 (#117) */}
@@ -168,54 +201,25 @@ export default function ContestDetailPage() {
         </article>
 
         {/* MAIN-02 ③: 포스터와 조회수. 넓은 화면에서는 본문을 내려도 GNB(72px) 아래에 고정된다.
-            1024px 미만에서는 긴 본문 아래로 밀리지 않게 제목과 본문 사이에, 최대 400px로 가운데 둔다 (#117) */}
-        <aside className="order-2 mx-auto w-full max-w-100 lg:sticky lg:top-24 lg:order-none lg:mx-0 lg:w-100 lg:max-w-none lg:shrink-0 lg:self-start">
+            1024px 미만에서는 긴 본문 아래로 밀리지 않게 제목과 본문 사이에, 최대 400px(휴대폰 288px)로 가운데 둔다 (#117) */}
+        <aside className="order-2 mx-auto w-full max-w-72 sm:max-w-100 lg:sticky lg:top-24 lg:order-none lg:mx-0 lg:w-100 lg:max-w-none lg:shrink-0 lg:self-start">
           <div className="overflow-hidden rounded-card border border-line bg-surface">
             <div className="aspect-3/4 bg-surface-sub">
               <Poster contest={contest} />
             </div>
-            <p className="px-4 pt-4 text-small text-text-sub md:px-6">
+            <p className="px-4 py-4 text-small text-text-sub md:px-6 md:pb-0">
               조회수 {contest.viewCount.toLocaleString()}
             </p>
 
-            {/* MAIN-02 ④ 버튼. [바로가기]는 위비티가 아닌 주최 측 원래 페이지로, 주소가 없으면 비활성 */}
-            <div className="flex gap-2 p-4 pt-4 md:p-6 md:pt-4">
-              {/* 비활성 버튼은 마우스 이벤트를 받지 않아서 안내 문구(title)는 감싼 span에 둔다 */}
-              <span
-                className="flex flex-1"
-                title={contest.homepageUrl ? undefined : NO_HOMEPAGE_MESSAGE}
-              >
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  disabled={!contest.homepageUrl}
-                  onClick={() => {
-                    if (contest.homepageUrl) {
-                      window.open(contest.homepageUrl, '_blank', 'noopener,noreferrer')
-                    }
-                  }}
-                >
-                  바로가기
-                </Button>
-              </span>
-              <Button
-                variant="outline"
-                aria-pressed={contest.isBookmarked}
-                onClick={handleBookmark}
-              >
-                <span
-                  className={`inline-flex items-center gap-1.5 ${contest.isBookmarked ? 'text-primary' : ''}`}
-                >
-                  <BookmarkIcon filled={contest.isBookmarked} />
-                  북마크
-                </span>
-              </Button>
-              <Button variant="outline" onClick={handleCopyLink}>
-                복사
-              </Button>
-            </div>
+            {/* MAIN-02 ④ 버튼. 768px 미만(휴대폰)에서는 화면 아래 고정 줄로 옮긴다 */}
+            <div className="hidden gap-2 p-6 pt-4 md:flex">{actionButtons}</div>
           </div>
         </aside>
+      </div>
+
+      {/* 휴대폰: 본문을 내려도 바로가기·북마크·복사를 누를 수 있게 화면 아래에 고정 (#117 2차) */}
+      <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-divider bg-surface px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] md:hidden">
+        {actionButtons}
       </div>
 
       <Modal
