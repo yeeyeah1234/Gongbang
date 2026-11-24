@@ -1,8 +1,11 @@
 package com.gongbang.comment.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.gongbang.board.domain.BoardCategory;
 import com.gongbang.board.domain.BoardPost;
@@ -10,11 +13,13 @@ import com.gongbang.board.service.BoardPostQueryService;
 import com.gongbang.comment.domain.Comment;
 import com.gongbang.comment.dto.CommentResponse;
 import com.gongbang.comment.repository.CommentRepository;
+import com.gongbang.comment.repository.CommentRepository.CommentTargetCount;
 import com.gongbang.member.dto.MemberProfileSummary;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.service.PostQueryService;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -117,6 +122,40 @@ class CommentQueryServiceTest {
         assertThat(tree.get(0).replies()).hasSize(1);
         assertThat(tree.get(0).replies().get(0).commentId()).isEqualTo(201L);
         assertThat(tree.get(0).replies().get(0).content()).isEqualTo("남아있는 대댓글");
+    }
+
+    @Test
+    @DisplayName("countByPostIds·countByBoardPostIds는 ID 목록으로 일괄 집계하고 비어 있으면 DB를 부르지 않는다")
+    void 목록_댓글수_일괄_조회() {
+        assertThat(queryService.countByPostIds(null)).isEmpty();
+        assertThat(queryService.countByPostIds(List.of())).isEmpty();
+        assertThat(queryService.countByBoardPostIds(Arrays.asList((Long) null))).isEmpty();
+        verify(commentRepository, never()).countActiveByPostIds(any());
+        verify(commentRepository, never()).countActiveByBoardPostIds(any());
+
+        given(commentRepository.countActiveByPostIds(Set.of(10L, 11L)))
+                .willReturn(List.of(targetCount(10L, 3L)));
+        given(commentRepository.countActiveByBoardPostIds(Set.of(20L, 21L)))
+                .willReturn(List.of(targetCount(20L, 5L), targetCount(21L, 1L)));
+
+        assertThat(queryService.countByPostIds(Arrays.asList(10L, 11L, 10L, null)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(10L, 3L));
+        assertThat(queryService.countByBoardPostIds(List.of(20L, 21L)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(20L, 5L, 21L, 1L));
+    }
+
+    private static CommentTargetCount targetCount(Long targetId, long count) {
+        return new CommentTargetCount() {
+            @Override
+            public Long getTargetId() {
+                return targetId;
+            }
+
+            @Override
+            public long getCount() {
+                return count;
+            }
+        };
     }
 
     private static RecruitPost sampleRecruitPost(Long postId, Long authorId) {
