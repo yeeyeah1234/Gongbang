@@ -5,6 +5,8 @@ import {
   fetchBookmarks,
   fetchHistory,
   fetchMyComments,
+  fetchMyApplications,
+  fetchMyBoardPosts,
   fetchMyPosts,
   fetchMyProfile,
   fetchPublicProfile,
@@ -101,4 +103,21 @@ export function useMyComments(page: number, enabled: boolean) {
 
 export function useBookmarks(sort: BookmarkSort) {
   return useQuery({ queryKey: memberKeys.bookmarks(sort), queryFn: () => fetchBookmarks(sort, 0) })
+}
+
+export function useMyApplications(page: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['members', 'me', 'applications', page],
+    queryFn: () => fetchMyApplications(page),
+    enabled,
+    retry: false,
+  })
+}
+export function useMyBoardPosts(page: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['members', 'me', 'board-posts', page],
+    queryFn: () => fetchMyBoardPosts(page),
+    enabled,
+    retry: false,
+  })
 }

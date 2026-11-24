@@ -2,15 +2,36 @@ package com.gongbang.application.repository;
 
 import com.gongbang.application.domain.Application;
 import com.gongbang.application.domain.ApplicationStatus;
+import com.gongbang.application.dto.MyApplicationListItem;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
+    @Query(
+            value =
+                    """
+            SELECT a.id AS applicationId, a.post_id AS postId,
+                   CASE WHEN p.deleted_at IS NULL THEN p.title ELSE '삭제된 모집글' END AS title,
+                   a.status AS status, p.deleted_at AS deletedAt, a.created_at AS createdAt
+            FROM application a JOIN recruit_post p ON p.id = a.post_id
+            WHERE a.applicant_id = :memberId
+            ORDER BY a.created_at DESC, a.id DESC
+            """,
+            countQuery =
+                    """
+            SELECT COUNT(*) FROM application a JOIN recruit_post p ON p.id = a.post_id
+            WHERE a.applicant_id = :memberId
+            """,
+            nativeQuery = true)
+    Page<MyApplicationListItem> findMine(@Param("memberId") Long memberId, Pageable pageable);
+
     @org.springframework.data.jpa.repository.Query(
             "select distinct a.applicantId from Application a where a.postId = :postId")
     java.util.List<Long> findApplicantIdsForAdmin(

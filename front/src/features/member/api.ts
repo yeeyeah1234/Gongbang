@@ -10,6 +10,8 @@ import type {
   Certificate,
   CertificateInput,
   MyComment,
+  MyApplicationItem,
+  MyBoardPost,
   MyPost,
   MyProfile,
   PublicProfile,
@@ -91,7 +93,7 @@ export async function requestVerify(
   ).data.data
 }
 
-// MY-02 (게시판 담당 김수형·댓글 김건우 테이블이 develop에 들어오면 동작)
+// MY-02 내 글 관리
 export async function fetchMyPosts(page: number) {
   return (
     await apiClient.get<ApiResponse<PageResponse<MyPost>>>('/api/members/me/posts', {
@@ -133,6 +135,22 @@ export async function withdraw(password: string, confirmText: string) {
   return (
     await apiClient.delete<ApiResponse<{ restoreDeadline: string }>>('/api/members/me', {
       data: { password, confirmText },
+    })
+  ).data.data
+}
+
+export async function fetchMyApplications(page: number) {
+  return (
+    await apiClient.get<ApiResponse<PageResponse<MyApplicationItem>>>(
+      '/api/members/me/applications',
+      { params: { page, size: 10 } },
+    )
+  ).data.data
+}
+export async function fetchMyBoardPosts(page: number) {
+  return (
+    await apiClient.get<ApiResponse<PageResponse<MyBoardPost>>>('/api/members/me/board-posts', {
+      params: { page, size: 10 },
     })
   ).data.data
 }

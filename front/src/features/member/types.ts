@@ -102,10 +102,26 @@ export interface MyPost {
 }
 export interface MyComment {
   commentId: number
-  postId: number
+  postId: number | null
+  boardPostId: number | null
   postTitle: string
   content: string
   createdAt: string
 }
 
 export type BookmarkSort = 'deadline' | 'bookmarked' | 'latest'
+
+export interface MyApplicationItem {
+  applicationId: number
+  postId: number
+  title: string
+  status: string
+  deletedAt: string | null
+  createdAt: string
+}
+export interface MyBoardPost {
+  boardPostId: number
+  title: string
+  category: string
+  createdAt: string
+}
