@@ -23,4 +23,15 @@ public interface FileStorage {
     default void deleteByUrlQuietly(String url) {
         extractKey(url).ifPresent(this::deleteQuietly);
     }
+
+    /** URL이 현재 저장소 객체이고 {@code requiredKeyPrefix}(예: {@code "profile/"})로 시작할 때만 조용히 삭제한다. */
+    default void deleteByUrlQuietly(String url, String requiredKeyPrefix) {
+        if (requiredKeyPrefix == null || requiredKeyPrefix.isBlank()) {
+            deleteByUrlQuietly(url);
+            return;
+        }
+        extractKey(url)
+                .filter(key -> key.startsWith(requiredKeyPrefix))
+                .ifPresent(this::deleteQuietly);
+    }
 }
