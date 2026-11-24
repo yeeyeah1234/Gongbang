@@ -1,6 +1,11 @@
 import { apiClient } from '../../api/client'
 import type { ApiResponse } from '../../api/types'
-import type { ChatMessagePageApiResponse, ChatRoomApiItem, TeamMemberApiItem } from './types'
+import type {
+  ChatMessagePageApiResponse,
+  ChatRoomApiItem,
+  FileUploadApiResponse,
+  TeamMemberApiItem,
+} from './types'
 
 // NET-06 팀원 목록 조회
 export async function fetchTeamMembers(teamId: number): Promise<TeamMemberApiItem[]> {
@@ -68,4 +73,16 @@ export async function markChatRoomAsRead(roomId: number, lastReadMessageId: numb
   await apiClient.patch<ApiResponse<null>>(`/api/chat-rooms/${roomId}/read`, {
     lastReadMessageId,
   })
+}
+
+// NET-05 채팅 이미지 업로드 (JPG·PNG·WEBP·GIF·AVIF, 5MB 이하)
+export async function uploadChatImage(file: File): Promise<FileUploadApiResponse> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('purpose', 'CHAT')
+  return (
+    await apiClient.post<ApiResponse<FileUploadApiResponse>>('/api/files', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  ).data.data
 }
