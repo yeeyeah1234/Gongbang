@@ -45,7 +45,7 @@ const labels: Record<string, string> = {
   POST: '모집글',
 }
 const field =
-  'w-full rounded-input border border-line-input bg-surface px-4 py-3 text-body focus:border-primary focus:outline-none'
+  'min-w-0 w-full rounded-input border border-line-input bg-surface px-4 py-3 text-body focus:border-primary focus:outline-none'
 const panel = 'border border-line-strong bg-surface p-4'
 const descriptions: Record<Kind, string> = {
   notices: '서비스 전체 공지를 작성·수정하고 회원에게 소식을 전달합니다.',
@@ -125,7 +125,14 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
   function act(command: Command) {
     mutation.reset()
     setFeedback('')
-    setConfirmation(command)
+    setConfirmation({
+      ...command,
+      targetLabel:
+        command.targetLabel ??
+        (creating
+          ? '새 운영 공지'
+          : (selected?.title ?? selected?.email ?? (selected ? `신고 #${selected.id}` : ''))),
+    })
   }
   const filters =
     kind === 'reports'
@@ -291,9 +298,11 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
                         item.nickname ??
                         `${labels[item.targetType ?? ''] ?? '신고'} #${item.id}`}
                     </span>
-                    <span className="h-fit shrink-0 rounded-full border border-line-strong px-2 py-1 text-caption text-text-sub">
-                      {item.deletedAt ? '숨김' : (labels[item.status ?? ''] ?? '')}
-                    </span>
+                    {(item.deletedAt || item.status) && (
+                      <span className="h-fit shrink-0 rounded-full border border-line-strong px-2 py-1 text-caption text-text-sub">
+                        {item.deletedAt ? '숨김' : (labels[item.status ?? ''] ?? '')}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-2 line-clamp-2 text-small break-words text-text-sub">
                     {item.email ?? item.reason ?? item.categoryName ?? item.content}
@@ -382,9 +391,7 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
           </>
         }
       >
-        <p className="text-small break-words">
-          {selected?.title ?? selected?.email ?? (selected ? `신고 #${selected.id}` : '새 공지')}
-        </p>
+        <p className="text-small break-words">{confirmation?.targetLabel}</p>
         {mutation.isError && (
           <p role="alert" className="mt-4 text-danger">
             {errorText(mutation.error)}
@@ -436,7 +443,7 @@ function NoticeForm({ item, act }: { item?: AdminItem; act: Act }) {
         {content.length} / 2,000 · 등록 시 전체 회원에게 사이트 알림을 보냅니다. 이메일은 발송하지
         않습니다.
       </p>
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-wrap justify-end gap-3">
         {item && !item.deletedAt && (
           <Button
             variant="danger"
@@ -467,7 +474,7 @@ function MemberDetail({ item, act }: { item: AdminItem; act: Act }) {
     <>
       <div className={panel}>
         <h2 className="mb-5 text-subheading font-bold">회원 상세 · 로그인 잠금 관리</h2>
-        <dl className="grid grid-cols-2 gap-5">
+        <dl className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Info label="이메일">{item.email}</Info>
           <Info label="닉네임">{item.nickname}</Info>
           <Info label="계정 상태">{labels[item.status ?? '']}</Info>
@@ -627,7 +634,7 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
           신고 #{item.id} · {labels[item.status ?? '']}
         </h2>
         <p className="break-words whitespace-pre-wrap">{item.reason}</p>
-        <dl className="mt-5 grid grid-cols-2 gap-4">
+        <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Info label="신고자">#{item.reporterId}</Info>
           <Info label="대상">
             {labels[item.targetType ?? '']} #{item.targetId ?? detail.data?.memberId}
@@ -845,7 +852,12 @@ function CrawlerPanel({ act }: { act: Act }) {
           <Button
             disabled={jobs.data?.some((j) => j.status === 'PENDING' || j.status === 'RUNNING')}
             onClick={() =>
-              act({ label: '공모전 수동 재수집 요청', path: 'crawler-jobs', method: 'post' })
+              act({
+                label: '공모전 수동 재수집 요청',
+                targetLabel: '전체 공모전 수집 작업',
+                path: 'crawler-jobs',
+                method: 'post',
+              })
             }
           >
             재수집 요청
@@ -882,6 +894,7 @@ function CategoryRow({ item, act }: { item: Category; act: Act }) {
         e.preventDefault()
         act({
           label: `${item.name} 카테고리 수정`,
+          targetLabel: `${item.name} → ${name} · 정렬 순서 ${sortOrder}`,
           path: `categories/${item.id}`,
           method: 'patch',
           body: { name, sortOrder },

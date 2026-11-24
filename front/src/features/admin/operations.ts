@@ -61,6 +61,7 @@ export interface Job {
   finishedAt: string | null
 }
 export interface Command {
+  targetLabel?: string
   path: string
   method: 'post' | 'patch' | 'delete'
   body?: unknown

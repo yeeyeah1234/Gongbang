@@ -60,8 +60,8 @@ export function AdminShell({
           </h1>
           <div className="mb-6 bg-surface-sub p-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-body font-bold">{nickname} 님</p>
-              <span className="bg-text px-2 py-1 text-caption text-surface">ADMIN</span>
+              <p className="min-w-0 text-body font-bold break-words">{nickname} 님</p>
+              <span className="shrink-0 bg-text px-2 py-1 text-caption text-surface">ADMIN</span>
             </div>
             <span className="text-caption text-text-sub">함께 도전하는 공간</span>
           </div>
