@@ -9,6 +9,7 @@ import {
   EMPTY_POST_FORM,
   MESSAGES,
   toCreateRequest,
+  todayString,
   validatePostForm,
 } from '../../features/post/postForm'
 import type { PostFormErrors, PostFormValues } from '../../features/post/postForm'
@@ -38,7 +39,11 @@ export default function PostCreatePage() {
   const saveImages = useSavePostImages()
   // PST-007 외부 공모전 사진 (등록한 뒤 차례로 올린다)
   const [images, setImages] = useState<PostImageDraft[]>([])
-  const [values, setValues] = useState<PostFormValues>(EMPTY_POST_FORM)
+  // PST-002 ① 모집 시작일은 오늘로 채워 둔다 (오늘부터 모집하면 입력을 건너뛸 수 있게)
+  const [values, setValues] = useState<PostFormValues>(() => ({
+    ...EMPTY_POST_FORM,
+    recruitStartDate: todayString(),
+  }))
   const [submitted, setSubmitted] = useState(false)
   const [serverErrors, setServerErrors] = useState<PostFormErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
