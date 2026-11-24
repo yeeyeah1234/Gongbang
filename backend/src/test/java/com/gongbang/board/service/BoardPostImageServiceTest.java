@@ -4,8 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.gongbang.board.domain.BoardCategory;
@@ -14,11 +12,11 @@ import com.gongbang.board.domain.BoardPostImage;
 import com.gongbang.board.dto.BoardPostDetailResponse.ImageInfo;
 import com.gongbang.board.repository.BoardPostImageRepository;
 import com.gongbang.board.repository.BoardPostRepository;
+import com.gongbang.file.service.AllowedImageType;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.service.ImageFolder;
-import com.gongbang.post.service.PostImageStorage;
-import com.gongbang.post.service.PostImageType;
+import com.gongbang.post.service.PostImageUploader;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,13 +41,14 @@ class BoardPostImageServiceTest {
 
     @Mock private BoardPostRepository boardPostRepository;
     @Mock private BoardPostImageRepository boardPostImageRepository;
-    @Mock private PostImageStorage storage;
+    @Mock private PostImageUploader uploader;
 
     private BoardPostImageService service;
 
     @BeforeEach
     void setUp() {
-        service = new BoardPostImageService(boardPostRepository, boardPostImageRepository, storage);
+        service =
+                new BoardPostImageService(boardPostRepository, boardPostImageRepository, uploader);
     }
 
     private void givenPost(BoardCategory category) {
@@ -91,7 +90,7 @@ class BoardPostImageServiceTest {
         givenPost(BoardCategory.SHOWCASE);
         givenImages(image(1, 0));
         MockMultipartFile file = png(100);
-        given(storage.store(ImageFolder.BOARD, POST_ID, PostImageType.PNG, file))
+        given(uploader.store(ImageFolder.BOARD, POST_ID, AllowedImageType.PNG, file))
                 .willReturn("/uploads/board/new.png");
         given(boardPostImageRepository.save(any()))
                 .willAnswer(
@@ -116,7 +115,7 @@ class BoardPostImageServiceTest {
 
         BusinessException e = fails(() -> service.upload(AUTHOR_ID, POST_ID, png(100)));
         assertThat(e.getMessage()).isEqualTo(BoardPostImageService.SHOWCASE_ONLY_MESSAGE);
-        verifyNoInteractions(storage);
+        verifyNoInteractions(uploader);
     }
 
     @Test
@@ -146,7 +145,7 @@ class BoardPostImageServiceTest {
         givenImages(image(1, 0), image(2, 1), image(3, 2));
         assertThat(fails(() -> service.upload(AUTHOR_ID, POST_ID, png(100))).getErrorCode())
                 .isEqualTo(ErrorCode.BOARD_POST_IMAGE_LIMIT);
-        verifyNoInteractions(storage);
+        verifyNoInteractions(uploader);
     }
 
     @Test
@@ -162,7 +161,7 @@ class BoardPostImageServiceTest {
                 .containsExactly(2L);
         assertThat(first.getDeletedAt()).isNotNull();
         assertThat(second.getSortOrder()).isZero();
-        verify(storage, never()).delete(any());
+        verifyNoInteractions(uploader);
 
         givenImages(second);
         assertThat(fails(() -> service.delete(AUTHOR_ID, POST_ID, 99L)).getErrorCode())

@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.gongbang.file.service.AllowedImageType;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.post.domain.ExternalContest;
@@ -37,19 +38,22 @@ import org.springframework.test.util.ReflectionTestUtils;
 class PostImageServiceTest {
 
     private static final Long POST_ID = 10L;
+    private static final byte[] PNG = {
+        (byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n', 0, 0, 0, 13
+    };
     private static final Long AUTHOR_ID = 1L;
     private static final Long OTHER_ID = 2L;
     private static final LocalDate DEADLINE = LocalDate.of(2099, 12, 31);
 
     @Mock private RecruitPostRepository recruitPostRepository;
     @Mock private RecruitPostImageRepository recruitPostImageRepository;
-    @Mock private PostImageStorage storage;
+    @Mock private PostImageUploader uploader;
 
     private PostImageService service;
 
     @BeforeEach
     void setUp() {
-        service = new PostImageService(recruitPostRepository, recruitPostImageRepository, storage);
+        service = new PostImageService(recruitPostRepository, recruitPostImageRepository, uploader);
     }
 
     private static RecruitPost externalPost() {
@@ -76,7 +80,7 @@ class PostImageServiceTest {
 
     private static MockMultipartFile png(int size) {
         byte[] bytes = new byte[size];
-        System.arraycopy(PostImageTypeTest.PNG, 0, bytes, 0, PostImageTypeTest.PNG.length);
+        System.arraycopy(PNG, 0, bytes, 0, PNG.length);
         return new MockMultipartFile("file", "poster.png", "image/png", bytes);
     }
 
@@ -103,7 +107,8 @@ class PostImageServiceTest {
         givenPost(externalPost());
         givenImages(image(1, 0));
         MockMultipartFile file = png(100);
-        given(storage.store(POST_ID, PostImageType.PNG, file)).willReturn("/uploads/post/new.png");
+        given(uploader.store(ImageFolder.POST, POST_ID, AllowedImageType.PNG, file))
+                .willReturn("/uploads/post/new.png");
         given(recruitPostImageRepository.save(any()))
                 .willAnswer(
                         invocation -> {
@@ -133,7 +138,7 @@ class PostImageServiceTest {
 
         assertThat(fails(() -> service.upload(OTHER_ID, POST_ID, png(100))).getErrorCode())
                 .isEqualTo(ErrorCode.NOT_POST_AUTHOR);
-        verifyNoInteractions(storage);
+        verifyNoInteractions(uploader);
     }
 
     @Test
@@ -161,7 +166,7 @@ class PostImageServiceTest {
         BusinessException e = fails(() -> service.upload(AUTHOR_ID, POST_ID, png(100)));
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         assertThat(e.getMessage()).isEqualTo(PostImageService.EXTERNAL_ONLY_MESSAGE);
-        verifyNoInteractions(storage);
+        verifyNoInteractions(uploader);
     }
 
     @Test
@@ -177,11 +182,12 @@ class PostImageServiceTest {
                                         POST_ID,
                                         png((int) PostImageService.MAX_BYTES + 1)));
         assertThat(e.getMessage()).isEqualTo(PostImageService.SIZE_MESSAGE);
-        verifyNoInteractions(storage);
+        verifyNoInteractions(uploader);
 
         givenImages();
         MockMultipartFile exact = png((int) PostImageService.MAX_BYTES);
-        given(storage.store(POST_ID, PostImageType.PNG, exact)).willReturn("/uploads/post/a.png");
+        given(uploader.store(ImageFolder.POST, POST_ID, AllowedImageType.PNG, exact))
+                .willReturn("/uploads/post/a.png");
         given(recruitPostImageRepository.save(any()))
                 .willAnswer(invocation -> invocation.getArgument(0));
         assertThat(service.upload(AUTHOR_ID, POST_ID, exact).images()).hasSize(1);
@@ -196,7 +202,7 @@ class PostImageServiceTest {
 
         BusinessException e = fails(() -> service.upload(AUTHOR_ID, POST_ID, fake));
         assertThat(e.getMessage()).isEqualTo(PostImageService.TYPE_MESSAGE);
-        verifyNoInteractions(storage);
+        verifyNoInteractions(uploader);
     }
 
     @Test
@@ -225,7 +231,7 @@ class PostImageServiceTest {
 
         assertThat(fails(() -> service.upload(AUTHOR_ID, POST_ID, png(100))).getErrorCode())
                 .isEqualTo(ErrorCode.POST_IMAGE_LIMIT);
-        verifyNoInteractions(storage);
+        verifyNoInteractions(uploader);
     }
 
     @Test
@@ -234,7 +240,7 @@ class PostImageServiceTest {
         givenPost(externalPost());
         givenImages();
         MockMultipartFile file = png(100);
-        given(storage.store(POST_ID, PostImageType.PNG, file))
+        given(uploader.store(ImageFolder.POST, POST_ID, AllowedImageType.PNG, file))
                 .willThrow(new java.io.IOException("disk"));
 
         BusinessException e = fails(() -> service.upload(AUTHOR_ID, POST_ID, file));
@@ -260,7 +266,7 @@ class PostImageServiceTest {
         assertThat(response.images())
                 .extracting(PostImageResponse::imageId)
                 .containsExactly(2L, 3L);
-        verify(storage, never()).delete(any());
+        verifyNoInteractions(uploader);
     }
 
     @Test
