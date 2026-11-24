@@ -150,6 +150,7 @@ export default function BoardDetailPage() {
         <CommentSection
           targetKind="board-post"
           targetId={post.boardPostId}
+          postAuthorId={post.author.memberId}
           redirectTo={`/board/${post.boardPostId}`}
           onNotify={toast.show}
         />

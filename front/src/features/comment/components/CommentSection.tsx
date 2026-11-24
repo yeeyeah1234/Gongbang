@@ -21,12 +21,14 @@ const MAX_COMMENT_LENGTH = 500
 interface ReplyDraft {
   parentId: number
   parentNickname: string
+  parentIsSecret: boolean
   content: string
   isSecret: boolean
 }
 
 interface EditDraft {
   commentId: number
+  parentIsSecret: boolean
   content: string
   isSecret: boolean
 }
@@ -34,6 +36,7 @@ interface EditDraft {
 interface CommentSectionProps {
   targetKind: CommentTargetKind
   targetId: number
+  postAuthorId: number | null
   redirectTo: string
   onNotify: (message: string) => void
 }
@@ -69,11 +72,13 @@ function countActiveComments(items: CommentItem[]): number {
 export function CommentSection({
   targetKind,
   targetId,
+  postAuthorId,
   redirectTo,
   onNotify,
 }: CommentSectionProps) {
   const isLoggedIn = useIsLoggedIn()
   const loginMember = useLoginMember()
+  const isAdmin = loginMember?.role === 'ADMIN'
 
   const commentsQuery = useComments(targetKind, targetId)
   const createMutation = useCreateCommentMutation(targetKind, targetId)
@@ -113,11 +118,20 @@ export function CommentSection({
     )
   }
 
+  const canReplyToComment = (item: CommentItem): boolean => {
+    if (!item.isSecret) return true
+    if (loginMember === null) return false
+    if (postAuthorId !== null && loginMember.memberId === postAuthorId) return true
+    if (item.author !== null && loginMember.memberId === item.author.memberId) return true
+    return isAdmin
+  }
+
   const handleOpenReply = (root: CommentItem) => {
     if (!isLoggedIn) {
       setLoginModalOpen(true)
       return
     }
+    if (!canReplyToComment(root)) return
     if (replyDraft?.parentId === root.commentId) {
       setReplyDraft(null)
       return
@@ -126,6 +140,7 @@ export function CommentSection({
     setReplyDraft({
       parentId: root.commentId,
       parentNickname: root.author?.nickname ?? '탈퇴한 사용자',
+      parentIsSecret: root.isSecret,
       content: '',
       isSecret: root.isSecret,
     })
@@ -139,7 +154,7 @@ export function CommentSection({
     createMutation.mutate(
       {
         content: trimmed,
-        isSecret: replyDraft.isSecret,
+        isSecret: replyDraft.parentIsSecret || replyDraft.isSecret,
         parentId: replyDraft.parentId,
       },
       {
@@ -154,12 +169,13 @@ export function CommentSection({
     )
   }
 
-  const handleStartEdit = (item: CommentItem) => {
+  const handleStartEdit = (item: CommentItem, parentIsSecret: boolean) => {
     setReplyDraft(null)
     setEditDraft({
       commentId: item.commentId,
+      parentIsSecret,
       content: item.content ?? '',
-      isSecret: item.isSecret,
+      isSecret: parentIsSecret || item.isSecret,
     })
   }
 
@@ -171,7 +187,7 @@ export function CommentSection({
     updateMutation.mutate(
       {
         commentId: editDraft.commentId,
-        payload: { content: trimmed, isSecret: editDraft.isSecret },
+        payload: { content: trimmed, isSecret: editDraft.parentIsSecret || editDraft.isSecret },
       },
       {
         onSuccess: () => {
@@ -199,7 +215,7 @@ export function CommentSection({
     })
   }
 
-  const renderCommentCard = (item: CommentItem, isReply: boolean) => {
+  const renderCommentCard = (item: CommentItem, isReply: boolean, parentIsSecret = false) => {
     if (item.isDeleted) {
       return (
         <div className="rounded-card border border-line bg-surface-sub px-5 py-4 text-body text-text-sub">
@@ -259,7 +275,7 @@ export function CommentSection({
 
           {!isEditing && (
             <div className="flex shrink-0 items-center gap-2 text-small sm:gap-3">
-              {!isReply && (
+              {!isReply && canReplyToComment(item) && (
                 <button
                   type="button"
                   onClick={() => handleOpenReply(item)}
@@ -272,7 +288,7 @@ export function CommentSection({
                 <>
                   <button
                     type="button"
-                    onClick={() => handleStartEdit(item)}
+                    onClick={() => handleStartEdit(item, parentIsSecret)}
                     className="inline-flex cursor-pointer items-center px-1.5 font-medium text-text-sub transition-colors hover:text-text max-sm:min-h-10 sm:px-0"
                   >
                     수정
@@ -302,17 +318,22 @@ export function CommentSection({
             />
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-4">
-                <label className="inline-flex cursor-pointer items-center gap-2 text-small text-text-sub select-none max-sm:min-h-10">
+                <label
+                  className={`inline-flex items-center gap-2 text-small text-text-sub select-none max-sm:min-h-10 ${
+                    editDraft.parentIsSecret ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                  }`}
+                >
                   <input
                     type="checkbox"
-                    checked={editDraft.isSecret}
+                    checked={editDraft.parentIsSecret || editDraft.isSecret}
+                    disabled={editDraft.parentIsSecret}
                     onChange={(event) =>
                       setEditDraft({ ...editDraft, isSecret: event.target.checked })
                     }
                     className="size-4 accent-primary"
                   />
                   <LockIcon className="h-4 w-4" />
-                  <span>비공개 댓글</span>
+                  <span>{editDraft.parentIsSecret ? '비공개 댓글 (고정)' : '비공개 댓글'}</span>
                 </label>
                 <span className="text-small text-text-sub">
                   {editDraft.content.length} / {MAX_COMMENT_LENGTH}
@@ -468,7 +489,7 @@ export function CommentSection({
               {root.replies.length > 0 && (
                 <div className="space-y-3 pl-4 sm:pl-10">
                   {root.replies.map((reply) => (
-                    <div key={reply.commentId}>{renderCommentCard(reply, true)}</div>
+                    <div key={reply.commentId}>{renderCommentCard(reply, true, root.isSecret)}</div>
                   ))}
                 </div>
               )}
@@ -496,17 +517,26 @@ export function CommentSection({
                     />
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex flex-wrap items-center gap-4">
-                        <label className="inline-flex cursor-pointer items-center gap-2 text-small text-text-sub select-none max-sm:min-h-10">
+                        <label
+                          className={`inline-flex items-center gap-2 text-small text-text-sub select-none max-sm:min-h-10 ${
+                            replyDraft.parentIsSecret
+                              ? 'cursor-not-allowed opacity-70'
+                              : 'cursor-pointer'
+                          }`}
+                        >
                           <input
                             type="checkbox"
-                            checked={replyDraft.isSecret}
+                            checked={replyDraft.parentIsSecret || replyDraft.isSecret}
+                            disabled={replyDraft.parentIsSecret}
                             onChange={(event) =>
                               setReplyDraft({ ...replyDraft, isSecret: event.target.checked })
                             }
                             className="size-4 accent-primary"
                           />
                           <LockIcon className="h-4 w-4" />
-                          <span>비공개 댓글</span>
+                          <span>
+                            {replyDraft.parentIsSecret ? '비공개 댓글 (고정)' : '비공개 댓글'}
+                          </span>
                         </label>
                         <span className="text-small text-text-sub">
                           {replyDraft.content.length} / {MAX_COMMENT_LENGTH}
