@@ -15,13 +15,15 @@ import type { PostImageDraft } from '../postImages'
 interface PostImagePickerProps {
   drafts: PostImageDraft[]
   onChange: (drafts: PostImageDraft[]) => void
+  // 칸 이름 (모집글은 「공모전 사진」, 커뮤니티 결과물 자랑은 「결과물 사진」)
+  label?: string
 }
 
 const ICON_BUTTON =
   'flex size-9 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-text hover:bg-bg focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:text-text-disabled disabled:hover:bg-surface'
 
 // PST-007 외부 공모전 사진: 최대 3장, 첫 장이 대표. 추가·삭제·순서 바꾸기는 저장(등록·수정 완료) 때 서버에 반영한다.
-export function PostImagePicker({ drafts, onChange }: PostImagePickerProps) {
+export function PostImagePicker({ drafts, onChange, label = '공모전 사진' }: PostImagePickerProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -72,7 +74,8 @@ export function PostImagePicker({ drafts, onChange }: PostImagePickerProps) {
   return (
     <div className="flex flex-col">
       <span id="post-images-label" className="mb-2 text-body font-bold text-text">
-        공모전 사진<span className="ml-1 font-normal text-text-sub">(선택)</span>
+        {label}
+        <span className="ml-1 font-normal text-text-sub">(선택)</span>
       </span>
       <ul aria-labelledby="post-images-label" className="grid grid-cols-3 gap-4">
         {drafts.map((draft, index) => (
@@ -82,7 +85,7 @@ export function PostImagePicker({ drafts, onChange }: PostImagePickerProps) {
           >
             <img
               src={draftUrl(draft)}
-              alt={`공모전 사진 ${index + 1}`}
+              alt={`${label} ${index + 1}`}
               className="size-full object-cover"
             />
             {index === 0 && (

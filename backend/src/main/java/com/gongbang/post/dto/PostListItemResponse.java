@@ -17,7 +17,9 @@ public record PostListItemResponse(
         int viewCount,
         int currentCount,
         int targetCount,
-        PostStatus status) {
+        PostStatus status,
+        // ④ 모집중인데 이 날짜가 지났으면 화면이 「모집마감」으로 보여 준다 (상태값은 그대로)
+        LocalDate recruitEndDate) {
 
     /** 공모전 배지·제목. 외부 공모전이면 contestId는 null, isExternal은 true (화면 「외부」 표시). */
     public record ContestInfo(
@@ -55,6 +57,7 @@ public record PostListItemResponse(
                 post.getViewCount(),
                 post.getCurrentCount(),
                 post.getTargetCount(),
-                post.getStatus());
+                post.getStatus(),
+                post.getRecruitEndDate());
     }
 }

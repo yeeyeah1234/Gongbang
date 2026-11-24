@@ -3,7 +3,7 @@ import { Badge } from '../../../components/ui/Badge'
 import { Button } from '../../../components/ui/Button'
 import { Input } from '../../../components/ui/Input'
 import { useCategories } from '../../contest/hooks'
-import { useActiveContestSearch } from '../hooks'
+import { useContestSearch } from '../hooks'
 import { EXTERNAL_TITLE_MAX, URL_MAX, todayString } from '../postForm'
 import type { PostFormErrors, PostFormValues, SelectedContest } from '../postForm'
 
@@ -74,7 +74,7 @@ export function ContestPicker({ values, errors, onChange }: ContestPickerProps) 
   )
 }
 
-function SelectedContestBox({
+export function SelectedContestBox({
   contest,
   onClear,
 }: {
@@ -93,17 +93,23 @@ function SelectedContestBox({
   )
 }
 
-function ContestSearch({
+// includeEnded: 마감된 공모전도 찾는다 (커뮤니티 게시판 BRD-002 ①, 모집글은 진행 중만)
+export function ContestSearch({
   error,
   onSelect,
+  includeEnded = false,
 }: {
   error?: string
   onSelect: (contest: SelectedContest) => void
+  includeEnded?: boolean
 }) {
   const [text, setText] = useState('')
   const [keyword, setKeyword] = useState('')
   const [open, setOpen] = useState(false)
-  const { data, isFetching, isError, isPlaceholderData } = useActiveContestSearch(keyword)
+  const { data, isFetching, isError, isPlaceholderData } = useContestSearch(
+    keyword,
+    includeEnded ? 'all' : 'active',
+  )
 
   useEffect(() => {
     const timer = window.setTimeout(() => setKeyword(text.trim()), SEARCH_DELAY_MS)
@@ -140,7 +146,7 @@ function ContestSearch({
         aria-controls="post-contest-results"
         aria-invalid={error ? true : undefined}
         value={text}
-        placeholder="진행 중인 공모전을 제목으로 검색"
+        placeholder={includeEnded ? '공모전을 제목으로 검색' : '진행 중인 공모전을 제목으로 검색'}
         onChange={(event) => {
           setText(event.target.value)
           setOpen(true)
@@ -196,7 +202,9 @@ function ContestSearch({
                 ? '공모전을 불러오지 못했어요. 잠시 후 다시 시도해 주세요'
                 : searching
                   ? '찾는 중이에요'
-                  : '진행 중인 공모전 중에 맞는 제목이 없어요. 「목록에 없는 공모전 직접 입력」을 눌러 주세요'}
+                  : includeEnded
+                    ? '맞는 제목의 공모전이 없어요'
+                    : '진행 중인 공모전 중에 맞는 제목이 없어요. 「목록에 없는 공모전 직접 입력」을 눌러 주세요'}
             </li>
           )}
         </ul>

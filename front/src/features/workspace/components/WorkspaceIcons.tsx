@@ -41,3 +41,43 @@ export function PencilIcon({ className = 'h-4 w-4', ...props }: IconProps) {
     </svg>
   )
 }
+
+// 사이드바 항목 더보기(⋮) 아이콘 (components/icons/Icons.tsx MoreHorizontalIcon과 같은 점 크기)
+export function MoreVerticalIcon({ className = 'h-4 w-4', ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+      className={className}
+      {...props}
+    >
+      <circle cx="12" cy="5" r="1.75" />
+      <circle cx="12" cy="12" r="1.75" />
+      <circle cx="12" cy="19" r="1.75" />
+    </svg>
+  )
+}
+
+// DOC-01 빈 상태·임시 본문 문서 아이콘 (같은 24px 선 아이콘 형식)
+export function DocumentIcon({ className = 'h-12 w-12', ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+      {...props}
+    >
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+      <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </svg>
+  )
+}

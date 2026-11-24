@@ -46,7 +46,7 @@ export function PostApplyPanel({ post, onError }: PostApplyPanelProps) {
         className="mt-4 block h-2 w-full appearance-none overflow-hidden rounded-full bg-surface-sub [&::-moz-progress-bar]:bg-primary [&::-webkit-progress-bar]:bg-surface-sub [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-primary"
       />
       <div className="mt-4 flex items-center gap-3">
-        <StatusBadge status={post.status} />
+        <StatusBadge status={post.status} recruitEndDate={post.recruitEndDate} />
         <span className="text-small text-text-sub">
           모집 기간 {shortDate(post.recruitStartDate)} ~ {shortDate(post.recruitEndDate)}
         </span>
@@ -58,12 +58,17 @@ export function PostApplyPanel({ post, onError }: PostApplyPanelProps) {
   )
 }
 
-export function StatusBadge({ status }: { status: PostDetail['status'] }) {
-  return status === 'RECRUITING' ? (
-    <Badge variant="primary-soft">모집중</Badge>
-  ) : (
-    <Badge variant="surface-sub">모집완료</Badge>
-  )
+// PST-001 ④ 모집중(파랑) / 모집마감(회색, 모집중인데 종료일이 지남) / 모집완료(회색). 저장된 상태값은 바꾸지 않는다
+export function StatusBadge({
+  status,
+  recruitEndDate,
+}: {
+  status: PostDetail['status']
+  recruitEndDate: string
+}) {
+  if (status !== 'RECRUITING') return <Badge variant="surface-sub">모집완료</Badge>
+  if (todayString() > recruitEndDate) return <Badge variant="surface-sub">모집마감</Badge>
+  return <Badge variant="primary-soft">모집중</Badge>
 }
 
 // 버튼 대신 상태 문구만 보여 줄 때

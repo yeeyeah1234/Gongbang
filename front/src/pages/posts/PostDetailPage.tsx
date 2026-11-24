@@ -6,6 +6,7 @@ import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { Toast } from '../../components/ui/Toast'
 import { DDayBadge, DefaultThumbnail } from '../../features/contest/components/ContestCard'
+import { ImageSlider } from '../../features/post/components/ImageSlider'
 import { MemberPhoto } from '../../features/post/components/MemberPhoto'
 import { PostDeleteButton } from '../../features/post/components/PostDeleteButton'
 import { PostApplyPanel, StatusBadge } from '../../features/post/components/PostApplyPanel'
@@ -100,7 +101,7 @@ export default function PostDetailPage() {
               {post.currentCount} / {post.targetCount}명
             </InfoRow>
             <InfoRow label="모집 상태">
-              <StatusBadge status={post.status} />
+              <StatusBadge status={post.status} recruitEndDate={post.recruitEndDate} />
             </InfoRow>
             <InfoRow label="모집 기간">
               {formatDate(post.recruitStartDate)} ~ {formatDate(post.recruitEndDate)}
@@ -120,10 +121,13 @@ export default function PostDetailPage() {
           {/* TODO(확인 필요): 김건우 댓글·대댓글 컴포넌트가 생기면 여기에 붙인다 */}
         </article>
 
-        {/* PST-006 ②③ 오른쪽 고정 영역 */}
-        <aside className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
-          <PostApplyPanel post={post} onError={toast.show} />
+        {/* PST-005 ⑤ 사진은 공모전 상세(MAIN-02 ③) 포스터 칸과 같은 세로 3:4로 위에 두고,
+            PST-006 ②③ 지원 패널만 GNB(72px) 아래에 고정한다. 둘을 함께 고정하면 화면보다 길어져 사진 아래가 잘린다 */}
+        <aside className="flex flex-col gap-6">
           <RepresentativeImage post={post} />
+          <div className="lg:sticky lg:top-24">
+            <PostApplyPanel post={post} onError={toast.show} />
+          </div>
         </aside>
       </div>
       <Toast message={toast.message} />
@@ -179,8 +183,9 @@ function ContestCard({ contest }: { contest: PostDetail['contest'] }) {
       </div>
     </>
   )
+  // 「공모전 보기」는 카드 오른쪽 아래 (제목 줄 높이에 맞춘다)
   const cardClass =
-    'flex items-center justify-between gap-6 rounded-card border border-line bg-surface px-6 py-5'
+    'flex items-end justify-between gap-6 rounded-card border border-line bg-surface px-6 py-5'
   const more = <span className="shrink-0 text-small text-text-sub">공모전 보기 ›</span>
 
   if (contest.contestId !== null) {
@@ -246,11 +251,19 @@ function AuthorLine({
 // 없거나 불러오지 못하면 기본 이미지 (PST-002 ⑤)
 function RepresentativeImage({ post }: { post: PostDetail }) {
   const [failed, setFailed] = useState(false)
-  if (post.images.length >= 2) return <ImageSlider post={post} />
+  if (post.images.length >= 2)
+    return (
+      <ImageSlider
+        images={post.images}
+        label="공모전 사진"
+        altPrefix={`${post.contest.title} 사진`}
+        aspectClass="aspect-3/4"
+      />
+    )
   return (
     <section
       aria-label="대표 이미지"
-      className="aspect-4/3 overflow-hidden rounded-card border border-line bg-surface-sub"
+      className="aspect-3/4 overflow-hidden rounded-card border border-line bg-surface-sub"
     >
       {post.imageUrl && !failed ? (
         <img
@@ -262,80 +275,6 @@ function RepresentativeImage({ post }: { post: PostDetail }) {
       ) : (
         <DefaultThumbnail />
       )}
-    </section>
-  )
-}
-
-// PST-007 ⑥ 올린 사진 슬라이드: 좌우 버튼·키보드 화살표·아래 점으로 넘긴다. 첫 장이 대표
-function ImageSlider({ post }: { post: PostDetail }) {
-  const [index, setIndex] = useState(0)
-  const [failed, setFailed] = useState<Set<number>>(() => new Set())
-  const count = post.images.length
-  const current = post.images[Math.min(index, count - 1)]
-  const go = (next: number) => setIndex((next + count) % count)
-
-  const buttonClass =
-    'absolute top-1/2 flex size-10 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-line bg-surface text-text shadow-pop hover:bg-bg focus-visible:outline-2 focus-visible:outline-primary'
-
-  return (
-    <section
-      aria-roledescription="carousel"
-      aria-label="공모전 사진"
-      tabIndex={0}
-      onKeyDown={(event) => {
-        if (event.key === 'ArrowLeft') go(index - 1)
-        if (event.key === 'ArrowRight') go(index + 1)
-      }}
-      className="relative aspect-4/3 overflow-hidden rounded-card border border-line bg-surface-sub focus-visible:outline-2 focus-visible:outline-primary"
-    >
-      <div aria-live="polite" className="size-full">
-        {failed.has(current.imageId) ? (
-          <DefaultThumbnail />
-        ) : (
-          <img
-            key={current.imageId}
-            src={current.url}
-            alt={`${post.contest.title} 사진 ${index + 1} / ${count}`}
-            onError={() => setFailed((prev) => new Set(prev).add(current.imageId))}
-            className="size-full object-cover"
-          />
-        )}
-      </div>
-      <button
-        type="button"
-        aria-label="이전 사진"
-        onClick={() => go(index - 1)}
-        className={`${buttonClass} left-3`}
-      >
-        <svg aria-hidden="true" viewBox="0 0 20 20" className="size-5" fill="none">
-          <path d="M12 5 7 10l5 5" stroke="currentColor" strokeWidth="1.8" />
-        </svg>
-      </button>
-      <button
-        type="button"
-        aria-label="다음 사진"
-        onClick={() => go(index + 1)}
-        className={`${buttonClass} right-3`}
-      >
-        <svg aria-hidden="true" viewBox="0 0 20 20" className="size-5" fill="none">
-          <path d="m8 5 5 5-5 5" stroke="currentColor" strokeWidth="1.8" />
-        </svg>
-      </button>
-      <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2">
-        {post.images.map((image, i) => (
-          <button
-            key={image.imageId}
-            type="button"
-            aria-label={`${i + 1}번째 사진 보기`}
-            aria-current={i === index ? 'true' : undefined}
-            onClick={() => setIndex(i)}
-            className={[
-              'size-2 cursor-pointer rounded-full',
-              i === index ? 'bg-primary' : 'border border-line-strong bg-surface',
-            ].join(' ')}
-          />
-        ))}
-      </div>
     </section>
   )
 }

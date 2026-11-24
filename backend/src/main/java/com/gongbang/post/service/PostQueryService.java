@@ -5,6 +5,7 @@ import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.dto.MemberProfileSummary;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.MyPostItemResponse;
@@ -114,14 +115,14 @@ public class PostQueryService {
     }
 
     /**
-     * PST-001 ② 작성자 닉네임 (INT-002 ①). 탈퇴·삭제 회원은 MemberService가 「탈퇴한 사용자」로 준다 (MY-11). 같은 작성자는 한 번만
-     * 읽는다.
-     *
-     * <p>TODO(확인 필요): 회원 여러 명을 한 번에 읽는 메서드(정진우 member)가 생기면 그걸로 바꾼다. 지금은 한 페이지(최대 50명)만큼 한 명씩 읽는다.
+     * PST-001 ② 작성자 닉네임 (INT-002 ①). 한 페이지의 작성자를 한 번에 읽는다. 탈퇴·삭제 회원은 MemberService가 「탈퇴한 사용자」로 준다
+     * (MY-11).
      */
     private Map<Long, String> nicknames(List<RecruitPost> posts) {
-        return collect(posts, RecruitPost::getAuthorId).stream()
-                .collect(Collectors.toMap(Function.identity(), memberService::displayName));
+        Set<Long> authorIds = collect(posts, RecruitPost::getAuthorId);
+        Map<Long, MemberProfileSummary> summaries = memberService.getProfileSummaries(authorIds);
+        return authorIds.stream()
+                .collect(Collectors.toMap(Function.identity(), id -> summaries.get(id).nickname()));
     }
 
     private static Set<Long> collect(List<RecruitPost> posts, Function<RecruitPost, Long> idOf) {

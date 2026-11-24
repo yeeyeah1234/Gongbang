@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import WorkspaceCalendarRoute from './pages/WorkspaceCalendarRoute'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
+import WorkspaceDocumentPage from './pages/WorkspaceDocumentPage'
 import WorkspaceListPage from './pages/WorkspaceListPage'
 import WorkspaceNoticePage from './pages/WorkspaceNoticePage'
 import { RequireLogin } from './features/auth/RequireLogin'
@@ -26,6 +27,10 @@ import PostCreatePage from './pages/posts/PostCreatePage'
 import PostDetailPage from './pages/posts/PostDetailPage'
 import PostEditPage from './pages/posts/PostEditPage'
 import PostListPage from './pages/posts/PostListPage'
+import BoardCreatePage from './pages/board/BoardCreatePage'
+import BoardDetailPage from './pages/board/BoardDetailPage'
+import BoardEditPage from './pages/board/BoardEditPage'
+import BoardListPage from './pages/board/BoardListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 import { WorkspaceLayout } from './features/workspace/components/WorkspaceLayout'
 import { WorkspacePlaceholder } from './features/workspace/components/WorkspacePlaceholder'
@@ -105,6 +110,38 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
           },
         ],
       },
+      {
+        path: '/dev/document-preview',
+        element: <Navigate to="/dev/document-preview/normal" replace />,
+      },
+      {
+        // DOC-01~04 문서 사이드바를 백엔드·로그인 없이 본다: {normal|empty|error|member}
+        path: '/dev/document-preview/:view',
+        lazy: async () => ({
+          Component: (await import('./pages/dev/DocumentPreviewPage')).default,
+        }),
+        children: [
+          {
+            path: 'docs/:documentId?',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/DocumentPreviewPage')).DocumentPreviewTab,
+            }),
+          },
+          {
+            // 첫 진입과 다른 탭은 문서 탭으로
+            index: true,
+            lazy: async () => ({
+              Component: (await import('./pages/dev/DocumentPreviewPage')).DocumentPreviewRedirect,
+            }),
+          },
+          {
+            path: '*',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/DocumentPreviewPage')).DocumentPreviewRedirect,
+            }),
+          },
+        ],
+      },
     ]
   : []
 
@@ -120,6 +157,9 @@ export const router = createBrowserRouter([
       { path: '/posts', element: <PostListPage /> },
       // PST-005 모집글 상세 (비회원도 본다. /posts/new는 아래 로그인 그룹이 먼저 받는다)
       { path: '/posts/:postId', element: <PostDetailPage /> },
+      // BRD-001·004 커뮤니티 게시판 목록·상세 (비회원도 본다. /board/new는 아래 로그인 그룹이 먼저 받는다)
+      { path: '/board', element: <BoardListPage /> },
+      { path: '/board/:boardPostId', element: <BoardDetailPage /> },
       // 정진우 AUTH (로그인 화면 경로 /login, 돌아갈 주소는 ?redirect=)
       {
         element: <RequireGuest />,
@@ -150,6 +190,9 @@ export const router = createBrowserRouter([
           { path: '/posts/new', element: <PostCreatePage /> },
           // PST-003 모집글 수정 (작성자가 아니면 화면이 막고, 서버도 403)
           { path: '/posts/:postId/edit', element: <PostEditPage /> },
+          // BRD-002·003 게시글 작성·수정
+          { path: '/board/new', element: <BoardCreatePage /> },
+          { path: '/board/:boardPostId/edit', element: <BoardEditPage /> },
           { path: '/service-notices/:serviceNoticeId', element: <ServiceNoticePage /> },
           // WS-08 워크스페이스 팀 목록 (GNB 「워크스페이스」). 팀을 고르면 아래 /workspaces/:teamId로
           { path: '/workspaces', element: <WorkspaceListPage /> },
@@ -169,7 +212,8 @@ export const router = createBrowserRouter([
           // 첫 입장은 채팅 탭
           { index: true, element: <Navigate to="chat" replace /> },
           { path: 'chat', element: <WorkspaceChatPage /> },
-          { path: 'docs', element: <WorkspacePlaceholder tab="docs" /> },
+          // DOC-01~04 문서 사이드바: documentId가 없으면 마지막으로 연 문서 또는 첫 문서로 옮긴다
+          { path: 'docs/:documentId?', element: <WorkspaceDocumentPage /> },
           { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
           // CAL-01·03·04·05·08 월간 캘린더 (WorkspaceCalendarRoute가 lazy로 불러온다)
           { path: 'calendar', element: <WorkspaceCalendarRoute /> },

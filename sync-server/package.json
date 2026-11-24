@@ -1,0 +1,23 @@
+{
+  "name": "gongbang-sync-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/src/index.js",
+    "test": "tsc && node --test \"dist/test/**/*.test.js\""
+  },
+  "dependencies": {
+    "@hocuspocus/server": "4.9.0",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.33"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3"
+  }
+}

@@ -17,7 +17,7 @@ const MIN_KEYWORD_LENGTH = 2
 const MENUS = [
   { label: '공모전', to: '/', activePrefixes: ['/contests/'] },
   // TODO(확인 필요): 커뮤니티(팀원 모집 게시판, PST-001 김수형) 화면 경로가 정해지면 맞춘다
-  { label: '커뮤니티', to: '/posts', activePrefixes: ['/posts/'] },
+  { label: '커뮤니티', to: '/posts', activePrefixes: ['/posts/', '/board'] },
   // 비로그인도 보인다. 비로그인이 누르면 「로그인이 필요한 서비스입니다」 팝업 → [로그인]으로 로그인 화면 (GNB-01 ④)
   // 경로 /workspaces는 이상현과 확정 (11/13, WS-08)
   {
