@@ -18,12 +18,13 @@
  * 5. 본문 영역은 flex 세로 칸이고 남은 높이를 채운다(flex-1, min-h-0). 탭 화면 맨 바깥은 flex-1로 두면 된다.
  */
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { getApiError } from '../../../api/errors'
+import type { MemberColorIndex } from '../../../components/ui/Avatar'
 import { Button } from '../../../components/ui/Button'
 import { useLoginMember } from '../../auth/store'
-import { useChatRooms } from '../../chat/hooks'
+import { useChatRooms, useTeamMembers } from '../../chat/hooks'
 import { useWorkspaceRealtime } from '../../chat/useWorkspaceRealtime'
 import type { WorkspaceOutletContext } from '../context'
 import {
@@ -35,7 +36,8 @@ import {
 } from '../hooks'
 import { memberColorIndex } from '../onlineMembers'
 import { usePinnedCollapsed } from '../pinnedCollapse'
-import { WORKSPACE_TABS, type WorkspaceOnlineMember } from '../types'
+import { WORKSPACE_TABS, type WorkspaceOnlineMember, type WorkspaceTabKey } from '../types'
+import { useWorkspacePresence } from '../useWorkspacePresence'
 import { PinnedNoticeBanner } from './PinnedNoticeBanner'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { WorkspaceNoAccess } from './WorkspaceNoAccess'
@@ -70,6 +72,7 @@ export function WorkspaceLayout({
   const noticeUnread = useNoticeUnreadCount(teamId, ready)
   const refreshNoticeIndicators = useRefreshNoticeIndicators(teamId)
   const chatRoomsQuery = useChatRooms(teamId, ready)
+  const teamMembersQuery = useTeamMembers(teamId, ready)
   const totalChatUnread = useMemo(() => {
     if (!chatRoomsQuery.data) return chatUnreadCount
     return chatRoomsQuery.data.reduce((sum, room) => sum + room.unreadCount, 0)
@@ -89,7 +92,24 @@ export function WorkspaceLayout({
   )
 
   const tabKey = pathname.slice(basePath.length + 1).split('/')[0]
-  const tabLabel = WORKSPACE_TABS.find((tab) => tab.key === tabKey)?.label
+  const currentTab = WORKSPACE_TABS.find((tab) => tab.key === tabKey)
+  const activeTab: WorkspaceTabKey | null = currentTab?.key ?? null
+  const tabLabel = currentTab?.label
+
+  const [docTitleState, setDocTitleState] = useState<{
+    teamId: number
+    title: string | null
+  }>({ teamId, title: null })
+  const activeDocTitle =
+    activeTab === 'docs' && docTitleState.teamId === teamId ? docTitleState.title : null
+  const setActiveDocTitle = useCallback(
+    (title: string | null) => {
+      setDocTitleState((prev) =>
+        prev.teamId === teamId && prev.title === title ? prev : { teamId, title },
+      )
+    },
+    [teamId],
+  )
 
   useEffect(() => {
     if (tabLabel) document.title = `${tabLabel} | 공방`
@@ -101,6 +121,30 @@ export function WorkspaceLayout({
   const forbidden =
     !Number.isFinite(teamId) ||
     (summaryQuery.isError && getApiError(summaryQuery.error).code === 'NOT_TEAM_MEMBER')
+
+  const myColorIndex: MemberColorIndex = useMemo(() => {
+    const myMemberId = summary?.myMemberId
+    if (myMemberId === undefined) return 1
+    const matched = teamMembersQuery.data?.find((member) => member.memberId === myMemberId)
+    return matched?.colorIndex ?? memberColorIndex(myMemberId)
+  }, [summary?.myMemberId, teamMembersQuery.data])
+
+  const handlePresenceForbidden = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
+  }, [queryClient, teamId])
+
+  const presenceMembers = useWorkspacePresence({
+    teamId,
+    enabled: ready && !forbidden && loginMember !== null,
+    memberId: summary?.myMemberId ?? null,
+    nickname: loginMember?.nickname ?? null,
+    colorIndex: ready ? myColorIndex : null,
+    leader: summary?.isLeader ?? false,
+    tab: activeTab,
+    docTitle: activeDocTitle,
+    onForbidden: handlePresenceForbidden,
+  })
+  const resolvedOnlineMembers = onlineMembers.length > 0 ? onlineMembers : presenceMembers
 
   // 403 뒤 재조회가 500이면 오류만 바뀌고 예전 data는 남는다. 비워 두어야 빠진 팀이 다시 보이지 않는다
   useEffect(() => {
@@ -141,14 +185,19 @@ export function WorkspaceLayout({
     summary,
     refreshNoticeIndicators,
     realtime,
+    onlineMembers: resolvedOnlineMembers,
+    myColorIndex,
+    setActiveDocTitle,
   }
-  // 헤더 맨 앞의 나: 닉네임은 로그인 상태, memberId·팀장 여부는 팀 요약에서
+  // 헤더 맨 앞의 나: 닉네임은 로그인 상태, memberId·팀장 여부는 팀 요약, 색은 team_member.colorIndex
   const self: WorkspaceOnlineMember | null = loginMember
     ? {
         memberId: summary.myMemberId,
         nickname: loginMember.nickname,
-        colorIndex: memberColorIndex(summary.myMemberId),
+        colorIndex: myColorIndex,
         isLeader: summary.isLeader,
+        tab: activeTab,
+        docTitle: activeDocTitle,
       }
     : null
 
@@ -159,7 +208,7 @@ export function WorkspaceLayout({
         contestTitle={summary.contestTitle}
         deadline={summary.deadline}
         self={self}
-        onlineMembers={onlineMembers}
+        onlineMembers={resolvedOnlineMembers}
         onBack={goList}
       />
       <WorkspaceTabs

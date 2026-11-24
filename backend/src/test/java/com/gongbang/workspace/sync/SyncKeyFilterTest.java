@@ -40,7 +40,12 @@ class SyncKeyFilterTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"/internal/documents/1", "/internal/whiteboards/1"})
+    @ValueSource(
+            strings = {
+                "/internal/documents/1",
+                "/internal/whiteboards/1",
+                "/internal/teams/1/access"
+            })
     @DisplayName("키가 맞으면 체인으로 넘긴다")
     void 키가_맞으면_통과(String uri) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
@@ -73,11 +78,11 @@ class SyncKeyFilterTest {
                 .doesNotContain(WRONG_KEY);
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"/internal/whiteboards/1", "/internal/teams/1/access"})
     @DisplayName("키 헤더가 없으면 401 INVALID_INTERNAL_KEY, 로그 이유는 「헤더 없음」")
-    void 헤더가_없으면_401(CapturedOutput output) throws Exception {
-        MockHttpServletRequest request =
-                new MockHttpServletRequest("GET", "/internal/whiteboards/1");
+    void 헤더가_없으면_401(String uri, CapturedOutput output) throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", uri);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         syncKeyFilter.doFilter(request, response, filterChain);

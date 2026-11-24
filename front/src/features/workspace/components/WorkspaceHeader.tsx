@@ -1,17 +1,8 @@
 import { ArrowLeftIcon } from '../../../components/icons/Icons'
-import { Avatar } from '../../../components/ui/Avatar'
 import { Badge } from '../../../components/ui/Badge'
 import { getDeadlineBadge } from '../deadline'
-import { withSelfFirst } from '../onlineMembers'
 import type { WorkspaceOnlineMember } from '../types'
-
-// 아바타는 최대 5개(나 포함), 나머지는 「+N」
-const MAX_AVATARS = 5
-
-// "(나) 닉네임", 팀장이면 "(나) [팀장] 닉네임"
-function selfLabel(self: WorkspaceOnlineMember) {
-  return self.isLeader ? `(나) [팀장] ${self.nickname}` : `(나) ${self.nickname}`
-}
+import { WorkspacePresenceAvatars } from './WorkspacePresenceAvatars'
 
 interface WorkspaceHeaderProps {
   teamName: string
@@ -37,9 +28,6 @@ export function WorkspaceHeader({
   today,
 }: WorkspaceHeaderProps) {
   const badge = getDeadlineBadge(deadline, today)
-  const members = withSelfFirst(self, onlineMembers)
-  const shown = members.slice(0, MAX_AVATARS)
-  const hiddenCount = members.length - shown.length
   const title = contestTitle ? `${contestTitle} · ${teamName}` : teamName
 
   return (
@@ -66,52 +54,7 @@ export function WorkspaceHeader({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
-          <span className="hidden text-small text-text-sub sm:inline">
-            접속 중 {members.length}명
-          </span>
-          {shown.length > 0 && (
-            <ul className="flex items-center gap-2" aria-label="접속 중인 팀원">
-              {shown.map((member) => {
-                if (self && member.memberId === self.memberId) {
-                  const label = selfLabel(member)
-                  // TODO(필요함): Avatar(components/ui)에 title·aria-label prop이 없어 name에 라벨을 넘긴다.
-                  // Avatar는 name 끝 두 글자를 그리므로 화면 글자는 닉네임 그대로, title만 라벨이 된다.
-                  return (
-                    <li key={member.memberId}>
-                      <span role="img" aria-label={label} className="inline-flex">
-                        <Avatar
-                          name={label}
-                          colorIndex={member.colorIndex}
-                          size="md"
-                          isLeader={member.isLeader}
-                        />
-                      </span>
-                    </li>
-                  )
-                }
-                return (
-                  <li key={member.memberId}>
-                    <Avatar
-                      name={member.nickname}
-                      colorIndex={member.colorIndex}
-                      size="md"
-                      isLeader={member.isLeader}
-                    />
-                  </li>
-                )
-              })}
-              {hiddenCount > 0 && (
-                <li
-                  className="flex h-10 min-w-10 items-center justify-center rounded-full bg-surface-sub px-2 text-small font-bold text-text-sub"
-                  aria-label={`외 ${hiddenCount}명`}
-                >
-                  +{hiddenCount}
-                </li>
-              )}
-            </ul>
-          )}
-        </div>
+        <WorkspacePresenceAvatars self={self} onlineMembers={onlineMembers} />
       </div>
     </header>
   )

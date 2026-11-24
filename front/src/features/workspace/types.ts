@@ -38,13 +38,15 @@ export interface PinnedNotice {
   isEdited: boolean
 }
 
-// 헤더 「접속 중」 아바타. TODO(확인 필요): 실시간 접속자 API(채팅 WebSocket, 김건우)가 생기면 그 응답에 맞춘다
-// 나는 헤더가 따로 맨 앞에 붙이므로 목록에 있어도 memberId로 중복 제거된다 (onlineMembers.ts)
+// WS-03 헤더 「접속 중」 아바타 (sync-server team:{teamId} awareness 기반).
+// 나는 헤더가 따로 맨 앞에 붙이므로 목록에 있어도 memberId로 중복 제거된다 (onlineMembers.ts).
 export interface WorkspaceOnlineMember {
   memberId: number
   nickname: string
   colorIndex: MemberColorIndex
   isLeader: boolean
+  tab?: WorkspaceTabKey | null
+  docTitle?: string | null
 }
 
 // GET /api/teams (WS-08 워크스페이스 팀 목록 카드)

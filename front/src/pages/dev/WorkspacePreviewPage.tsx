@@ -17,14 +17,57 @@ import {
 // 백엔드·로그인 없이 WS-02 헤더·탭·고정 공지 배너·권한 없음 화면을 고정 데이터로 본다.
 
 const BASE_PATH = '/dev/workspace-preview'
-const NAMES = ['김하늘', '이바다', '박산들', '최노을', '정새벽', '한여름', '윤가을']
 
-const MEMBERS: WorkspaceOnlineMember[] = NAMES.map((nickname, i) => ({
-  memberId: i + 1,
-  nickname,
-  colorIndex: (i + 1) as WorkspaceOnlineMember['colorIndex'],
-  isLeader: i === 0,
-}))
+const MEMBERS: WorkspaceOnlineMember[] = [
+  {
+    memberId: 1,
+    nickname: '김하늘',
+    colorIndex: 1,
+    isLeader: true,
+    tab: 'docs',
+    docTitle: '기획서',
+  },
+  {
+    memberId: 2,
+    nickname: '이바다',
+    colorIndex: 2,
+    isLeader: false,
+    tab: 'chat',
+    docTitle: null,
+  },
+  {
+    memberId: 3,
+    nickname: '박산들',
+    colorIndex: 3,
+    isLeader: false,
+    tab: 'docs',
+    docTitle: '기능 정의 초안',
+  },
+  {
+    memberId: 4,
+    nickname: '최노을',
+    colorIndex: 4,
+    isLeader: false,
+    tab: 'board',
+    docTitle: null,
+  },
+  {
+    memberId: 5,
+    nickname: '정새벽',
+    colorIndex: 5,
+    isLeader: false,
+    tab: 'calendar',
+    docTitle: null,
+  },
+  {
+    memberId: 6,
+    nickname: '한여름',
+    colorIndex: 6,
+    isLeader: false,
+    tab: 'notice',
+    docTitle: null,
+  },
+]
 
 // 헤더 맨 앞의 "나" (실제 화면은 로그인 상태 + 팀 요약에서 만든다). 팀장인 나 / 팀원인 나
 const ME_LEADER: WorkspaceOnlineMember = MEMBERS[0]
@@ -68,8 +111,9 @@ export default function WorkspacePreviewPage() {
     <div className="flex min-h-screen flex-col gap-6 bg-bg pb-12">
       <section>
         <Label>
-          기본: D-10 (보통), 나(팀장 김하늘) 맨 앞 + 목록 7명(나 포함, 중복 제거) → 접속 7명, 아바타
-          5개 + 「+2」, 내 툴팁 「(나) [팀장] 김하늘」, 채팅 3·공지 12 배지
+          WS-03 접속자 6명: D-10 (보통), 나(팀장 김하늘, 왕관) 맨 앞 + 5명 → 접속 6명, 아바타 5개 +
+          「+1」, 호버 툴팁(「(나) [팀장] 김하늘 · 문서 &gt; 기획서」, 「박산들 · 문서 &gt; 기능
+          정의 초안」, 「+1」 숨겨진 팀원 목록)
         </Label>
         <WorkspaceHeader
           teamName="공방팀"

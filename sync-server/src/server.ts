@@ -21,6 +21,8 @@ export interface SyncConnectionContext {
   memberId: number;
   nickname: string;
   teamId: number;
+  leader?: boolean;
+  colorIndex?: number;
 }
 
 export interface SyncLogger {
@@ -97,6 +99,17 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
         throw new Error('인증 토큰이 필요합니다');
       }
 
+      if (parsed.type === 'team') {
+        const access = await springClient.checkTeamAccess(parsed.id, trimmedToken);
+        return {
+          memberId: access.memberId,
+          nickname: access.nickname,
+          teamId: access.teamId,
+          leader: access.leader,
+          colorIndex: access.colorIndex,
+        };
+      }
+
       const access = await springClient.checkDocumentAccess(parsed.id, trimmedToken);
       return {
         memberId: access.memberId,
@@ -107,6 +120,10 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
 
     async onLoadDocument({ documentName, document }) {
       const parsed = parseDocumentName(documentName);
+      if (parsed.type === 'team') {
+        // WS-03: team:{teamId} 방은 awareness 전용(빈 문서). Spring 본문 조회를 호출하지 않는다.
+        return;
+      }
       deletedDocuments.delete(documentName);
 
       try {
@@ -124,6 +141,10 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
     },
 
     async onChange({ documentName, context }) {
+      const parsed = parseDocumentName(documentName);
+      if (parsed.type === 'team') {
+        return;
+      }
       if (deletedDocuments.has(documentName)) {
         return;
       }
@@ -138,6 +159,10 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
       }
 
       const parsed = parseDocumentName(documentName);
+      if (parsed.type === 'team') {
+        // WS-03: team:{teamId} 방은 awareness 전용이라 DB에 저장하지 않는다.
+        return;
+      }
       const editorId = lastEditorByDocument.get(documentName) ?? lastContext?.memberId;
       if (typeof editorId !== 'number') {
         logger.warn(
@@ -244,6 +269,11 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
     },
   };
 
+  // WS-03 ⑤ 끊김 감지 시간:
+  // - 정상 이탈(탭 닫기·라우트 이동·강퇴)은 WebSocket close + awareness null 전송으로 즉시 제거된다.
+  // - 비정상 단절(네트워크 끊김 등)은 명세 10초와 달리 라이브러리 기본값(Hocuspocus timeout 60초,
+  //   y-protocols awareness outdatedTimeout 30초)을 유지한다. 서버 timeout을 10초로 줄이면
+  //   15초마다 awareness를 갱신하는 정상 유휴 클라이언트(doc:* 포함)까지 끊기기 때문이다.
   const server = new Server<SyncConnectionContext>({
     address: config.host,
     port: config.port,

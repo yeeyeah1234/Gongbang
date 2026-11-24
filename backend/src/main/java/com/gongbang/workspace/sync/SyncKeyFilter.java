@@ -20,9 +20,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * DOC-08·DOC-10·WB-10, AGENTS.md 9장: /internal/documents/**, /internal/whiteboards/** 는 동기화 서버
- * 키(SYNC_INTERNAL_KEY)가 맞을 때만 받는다. 키는 X-Sync-Key 헤더로 받고, 설정값이 비어 있으면 모두 거절한다(fail-closed). 크롤러 키 등
- * 다른 내부 키로는 열리지 않는다.
+ * WS-03·DOC-08·DOC-10·WB-10, AGENTS.md 9장: /internal/documents/**, /internal/whiteboards/**,
+ * /internal/teams/** 는 동기화 서버 키(SYNC_INTERNAL_KEY)가 맞을 때만 받는다. 키는 X-Sync-Key 헤더로 받고, 설정값이 비어 있으면 모두
+ * 거절한다(fail-closed). 크롤러 키 등 다른 내부 키로는 열리지 않는다.
  */
 @Slf4j
 @Component
@@ -30,7 +30,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class SyncKeyFilter extends OncePerRequestFilter {
 
     private static final List<String> INTERNAL_PATH_PREFIXES =
-            List.of("/internal/documents", "/internal/whiteboards");
+            List.of("/internal/documents", "/internal/whiteboards", "/internal/teams");
     private static final String HEADER_NAME = "X-Sync-Key";
 
     private final ObjectMapper objectMapper;
