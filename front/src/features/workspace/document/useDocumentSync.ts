@@ -55,9 +55,11 @@ function createSyncSession(documentId: number, offlinePreview: boolean): SyncSes
 
   // autoConnect: false로 만들어 React StrictMode의 마운트·클린업·재마운트에서도
   // useEffect 안에서 안전하게 connect()/disconnect() 생명주기를 제어한다.
+  // preserveTrailingSlash: true로 배포 기본값(/sync/) 끝 슬래시가 잘려 301이 나지 않게 유지한다.
   const websocketProvider = new HocuspocusProviderWebsocket({
     url: resolveSyncServerUrl(),
     autoConnect: false,
+    preserveTrailingSlash: true,
   })
   const provider = new HocuspocusProvider({
     websocketProvider,
@@ -144,6 +146,7 @@ export function useDocumentSync({
 
     const handleStatus = ({ status }: { status: WebSocketStatus }) => {
       if (stopped) return
+      console.info(`[doc-sync] doc:${documentId} status=${status}`)
       connected = status === WebSocketStatus.Connected
       setWsStatus(status)
       if (status === WebSocketStatus.Disconnected) {
@@ -177,6 +180,9 @@ export function useDocumentSync({
 
     const handleClose = ({ event }: { event: { code?: number; reason?: string } }) => {
       if (stopped) return
+      console.info(
+        `[doc-sync] doc:${documentId} close code=${event?.code ?? 'unknown'} reason=${event?.reason || '-'}`,
+      )
       if (event?.code === CLOSE_CODE_TEAM_MEMBER_REMOVED) {
         stopPermanently()
         onForbiddenRef.current()
@@ -185,6 +191,9 @@ export function useDocumentSync({
 
     const handleAuthFailed = ({ reason }: { reason: string }) => {
       if (stopped || authHandling) return
+      console.info(
+        `[doc-sync] doc:${documentId} authenticationFailed reason=${reason || 'unknown'}`,
+      )
       authHandling = true
 
       void (async () => {

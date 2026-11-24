@@ -42,7 +42,7 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
     useEditorState<ToolbarState>({
       editor,
       selector: ({ editor: current }) => {
-        if (!current) return DEFAULT_TOOLBAR_STATE
+        if (!current || current.isDestroyed) return DEFAULT_TOOLBAR_STATE
         return {
           bold: current.isActive('bold'),
           italic: current.isActive('italic'),
@@ -60,6 +60,13 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
       },
     }) ?? DEFAULT_TOOLBAR_STATE
 
+  const disabled = !editor || editor.isDestroyed
+
+  const runWithEditor = (action: (activeEditor: Editor) => void) => {
+    if (!editor || editor.isDestroyed) return
+    action(editor)
+  }
+
   const keepFocus = (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault()
   }
@@ -75,9 +82,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="굵게"
         title="굵게 (Ctrl+B)"
         active={active.bold}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleBold().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleBold().run())
+        }
       >
         <span className="font-bold">B</span>
       </ToolbarButton>
@@ -85,9 +94,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="기울임"
         title="기울임 (Ctrl+I)"
         active={active.italic}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleItalic().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleItalic().run())
+        }
       >
         <span className="italic">I</span>
       </ToolbarButton>
@@ -95,9 +106,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="밑줄"
         title="밑줄 (Ctrl+U)"
         active={active.underline}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleUnderline().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleUnderline().run())
+        }
       >
         <span className="underline">U</span>
       </ToolbarButton>
@@ -105,9 +118,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="취소선"
         title="취소선 (Ctrl+Shift+X)"
         active={active.strike}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleStrike().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleStrike().run())
+        }
       >
         <span className="line-through">S</span>
       </ToolbarButton>
@@ -119,9 +134,13 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="제목 1"
         title="제목 1 (# )"
         active={active.h1}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+        onClick={() =>
+          runWithEditor((activeEditor) =>
+            activeEditor.chain().focus().toggleHeading({ level: 1 }).run(),
+          )
+        }
       >
         H1
       </ToolbarButton>
@@ -129,9 +148,13 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="제목 2"
         title="제목 2 (## )"
         active={active.h2}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+        onClick={() =>
+          runWithEditor((activeEditor) =>
+            activeEditor.chain().focus().toggleHeading({ level: 2 }).run(),
+          )
+        }
       >
         H2
       </ToolbarButton>
@@ -139,9 +162,13 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="제목 3"
         title="제목 3 (### )"
         active={active.h3}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+        onClick={() =>
+          runWithEditor((activeEditor) =>
+            activeEditor.chain().focus().toggleHeading({ level: 3 }).run(),
+          )
+        }
       >
         H3
       </ToolbarButton>
@@ -153,9 +180,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="글머리 기호 목록"
         title="글머리 기호 (- )"
         active={active.bulletList}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleBulletList().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleBulletList().run())
+        }
       >
         <BulletListIcon />
       </ToolbarButton>
@@ -163,9 +192,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="번호 목록"
         title="번호 목록 (1. )"
         active={active.orderedList}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleOrderedList().run())
+        }
       >
         <OrderedListIcon />
       </ToolbarButton>
@@ -173,9 +204,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="체크리스트"
         title="체크리스트 ([] )"
         active={active.taskList}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleTaskList().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleTaskList().run())
+        }
       >
         <ChecklistIcon />
       </ToolbarButton>
@@ -187,7 +220,7 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="링크"
         title="링크 (Ctrl+K)"
         active={active.link}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
         onClick={onOpenLinkModal}
       >
@@ -197,9 +230,11 @@ export function DocumentToolbar({ editor, onOpenLinkModal }: DocumentToolbarProp
         label="코드 블록"
         title="코드 블록 (```)"
         active={active.codeBlock}
-        disabled={!editor}
+        disabled={disabled}
         onMouseDown={keepFocus}
-        onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+        onClick={() =>
+          runWithEditor((activeEditor) => activeEditor.chain().focus().toggleCodeBlock().run())
+        }
       >
         <CodeBlockIcon />
       </ToolbarButton>
