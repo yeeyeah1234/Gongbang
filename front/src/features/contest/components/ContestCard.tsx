@@ -70,6 +70,7 @@ function BookmarkButton({ contest, onToast }: ContestCardProps) {
 }
 
 // MAIN-06 공모전 카드. 마감된 공모전은 MAIN-03 ③대로 「마감됨」 배지 + 어둡게.
+// 640px 미만(휴대폰)에서는 한 칸 목록형: 왼쪽 작은 포스터 + 오른쪽 글 (#117 2차)
 export function ContestCard({ contest, onToast, highlight }: ContestCardProps) {
   const navigate = useNavigate()
   const [imageFailed, setImageFailed] = useState(false)
@@ -90,10 +91,15 @@ export function ContestCard({ contest, onToast, highlight }: ContestCardProps) {
   return (
     <article
       onClick={handleCardClick}
-      className={`relative h-full cursor-pointer overflow-hidden rounded-card border border-line bg-surface ${contest.isClosed ? 'opacity-50' : ''}`}
+      className={`relative flex h-full cursor-pointer overflow-hidden rounded-card border border-line bg-surface sm:block ${contest.isClosed ? 'opacity-50' : ''}`}
     >
       {/* 키보드 이동·새 탭 열기는 포스터 링크로 한다. 제목·주최는 링크 밖에 둬서 드래그로 선택할 수 있다 */}
-      <Link to={detailPath} aria-label={contest.title} draggable={false} className="block">
+      <Link
+        to={detailPath}
+        aria-label={contest.title}
+        draggable={false}
+        className="block w-24 shrink-0 sm:w-auto"
+      >
         <div className="relative aspect-3/4 bg-surface-sub">
           {showImage ? (
             <img
@@ -108,14 +114,15 @@ export function ContestCard({ contest, onToast, highlight }: ContestCardProps) {
             <DefaultThumbnail />
           )}
           {contest.isClosed && (
-            <span className="absolute top-3 left-3">
+            <span className="absolute top-2 left-2 sm:top-3 sm:left-3">
               <Badge>마감됨</Badge>
             </span>
           )}
         </div>
       </Link>
-      <div className="flex flex-col gap-2 p-4 md:p-6">
-        {/* 좁은 카드(두 칸)에서는 분야·D-day 배지가 줄을 바꿔도 되게 */}
+      {/* 휴대폰 목록형에서는 오른쪽 위 북마크 버튼 자리(pr-14)를 비운다 */}
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-4 pr-14 sm:pr-4 md:p-6">
+        {/* 좁은 카드에서는 분야·D-day 배지가 줄을 바꿔도 되게 */}
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="primary-soft">{contest.categoryName}</Badge>
           {!contest.isClosed && <DDayBadge dDay={contest.dDay} />}

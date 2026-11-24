@@ -42,7 +42,7 @@ function ContestGrid({
   onToast: (message: string) => void
 }) {
   return (
-    <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
       {contests.map((contest) => (
         <li key={contest.contestId}>
           <ContestCard contest={contest} highlight={highlight} onToast={onToast} />
@@ -102,10 +102,13 @@ function SearchResults({
     return (
       <ul
         aria-busy="true"
-        className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4"
       >
         {Array.from({ length: 4 }, (_, index) => (
-          <li key={index} className="aspect-3/4 animate-pulse rounded-card bg-surface-sub" />
+          <li
+            key={index}
+            className="h-32 animate-pulse rounded-card bg-surface-sub sm:aspect-3/4 sm:h-auto"
+          />
         ))}
       </ul>
     )
