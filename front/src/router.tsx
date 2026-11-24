@@ -26,6 +26,10 @@ import PostCreatePage from './pages/posts/PostCreatePage'
 import PostDetailPage from './pages/posts/PostDetailPage'
 import PostEditPage from './pages/posts/PostEditPage'
 import PostListPage from './pages/posts/PostListPage'
+import BoardCreatePage from './pages/board/BoardCreatePage'
+import BoardDetailPage from './pages/board/BoardDetailPage'
+import BoardEditPage from './pages/board/BoardEditPage'
+import BoardListPage from './pages/board/BoardListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 import { WorkspaceLayout } from './features/workspace/components/WorkspaceLayout'
 import { WorkspacePlaceholder } from './features/workspace/components/WorkspacePlaceholder'
@@ -120,6 +124,9 @@ export const router = createBrowserRouter([
       { path: '/posts', element: <PostListPage /> },
       // PST-005 모집글 상세 (비회원도 본다. /posts/new는 아래 로그인 그룹이 먼저 받는다)
       { path: '/posts/:postId', element: <PostDetailPage /> },
+      // BRD-001·004 커뮤니티 게시판 목록·상세 (비회원도 본다. /board/new는 아래 로그인 그룹이 먼저 받는다)
+      { path: '/board', element: <BoardListPage /> },
+      { path: '/board/:boardPostId', element: <BoardDetailPage /> },
       // 정진우 AUTH (로그인 화면 경로 /login, 돌아갈 주소는 ?redirect=)
       {
         element: <RequireGuest />,
@@ -150,6 +157,9 @@ export const router = createBrowserRouter([
           { path: '/posts/new', element: <PostCreatePage /> },
           // PST-003 모집글 수정 (작성자가 아니면 화면이 막고, 서버도 403)
           { path: '/posts/:postId/edit', element: <PostEditPage /> },
+          // BRD-002·003 게시글 작성·수정
+          { path: '/board/new', element: <BoardCreatePage /> },
+          { path: '/board/:boardPostId/edit', element: <BoardEditPage /> },
           { path: '/service-notices/:serviceNoticeId', element: <ServiceNoticePage /> },
           // WS-08 워크스페이스 팀 목록 (GNB 「워크스페이스」). 팀을 고르면 아래 /workspaces/:teamId로
           { path: '/workspaces', element: <WorkspaceListPage /> },

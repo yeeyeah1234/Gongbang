@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchContests } from '../contest/api'
 import { useViewer } from '../contest/hooks'
+import type { ContestStatus } from '../contest/types'
 import {
   acceptApplication,
   applyToPost,
@@ -56,13 +57,13 @@ export function useCreatePost() {
 // PST-002 ②: 진행 중인 공모전을 제목으로 검색 (최규선 MAIN-01 API, status=active)
 const CONTEST_SEARCH_SIZE = 8
 
-export function useActiveContestSearch(keyword: string) {
+export function useContestSearch(keyword: string, status: ContestStatus = 'active') {
   return useQuery({
-    queryKey: ['contest-search', 'post-form', keyword],
+    queryKey: ['contest-search', status, keyword],
     enabled: keyword.length > 0,
     queryFn: () =>
       fetchContests({
-        status: 'active',
+        status,
         sort: 'deadline',
         keyword,
         page: 0,
