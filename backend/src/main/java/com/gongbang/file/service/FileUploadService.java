@@ -25,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 public class FileUploadService {
 
     public static final long MAX_FILE_SIZE_BYTES = 5L * 1024 * 1024;
-    private static final int HEADER_READ_BYTES = 64;
     private static final int MAX_ORIGINAL_NAME_LENGTH = 255;
 
     private final UploadedFileRepository uploadedFileRepository;
@@ -118,14 +117,12 @@ public class FileUploadService {
     }
 
     private AllowedImageType detectImageType(MultipartFile file) {
-        byte[] header;
         try (InputStream in = file.getInputStream()) {
-            header = in.readNBytes(HEADER_READ_BYTES);
+            return AllowedImageType.detect(in)
+                    .orElseThrow(() -> new BusinessException(ErrorCode.UNSUPPORTED_FILE_TYPE));
         } catch (IOException e) {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "업로드할 파일을 읽을 수 없어요.");
         }
-        return AllowedImageType.detect(header)
-                .orElseThrow(() -> new BusinessException(ErrorCode.UNSUPPORTED_FILE_TYPE));
     }
 
     private void storeBinary(String storageKey, String contentType, MultipartFile file) {

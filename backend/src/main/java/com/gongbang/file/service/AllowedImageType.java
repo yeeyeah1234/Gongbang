@@ -1,5 +1,7 @@
 package com.gongbang.file.service;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Optional;
 
 /** 파일 매직 바이트 기반으로 허용된 이미지 형식(JPG·PNG·WEBP·GIF·AVIF)을 판별한다. */
@@ -9,6 +11,8 @@ public enum AllowedImageType {
     WEBP("webp", "image/webp"),
     GIF("gif", "image/gif"),
     AVIF("avif", "image/avif");
+
+    private static final int HEADER_READ_BYTES = 64;
 
     private final String extension;
     private final String contentType;
@@ -24,6 +28,14 @@ public enum AllowedImageType {
 
     public String contentType() {
         return contentType;
+    }
+
+    /** 입력 스트림 앞부분 바이트만으로 실제 이미지 형식을 판별한다. */
+    public static Optional<AllowedImageType> detect(InputStream in) throws IOException {
+        if (in == null) {
+            return Optional.empty();
+        }
+        return detect(in.readNBytes(HEADER_READ_BYTES));
     }
 
     /** 파일 앞부분 바이트만으로 실제 이미지 형식을 판별한다 (확장자·Content-Type 스푸핑 방지). */

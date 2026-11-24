@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -41,6 +42,24 @@ public class LocalFileStorage implements FileStorage {
     }
 
     @Override
+    public Optional<String> extractKey(String url) {
+        if (url == null || url.isBlank() || !url.startsWith(UPLOADS_PREFIX)) {
+            return Optional.empty();
+        }
+        String candidate = url.substring(UPLOADS_PREFIX.length());
+        if (candidate.contains("\\") || candidate.contains("?") || candidate.contains("#")) {
+            return Optional.empty();
+        }
+        try {
+            String key = normalizeKey(candidate);
+            resolveSafePath(key);
+            return Optional.of(key);
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
     public void deleteQuietly(String storageKey) {
         try {
             Files.deleteIfExists(resolveSafePath(storageKey));
@@ -66,6 +85,18 @@ public class LocalFileStorage implements FileStorage {
         while (normalized.startsWith("/")) {
             normalized = normalized.substring(1);
         }
+        if (normalized.isBlank() || hasUnsafeSegment(normalized)) {
+            throw new IllegalArgumentException("Invalid storage key: " + storageKey);
+        }
         return normalized;
+    }
+
+    private static boolean hasUnsafeSegment(String key) {
+        for (String segment : key.split("/", -1)) {
+            if ("..".equals(segment) || ".".equals(segment)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -2,6 +2,7 @@ package com.gongbang.file.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -56,13 +57,16 @@ class AllowedImageTypeTest {
     }
 
     @Test
-    @DisplayName("SVG·PDF·빈 바이트·짧은 헤더는 거부한다")
-    void 지원하지_않는_형식() {
+    @DisplayName("SVG·PDF·빈 바이트·짧은 헤더는 거부하고 InputStream 오버로드도 동일하게 동작한다")
+    void 지원하지_않는_형식() throws Exception {
         assertThat(AllowedImageType.detect(ascii("<svg xmlns=\"http://www.w3.org/2000/svg\">")))
                 .isEmpty();
         assertThat(AllowedImageType.detect(ascii("%PDF-1.7"))).isEmpty();
         assertThat(AllowedImageType.detect(new byte[0])).isEmpty();
         assertThat(AllowedImageType.detect(new byte[] {(byte) 0xFF, (byte) 0xD8})).isEmpty();
-        assertThat(AllowedImageType.detect(null)).isEmpty();
+        assertThat(AllowedImageType.detect((byte[]) null)).isEmpty();
+        assertThat(AllowedImageType.detect((ByteArrayInputStream) null)).isEmpty();
+        assertThat(AllowedImageType.detect(new ByteArrayInputStream(PNG)))
+                .contains(AllowedImageType.PNG);
     }
 }

@@ -2,6 +2,7 @@ package com.gongbang.file.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -40,6 +41,23 @@ public class S3FileStorage implements FileStorage {
     }
 
     @Override
+    public Optional<String> extractKey(String url) {
+        String prefix = publicBaseUrl + "/";
+        if (url == null || url.isBlank() || !url.startsWith(prefix)) {
+            return Optional.empty();
+        }
+        String candidate = url.substring(prefix.length());
+        if (candidate.contains("\\") || candidate.contains("?") || candidate.contains("#")) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(normalizeKey(candidate));
+        } catch (IllegalArgumentException e) {
+            return Optional.empty();
+        }
+    }
+
+    @Override
     public void deleteQuietly(String storageKey) {
         if (storageKey == null || storageKey.isBlank()) {
             return;
@@ -60,9 +78,18 @@ public class S3FileStorage implements FileStorage {
         while (normalized.startsWith("/")) {
             normalized = normalized.substring(1);
         }
-        if (normalized.contains("..")) {
+        if (normalized.isBlank() || hasUnsafeSegment(normalized)) {
             throw new IllegalArgumentException("Invalid storage key: " + storageKey);
         }
         return normalized;
+    }
+
+    private static boolean hasUnsafeSegment(String key) {
+        for (String segment : key.split("/", -1)) {
+            if ("..".equals(segment) || ".".equals(segment)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
