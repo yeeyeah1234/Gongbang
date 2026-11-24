@@ -113,6 +113,8 @@ public enum ErrorCode {
     AUTO_EVENT_NOT_EDITABLE(HttpStatus.FORBIDDEN, "AUTO_EVENT_NOT_EDITABLE", "자동 일정은 바꿀 수 없어요"),
     // TODO(확인 필요): 기능정의서 문구를 찾지 못해 임시로 정함 (DOC-04)
     NOT_DOCUMENT_AUTHOR(HttpStatus.FORBIDDEN, "NOT_DOCUMENT_AUTHOR", "작성자나 팀장만 지울 수 있어요"),
+    // TODO(확인 필요): API 명세서 WB-01에 「403」만 있고 코드·문구가 없어 NOT_DOCUMENT_AUTHOR와 같게 임시로 정함
+    NOT_WHITEBOARD_AUTHOR(HttpStatus.FORBIDDEN, "NOT_WHITEBOARD_AUTHOR", "작성자나 팀장만 지울 수 있어요"),
     // TODO(확인 필요): 기능정의서 문구 미정 (NET-04, NET-05)
     NOT_CHAT_ROOM_MEMBER(HttpStatus.FORBIDDEN, "NOT_CHAT_ROOM_MEMBER", "채팅방 참여자만 접근할 수 있습니다."),
 
@@ -172,6 +174,8 @@ public enum ErrorCode {
     ALREADY_APPLIED(HttpStatus.CONFLICT, "ALREADY_APPLIED", "이미 지원한 모집글입니다."),
     POST_FULL(HttpStatus.CONFLICT, "POST_FULL", "모집 인원이 모두 충원되었습니다."),
     DOCUMENT_LIMIT(HttpStatus.CONFLICT, "DOCUMENT_LIMIT", "문서 개수 제한을 초과했습니다."),
+    // WB-01 ③ (API 명세서 409 WHITEBOARD_LIMIT). TODO(확인 필요): 기능정의서에 문구가 없어 DOC-02 ⑤에 맞춰 임시로 정함
+    WHITEBOARD_LIMIT(HttpStatus.CONFLICT, "WHITEBOARD_LIMIT", "보드는 30개까지 만들 수 있어요"),
     // REC-001 ③, REC-006 ③ 문구
     POST_COMPLETED(HttpStatus.CONFLICT, "POST_COMPLETED", "모집이 완료된 게시글입니다"),
     // PST-007 ② 문구

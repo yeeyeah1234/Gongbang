@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import WorkspaceCalendarRoute from './pages/WorkspaceCalendarRoute'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
+import WorkspaceBoardPage from './pages/WorkspaceBoardPage'
 import WorkspaceDocumentPage from './pages/WorkspaceDocumentPage'
 import WorkspaceListPage from './pages/WorkspaceListPage'
 import WorkspaceNoticePage from './pages/WorkspaceNoticePage'
@@ -33,7 +34,6 @@ import BoardEditPage from './pages/board/BoardEditPage'
 import BoardListPage from './pages/board/BoardListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 import { WorkspaceLayout } from './features/workspace/components/WorkspaceLayout'
-import { WorkspacePlaceholder } from './features/workspace/components/WorkspacePlaceholder'
 import AdminVerificationPage from './pages/admin/AdminVerificationPage'
 import { AdminLayout } from './features/admin/AdminLayout'
 import AdminMembersPage from './pages/admin/AdminMembersPage'
@@ -118,6 +118,38 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             path: '*',
             lazy: async () => ({
               Component: (await import('./pages/dev/CalendarPreviewPage')).CalendarPreviewRedirect,
+            }),
+          },
+        ],
+      },
+      {
+        path: '/dev/board-preview',
+        element: <Navigate to="/dev/board-preview/normal" replace />,
+      },
+      {
+        // WB-01 화이트보드 사이드바를 백엔드·로그인 없이 본다: {normal|empty|error|member}
+        path: '/dev/board-preview/:view',
+        lazy: async () => ({
+          Component: (await import('./pages/dev/BoardPreviewPage')).default,
+        }),
+        children: [
+          {
+            path: 'board/:boardId?',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/BoardPreviewPage')).BoardPreviewTab,
+            }),
+          },
+          {
+            // 첫 진입과 다른 탭은 화이트보드 탭으로
+            index: true,
+            lazy: async () => ({
+              Component: (await import('./pages/dev/BoardPreviewPage')).BoardPreviewRedirect,
+            }),
+          },
+          {
+            path: '*',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/BoardPreviewPage')).BoardPreviewRedirect,
             }),
           },
         ],
@@ -226,7 +258,8 @@ export const router = createBrowserRouter([
           { path: 'chat', element: <WorkspaceChatPage /> },
           // DOC-01~04 문서 사이드바: documentId가 없으면 마지막으로 연 문서 또는 첫 문서로 옮긴다
           { path: 'docs/:documentId?', element: <WorkspaceDocumentPage /> },
-          { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
+          // WB-01 화이트보드 사이드바: boardId가 없으면 마지막으로 연 보드 또는 첫 보드로 옮긴다
+          { path: 'board/:boardId?', element: <WorkspaceBoardPage /> },
           // CAL-01·03·04·05·08 월간 캘린더 (WorkspaceCalendarRoute가 lazy로 불러온다)
           { path: 'calendar', element: <WorkspaceCalendarRoute /> },
           // NTC-01: noticeId가 없으면 목록의 첫 공지로 옮긴다

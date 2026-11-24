@@ -8,7 +8,7 @@ import { usePopularContests, useSearch } from '../features/search/hooks'
 import type { SearchSort, SearchType } from '../features/search/types'
 import { useTimedToast } from '../hooks/useTimedToast'
 
-const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
+const PAGE_CLASS = 'mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]'
 
 // SRCH-02 ① 결과 유형 탭
 const TABS: { value: SearchType; label: string }[] = [
@@ -42,7 +42,7 @@ function ContestGrid({
   onToast: (message: string) => void
 }) {
   return (
-    <ul className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
+    <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
       {contests.map((contest) => (
         <li key={contest.contestId}>
           <ContestCard contest={contest} highlight={highlight} onToast={onToast} />
@@ -100,9 +100,15 @@ function SearchResults({
 
   if (isPending) {
     return (
-      <ul aria-busy="true" className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
+      <ul
+        aria-busy="true"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4"
+      >
         {Array.from({ length: 4 }, (_, index) => (
-          <li key={index} className="aspect-3/4 animate-pulse rounded-card bg-surface-sub" />
+          <li
+            key={index}
+            className="h-32 animate-pulse rounded-card bg-surface-sub sm:aspect-3/4 sm:h-auto"
+          />
         ))}
       </ul>
     )
@@ -140,7 +146,7 @@ export default function SearchPage() {
 
       <div className="flex flex-wrap items-end justify-between gap-4 border-b border-divider">
         {/* SRCH-02 ①: 탭은 하나만 선택 (기본 [전체]) */}
-        <div role="tablist" aria-label="검색 결과 유형" className="flex gap-10">
+        <div role="tablist" aria-label="검색 결과 유형" className="flex gap-6 md:gap-10">
           {TABS.map((tab) => {
             const isActive = tab.value === type
             return (
@@ -162,7 +168,7 @@ export default function SearchPage() {
           })}
         </div>
 
-        <div className="mb-3 flex items-center gap-6">
+        <div className="mb-3 flex flex-wrap items-center gap-4 md:gap-6">
           {/* SRCH-02 ①: 기본은 해제. 켜면 마감된 공모전도 「마감됨」 배지와 어둡게 보여 준다 */}
           <label className="flex cursor-pointer items-center gap-2 text-body">
             <input
@@ -190,7 +196,7 @@ export default function SearchPage() {
         </div>
       </div>
 
-      <section className="mt-8">
+      <section className="mt-6 md:mt-8">
         <SearchResults
           keyword={keyword}
           type={type}

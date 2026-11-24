@@ -17,7 +17,7 @@ import { sanitizeDescription } from '../features/contest/sanitizeDescription'
 import type { ContestDetail } from '../features/contest/types'
 import { useTimedToast } from '../hooks/useTimedToast'
 
-const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
+const PAGE_CLASS = 'mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]'
 
 // 2026-12-06 → 2026.12.06
 function formatDate(date: string | null) {
@@ -59,7 +59,7 @@ function DetailSkeleton() {
           <div className="h-10 w-3/4 animate-pulse rounded-lg bg-surface-sub" />
           <div className="h-60 animate-pulse rounded-lg bg-surface-sub" />
         </div>
-        <div className="aspect-3/4 w-full animate-pulse rounded-card bg-surface-sub lg:w-100" />
+        <div className="order-first mx-auto aspect-3/4 w-full max-w-100 animate-pulse rounded-card bg-surface-sub lg:order-none lg:w-100 lg:max-w-none" />
       </div>
     </main>
   )
@@ -113,30 +113,68 @@ export default function ContestDetailPage() {
     toast.show('링크를 복사했어요')
   }
 
-  return (
-    <main className={PAGE_CLASS}>
-      <title>{`${contest.title} | 공방`}</title>
-      <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
-        <article className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="primary-soft">{contest.categoryName}</Badge>
-            {/* MAIN-02 ⑥: 마감된 공모전은 「마감됨」 */}
-            {contest.isClosed ? <Badge>마감됨</Badge> : <DDayBadge dDay={contest.dDay} />}
-          </div>
-          <h1 className="mt-4 text-title font-bold break-keep">{contest.title}</h1>
+  // MAIN-02 ④ 버튼. [바로가기]는 위비티가 아닌 주최 측 원래 페이지로, 주소가 없으면 비활성
+  const actionButtons = (
+    <>
+      {/* 비활성 버튼은 마우스 이벤트를 받지 않아서 안내 문구(title)는 감싼 span에 둔다 */}
+      <span className="flex flex-1" title={contest.homepageUrl ? undefined : NO_HOMEPAGE_MESSAGE}>
+        <Button
+          variant="primary"
+          className="flex-1"
+          disabled={!contest.homepageUrl}
+          onClick={() => {
+            if (contest.homepageUrl) {
+              window.open(contest.homepageUrl, '_blank', 'noopener,noreferrer')
+            }
+          }}
+        >
+          바로가기
+        </Button>
+      </span>
+      <Button variant="outline" aria-pressed={contest.isBookmarked} onClick={handleBookmark}>
+        <span
+          className={`inline-flex items-center gap-1.5 ${contest.isBookmarked ? 'text-primary' : ''}`}
+        >
+          <BookmarkIcon filled={contest.isBookmarked} />
+          북마크
+        </span>
+      </Button>
+      <Button variant="outline" onClick={handleCopyLink}>
+        복사
+      </Button>
+    </>
+  )
 
-          {/* MAIN-02 ②: 주최/주관, 접수기간 */}
-          <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-body">
-            <dt className="text-text-sub">주최/주관</dt>
-            <dd>{contest.host}</dd>
-            <dt className="text-text-sub">접수기간</dt>
-            <dd>
-              {formatDate(contest.startDate)} ~ {formatDate(contest.deadline)}
-            </dd>
-          </dl>
+  return (
+    // 768px 미만은 아래 고정 버튼 줄(높이 약 68px)에 본문 끝이 가리지 않게 아래 여백을 더 둔다
+    <main className={`${PAGE_CLASS} max-md:pb-28`}>
+      <title>{`${contest.title} | 공방`}</title>
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10">
+        {/* 1024px 미만에서는 article을 contents로 풀어 「제목·기간 → 포스터·버튼 → 본문」 순서로 놓는다 (#117) */}
+        <article className="contents lg:block lg:min-w-0 lg:flex-1">
+          <header className="order-1 lg:order-none">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="primary-soft">{contest.categoryName}</Badge>
+              {/* MAIN-02 ⑥: 마감된 공모전은 「마감됨」 */}
+              {contest.isClosed ? <Badge>마감됨</Badge> : <DDayBadge dDay={contest.dDay} />}
+            </div>
+            <h1 className="mt-4 text-heading font-bold break-keep md:text-title">
+              {contest.title}
+            </h1>
+
+            {/* MAIN-02 ②: 주최/주관, 접수기간 */}
+            <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-body">
+              <dt className="text-text-sub">주최/주관</dt>
+              <dd>{contest.host}</dd>
+              <dt className="text-text-sub">접수기간</dt>
+              <dd>
+                {formatDate(contest.startDate)} ~ {formatDate(contest.deadline)}
+              </dd>
+            </dl>
+          </header>
 
           {/* MAIN-02 ②: 크롤링한 상세 본문 (DOMPurify로 정리한 HTML) */}
-          <section className="mt-10 border-t border-divider pt-10">
+          <section className="order-3 border-t border-divider pt-8 lg:order-none lg:mt-10 lg:pt-10">
             <div
               className="text-body-lg break-words [&_a]:text-primary [&_a]:underline [&_img]:mx-auto [&_img]:my-4 [&_img]:h-auto [&_img]:max-w-full"
               dangerouslySetInnerHTML={{ __html: safeDescription }}
@@ -162,54 +200,26 @@ export default function ContestDetailPage() {
           </section>
         </article>
 
-        {/* MAIN-02 ③: 포스터와 조회수. 넓은 화면에서는 본문을 내려도 GNB(72px) 아래에 고정된다 */}
-        <aside className="w-full lg:sticky lg:top-24 lg:w-100 lg:shrink-0 lg:self-start">
+        {/* MAIN-02 ③: 포스터와 조회수. 넓은 화면에서는 본문을 내려도 GNB(72px) 아래에 고정된다.
+            1024px 미만에서는 긴 본문 아래로 밀리지 않게 제목과 본문 사이에, 최대 400px(휴대폰 288px)로 가운데 둔다 (#117) */}
+        <aside className="order-2 mx-auto w-full max-w-72 sm:max-w-100 lg:sticky lg:top-24 lg:order-none lg:mx-0 lg:w-100 lg:max-w-none lg:shrink-0 lg:self-start">
           <div className="overflow-hidden rounded-card border border-line bg-surface">
             <div className="aspect-3/4 bg-surface-sub">
               <Poster contest={contest} />
             </div>
-            <p className="px-6 pt-4 text-small text-text-sub">
+            <p className="px-4 py-4 text-small text-text-sub md:px-6 md:pb-0">
               조회수 {contest.viewCount.toLocaleString()}
             </p>
 
-            {/* MAIN-02 ④ 버튼. [바로가기]는 위비티가 아닌 주최 측 원래 페이지로, 주소가 없으면 비활성 */}
-            <div className="flex gap-2 p-6 pt-4">
-              {/* 비활성 버튼은 마우스 이벤트를 받지 않아서 안내 문구(title)는 감싼 span에 둔다 */}
-              <span
-                className="flex flex-1"
-                title={contest.homepageUrl ? undefined : NO_HOMEPAGE_MESSAGE}
-              >
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  disabled={!contest.homepageUrl}
-                  onClick={() => {
-                    if (contest.homepageUrl) {
-                      window.open(contest.homepageUrl, '_blank', 'noopener,noreferrer')
-                    }
-                  }}
-                >
-                  바로가기
-                </Button>
-              </span>
-              <Button
-                variant="outline"
-                aria-pressed={contest.isBookmarked}
-                onClick={handleBookmark}
-              >
-                <span
-                  className={`inline-flex items-center gap-1.5 ${contest.isBookmarked ? 'text-primary' : ''}`}
-                >
-                  <BookmarkIcon filled={contest.isBookmarked} />
-                  북마크
-                </span>
-              </Button>
-              <Button variant="outline" onClick={handleCopyLink}>
-                복사
-              </Button>
-            </div>
+            {/* MAIN-02 ④ 버튼. 768px 미만(휴대폰)에서는 화면 아래 고정 줄로 옮긴다 */}
+            <div className="hidden gap-2 p-6 pt-4 md:flex">{actionButtons}</div>
           </div>
         </aside>
+      </div>
+
+      {/* 휴대폰: 본문을 내려도 바로가기·북마크·복사를 누를 수 있게 화면 아래에 고정 (#117 2차) */}
+      <div className="fixed inset-x-0 bottom-0 z-20 flex gap-2 border-t border-divider bg-surface px-4 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] md:hidden">
+        {actionButtons}
       </div>
 
       <Modal
