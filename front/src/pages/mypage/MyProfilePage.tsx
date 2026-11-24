@@ -19,7 +19,7 @@ import {
 import { HistorySection } from '../../features/member/components/HistorySection'
 import { LeaveConfirmModal } from '../../features/member/components/LeaveConfirmModal'
 import { MyPageLayout } from '../../features/member/components/MyPageLayout'
-import { ProfilePhoto } from '../../features/member/components/ProfilePhoto'
+import { ProfilePhoto } from '../../components/ui/ProfilePhoto'
 import { PublicProfileCard } from '../../features/member/components/PublicProfileCard'
 import { VerifyBadge } from '../../features/member/components/VerifyBadge'
 import {

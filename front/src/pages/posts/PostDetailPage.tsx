@@ -8,7 +8,7 @@ import { Toast } from '../../components/ui/Toast'
 import { CommentSection } from '../../features/comment/components/CommentSection'
 import { DDayBadge, DefaultThumbnail } from '../../features/contest/components/ContestCard'
 import { ImageSlider } from '../../features/post/components/ImageSlider'
-import { MemberPhoto } from '../../features/post/components/MemberPhoto'
+import { ProfilePhoto } from '../../components/ui/ProfilePhoto'
 import { PostDeleteButton } from '../../features/post/components/PostDeleteButton'
 import { PostApplyPanel, StatusBadge } from '../../features/post/components/PostApplyPanel'
 import { usePostDetail } from '../../features/post/hooks'
@@ -241,11 +241,7 @@ function AuthorLine({
         redirectTo={`/posts/${post.postId}`}
         onReportSuccess={onReportSuccess}
       >
-        <MemberPhoto
-          url={post.author.profileImageUrl}
-          nickname={nickname}
-          className="size-8 text-caption"
-        />
+        <ProfilePhoto url={post.author.profileImageUrl} name={nickname} size="sm" decorative />
         {nickname}
       </MemberActionPopover>
       <span aria-hidden="true">·</span>

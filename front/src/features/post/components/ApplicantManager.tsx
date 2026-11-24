@@ -5,7 +5,7 @@ import { Button } from '../../../components/ui/Button'
 import { Modal } from '../../../components/ui/Modal'
 import { useAcceptApplication, useApplicants, useRejectApplication } from '../hooks'
 import type { Applicant, ApplicantStatus, PostDetail } from '../types'
-import { MemberPhoto } from './MemberPhoto'
+import { ProfilePhoto } from '../../../components/ui/ProfilePhoto'
 
 interface ApplicantManagerProps {
   post: PostDetail
@@ -233,7 +233,7 @@ function ApplicantRow({
   return (
     // 좁은 화면에서는 버튼 줄이 아래로 내려가 이름이 가려지지 않게 한다
     <li className="flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-line py-4">
-      <MemberPhoto url={member.profileImageUrl} nickname={name} className="size-12 text-body" />
+      <ProfilePhoto url={member.profileImageUrl} name={name} size="md" decorative />
       <div className="min-w-0 flex-1">
         <p className="truncate text-body font-bold text-text">{name}</p>
         {intro && <p className="truncate text-small text-text-sub">{intro}</p>}
