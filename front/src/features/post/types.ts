@@ -26,6 +26,7 @@ export interface PostListItem {
   currentCount: number // 작성자 포함 확정 팀원 수 (PST-001 ③)
   targetCount: number
   status: PostStatus
+  recruitEndDate: string // YYYY-MM-DD. 모집중인데 지났으면 「모집마감」으로 보여 준다 (PST-001 ④)
 }
 
 // API 명세서 PST-002 POST /api/posts. contestId와 external 중 하나만 보낸다.

@@ -101,7 +101,7 @@ export default function PostDetailPage() {
               {post.currentCount} / {post.targetCount}명
             </InfoRow>
             <InfoRow label="모집 상태">
-              <StatusBadge status={post.status} />
+              <StatusBadge status={post.status} recruitEndDate={post.recruitEndDate} />
             </InfoRow>
             <InfoRow label="모집 기간">
               {formatDate(post.recruitStartDate)} ~ {formatDate(post.recruitEndDate)}
@@ -121,10 +121,13 @@ export default function PostDetailPage() {
           {/* TODO(확인 필요): 김건우 댓글·대댓글 컴포넌트가 생기면 여기에 붙인다 */}
         </article>
 
-        {/* PST-006 ②③ 오른쪽 고정 영역 */}
-        <aside className="flex flex-col gap-6 lg:sticky lg:top-6 lg:self-start">
-          <PostApplyPanel post={post} onError={toast.show} />
+        {/* PST-005 ⑤ 사진은 공모전 상세(MAIN-02 ③) 포스터 칸과 같은 세로 3:4로 위에 두고,
+            PST-006 ②③ 지원 패널만 GNB(72px) 아래에 고정한다. 둘을 함께 고정하면 화면보다 길어져 사진 아래가 잘린다 */}
+        <aside className="flex flex-col gap-6">
           <RepresentativeImage post={post} />
+          <div className="lg:sticky lg:top-24">
+            <PostApplyPanel post={post} onError={toast.show} />
+          </div>
         </aside>
       </div>
       <Toast message={toast.message} />
@@ -180,8 +183,9 @@ function ContestCard({ contest }: { contest: PostDetail['contest'] }) {
       </div>
     </>
   )
+  // 「공모전 보기」는 카드 오른쪽 아래 (제목 줄 높이에 맞춘다)
   const cardClass =
-    'flex items-center justify-between gap-6 rounded-card border border-line bg-surface px-6 py-5'
+    'flex items-end justify-between gap-6 rounded-card border border-line bg-surface px-6 py-5'
   const more = <span className="shrink-0 text-small text-text-sub">공모전 보기 ›</span>
 
   if (contest.contestId !== null) {
@@ -253,12 +257,13 @@ function RepresentativeImage({ post }: { post: PostDetail }) {
         images={post.images}
         label="공모전 사진"
         altPrefix={`${post.contest.title} 사진`}
+        aspectClass="aspect-3/4"
       />
     )
   return (
     <section
       aria-label="대표 이미지"
-      className="aspect-4/3 overflow-hidden rounded-card border border-line bg-surface-sub"
+      className="aspect-3/4 overflow-hidden rounded-card border border-line bg-surface-sub"
     >
       {post.imageUrl && !failed ? (
         <img

@@ -110,6 +110,8 @@ class PostQueryServiceTest {
         assertThat(service.currentCount()).isEqualTo(1);
         assertThat(service.targetCount()).isEqualTo(4);
         assertThat(service.status()).isEqualTo(PostStatus.RECRUITING);
+        // ④ 「모집마감」 표시용 모집 종료일
+        assertThat(service.recruitEndDate()).isEqualTo(DEADLINE);
         assertThat(service.author().memberId()).isEqualTo(7L);
 
         PostListItemResponse external = result.items().get(1);
