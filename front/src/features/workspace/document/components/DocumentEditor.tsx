@@ -1,21 +1,57 @@
 import { Collaboration } from '@tiptap/extension-collaboration'
-import { CollaborationCaret } from '@tiptap/extension-collaboration-caret'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
+import type { EditorProps } from '@tiptap/pm/view'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Awareness } from 'y-protocols/awareness'
 import { useLoginMember } from '../../../auth/store'
 import { useWorkspace } from '../../context'
 import { isValidMemberColorIndex, resolveCursorColor } from '../cursorColor'
+import { ImeSafeCollaborationCaret } from '../imeSafeCollaborationCaret'
 import { ListMaxDepth } from '../listDepthExtension'
 import { isSafeHttpUrl, normalizeSafeHttpUrl } from '../urlSafety'
-import { useDocumentSync } from '../useDocumentSync'
+import {
+  useDocumentSyncConnection,
+  useDocumentSyncSession,
+  type SyncSessionHandle,
+} from '../useDocumentSync'
 import { DocumentSaveStatus } from './DocumentSaveStatus'
 import { DocumentToolbar } from './DocumentToolbar'
 import { LinkModal } from './LinkModal'
 
 // DOC-09: 3초 동안 입력·커서 변화가 없으면 원격 커서 이름표만 숨긴다
 const CARET_LABEL_IDLE_MS = 3_000
+
+// useEditor 옵션 객체가 매 렌더 새로 만들어지지 않도록 모듈 상수로 고정한다
+const EDITOR_PROPS: EditorProps = {
+  attributes: {
+    'aria-label': '문서 본문',
+  },
+  // 선택 영역이 없는 상태에서 http(s) URL만 붙여넣을 때도 즉시 클릭 가능한 링크로 삽입
+  handlePaste: (view, event) => {
+    const text = event.clipboardData?.getData('text/plain')?.trim() ?? ''
+    if (!text || /\s/.test(text)) return false
+    const safeUrl = normalizeSafeHttpUrl(text)
+    if (!safeUrl) return false
+    const linkMarkType = view.state.schema.marks.link
+    if (!linkMarkType) return false
+
+    const { from, empty } = view.state.selection
+    if (!empty) {
+      // 선택 텍스트가 있으면 Tiptap 기본 linkOnPaste가 처리
+      return false
+    }
+    const linkMark = linkMarkType.create({
+      href: safeUrl,
+      target: '_blank',
+      rel: 'noopener noreferrer nofollow',
+    })
+    const tr = view.state.tr.insert(from, view.state.schema.text(safeUrl, [linkMark]))
+    view.dispatch(tr.scrollIntoView())
+    return true
+  },
+}
 
 export interface DocumentEditorProps {
   teamId: number
@@ -61,6 +97,57 @@ function isEditorAlive(editor: Editor | null): editor is Editor {
   return editor !== null && !editor.isDestroyed
 }
 
+function isSameAwarenessUser(a: AwarenessUser, b: AwarenessUser): boolean {
+  return (
+    a.name === b.name &&
+    a.colorIndex === b.colorIndex &&
+    a.clientKey === b.clientKey &&
+    a.memberId === b.memberId
+  )
+}
+
+function applyAwarenessUser(awareness: Awareness, user: AwarenessUser): void {
+  if (awareness.getLocalState() === null) {
+    awareness.setLocalState({ user })
+    return
+  }
+  awareness.setLocalStateField('user', user)
+}
+
+interface DocumentSyncStatusOverlayProps {
+  session: SyncSessionHandle
+  teamId: number
+  documentId: number
+  offlinePreview: boolean
+  onDocumentGone: (documentId: number) => void
+  onForbidden: () => void
+}
+
+// WS-04: 저장·접속 상태 구독을 별도 자식으로 분리해 입력 중 DocumentEditor 전체가 리렌더링되지 않게 한다
+function DocumentSyncStatusOverlay({
+  session,
+  teamId,
+  documentId,
+  offlinePreview,
+  onDocumentGone,
+  onForbidden,
+}: DocumentSyncStatusOverlayProps) {
+  const { saveState, retrySync } = useDocumentSyncConnection({
+    session,
+    teamId,
+    documentId,
+    offlinePreview,
+    onDocumentGone,
+    onForbidden,
+  })
+
+  return (
+    <div className="pointer-events-none absolute right-4 bottom-4 z-10">
+      <DocumentSaveStatus state={saveState} onRetry={retrySync} />
+    </div>
+  )
+}
+
 // DOC-05~10 Tiptap + Yjs 동시 편집 에디터 (DocumentEditorPane이 React.lazy로 불러온다)
 export default function DocumentEditor({
   teamId,
@@ -73,21 +160,28 @@ export default function DocumentEditor({
   const { summary } = useWorkspace()
   const loginMember = useLoginMember()
   const editorContainerRef = useRef<HTMLDivElement | null>(null)
+  const editorRef = useRef<Editor | null>(null)
+  const composingRef = useRef(false)
+  const hasPendingLabelSyncRef = useRef(false)
+  const pendingUserRef = useRef<AwarenessUser | null>(null)
   const [caretIdleTracker] = useState(createCaretIdleTracker)
 
-  const { session, saveState, retrySync } = useDocumentSync({
-    teamId,
-    documentId,
-    offlinePreview,
-    onDocumentGone,
-    onForbidden,
-  })
+  const session = useDocumentSyncSession(documentId, offlinePreview)
 
   const nickname = loginMember?.nickname ?? '팀원'
   const cursorColor = resolveCursorColor({ memberId: summary.myMemberId })
   const myMemberId = summary.myMemberId
   const myColorIndex = cursorColor.colorIndex
   const myClientKey = `${myMemberId}-${session.instanceId}`
+
+  // 연결 시점의 사용자 정보를 1회 고정해 extensions가 문서 전환 외에는 재생성되지 않게 한다
+  const [initialUser] = useState<AwarenessUser>(() => ({
+    name: nickname,
+    colorIndex: myColorIndex,
+    clientKey: myClientKey,
+    memberId: myMemberId,
+  }))
+  const lastAppliedUserRef = useRef<AwarenessUser>(initialUser)
 
   const [linkModalState, setLinkModalState] = useState<{
     open: boolean
@@ -128,14 +222,9 @@ export default function DocumentEditor({
 
     if (session.provider) {
       baseExtensions.push(
-        CollaborationCaret.configure({
+        ImeSafeCollaborationCaret.configure({
           provider: session.provider,
-          user: {
-            name: nickname,
-            colorIndex: myColorIndex,
-            clientKey: myClientKey,
-            memberId: myMemberId,
-          },
+          user: { ...initialUser },
           render: (rawUser) => {
             const user = rawUser as Partial<AwarenessUser>
             const colorIndex = isValidMemberColorIndex(user.colorIndex) ? user.colorIndex : 1
@@ -173,55 +262,100 @@ export default function DocumentEditor({
     }
 
     return baseExtensions
-    // 사용자 정보의 초기값은 마운트 시점에 넘기고, 이후 변경은 아래 updateUser effect가 반영한다
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, caretIdleTracker])
+  }, [session, caretIdleTracker, initialUser])
 
   const editor = useEditor(
     {
       extensions,
-      editorProps: {
-        attributes: {
-          'aria-label': '문서 본문',
-        },
-        // 선택 영역이 없는 상태에서 http(s) URL만 붙여넣을 때도 즉시 클릭 가능한 링크로 삽입
-        handlePaste: (view, event) => {
-          const text = event.clipboardData?.getData('text/plain')?.trim() ?? ''
-          if (!text || /\s/.test(text)) return false
-          const safeUrl = normalizeSafeHttpUrl(text)
-          if (!safeUrl) return false
-          const linkMarkType = view.state.schema.marks.link
-          if (!linkMarkType) return false
-
-          const { from, empty } = view.state.selection
-          if (!empty) {
-            // 선택 텍스트가 있으면 Tiptap 기본 linkOnPaste가 처리
-            return false
-          }
-          const linkMark = linkMarkType.create({
-            href: safeUrl,
-            target: '_blank',
-            rel: 'noopener noreferrer nofollow',
-          })
-          const tr = view.state.tr.insert(from, view.state.schema.text(safeUrl, [linkMark]))
-          view.dispatch(tr.scrollIntoView())
-          return true
-        },
-      },
+      editorProps: EDITOR_PROPS,
     },
     [extensions],
   )
 
-  // 로그인 사용자 닉네임·색이 늦게 채워지면 awareness user 정보 갱신
   useEffect(() => {
-    if (!isEditorAlive(editor) || !session.provider) return
-    editor.commands.updateUser({
+    editorRef.current = editor
+  }, [editor])
+
+  // IME 조합 구간에는 에디터 DOM(이름표 숨김)과 awareness user 갱신을 보류했다가 종료 후 1회 반영한다
+  useEffect(() => {
+    const container = editorContainerRef.current
+    if (!container) return
+    let flushTimer: number | null = null
+
+    const clearFlushTimer = () => {
+      if (flushTimer !== null) {
+        window.clearTimeout(flushTimer)
+        flushTimer = null
+      }
+    }
+
+    const handleCompositionStart = () => {
+      composingRef.current = true
+      clearFlushTimer()
+    }
+
+    const handleCompositionEnd = () => {
+      composingRef.current = false
+      clearFlushTimer()
+      flushTimer = window.setTimeout(() => {
+        flushTimer = null
+        const activeEditor = editorRef.current
+        if (composingRef.current || (isEditorAlive(activeEditor) && activeEditor.view.composing)) {
+          return
+        }
+        if (hasPendingLabelSyncRef.current) {
+          hasPendingLabelSyncRef.current = false
+          const root = editorContainerRef.current
+          if (root) {
+            const labels = root.querySelectorAll<HTMLElement>('.gb-caret-label')
+            labels.forEach((label) => {
+              const key = label.dataset.clientKey
+              if (key) {
+                label.dataset.hidden = caretIdleTracker.isHidden(key) ? 'true' : 'false'
+              }
+            })
+          }
+        }
+        const pendingUser = pendingUserRef.current
+        const awareness = session.provider?.awareness
+        if (pendingUser && awareness) {
+          pendingUserRef.current = null
+          applyAwarenessUser(awareness, pendingUser)
+        }
+      }, 0)
+    }
+
+    container.addEventListener('compositionstart', handleCompositionStart)
+    container.addEventListener('compositionend', handleCompositionEnd)
+    return () => {
+      clearFlushTimer()
+      composingRef.current = false
+      container.removeEventListener('compositionstart', handleCompositionStart)
+      container.removeEventListener('compositionend', handleCompositionEnd)
+    }
+  }, [session, caretIdleTracker])
+
+  // 로그인 사용자 닉네임·색이 연결 이후 실제로 바뀐 경우에만 awareness user 정보 갱신
+  useEffect(() => {
+    const awareness = session.provider?.awareness
+    if (!awareness) return
+    const nextUser: AwarenessUser = {
       name: nickname,
       colorIndex: myColorIndex,
       clientKey: myClientKey,
       memberId: myMemberId,
-    })
-  }, [editor, session.provider, nickname, myColorIndex, myClientKey, myMemberId])
+    }
+    if (isSameAwarenessUser(lastAppliedUserRef.current, nextUser)) return
+    lastAppliedUserRef.current = nextUser
+
+    const activeEditor = editorRef.current
+    if (composingRef.current || (isEditorAlive(activeEditor) && activeEditor.view.composing)) {
+      pendingUserRef.current = nextUser
+      return
+    }
+    pendingUserRef.current = null
+    applyAwarenessUser(awareness, nextUser)
+  }, [session, nickname, myColorIndex, myClientKey, myMemberId])
 
   // DOC-06: Ctrl+K / Cmd+K 링크 삽입·수정 단축키
   useEffect(() => {
@@ -254,6 +388,12 @@ export default function DocumentEditor({
     const timers = new Map<string, number>()
 
     const setLabelHiddenDom = (clientKey: string, hidden: boolean) => {
+      // IME 조합 중에는 에디터 내부 DOM 속성을 건드리지 않고 compositionend 후 일괄 반영한다
+      const activeEditor = editorRef.current
+      if (composingRef.current || (isEditorAlive(activeEditor) && activeEditor.view.composing)) {
+        hasPendingLabelSyncRef.current = true
+        return
+      }
       const root = editorContainerRef.current
       if (!root) return
       const labels = root.querySelectorAll<HTMLElement>('.gb-caret-label')
@@ -426,9 +566,14 @@ export default function DocumentEditor({
       </div>
 
       {/* 작업 영역 오른쪽 아래: 저장 상태 (WS-04) */}
-      <div className="pointer-events-none absolute right-4 bottom-4 z-10">
-        <DocumentSaveStatus state={saveState} onRetry={retrySync} />
-      </div>
+      <DocumentSyncStatusOverlay
+        session={session}
+        teamId={teamId}
+        documentId={documentId}
+        offlinePreview={offlinePreview}
+        onDocumentGone={onDocumentGone}
+        onForbidden={onForbidden}
+      />
 
       <LinkModal
         open={linkModalState.open}

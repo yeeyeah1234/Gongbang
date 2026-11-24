@@ -35,11 +35,18 @@ export interface SyncSessionHandle {
   provider: HocuspocusProvider | null
 }
 
-export interface DocumentSyncResult {
+interface UseDocumentSyncConnectionOptions extends UseDocumentSyncOptions {
   session: SyncSessionHandle
+}
+
+export interface DocumentSyncStatusResult {
   saveState: DocumentSaveState
   hasUnsyncedChanges: boolean
   retrySync: () => void
+}
+
+export interface DocumentSyncResult extends DocumentSyncStatusResult {
+  session: SyncSessionHandle
 }
 
 let nextSessionInstanceId = 1
@@ -75,22 +82,35 @@ function createSyncSession(documentId: number, offlinePreview: boolean): SyncSes
   return { instanceId, ydoc, websocketProvider, provider }
 }
 
-export function useDocumentSync({
+/**
+ * 문서별 Y.Doc + Hocuspocus 세션을 1회 생성해 고정한다.
+ * 저장 상태 변경으로 에디터 본체가 리렌더링되지 않도록 상태 구독은 useDocumentSyncConnection에 분리한다.
+ */
+export function useDocumentSyncSession(
+  documentId: number,
+  offlinePreview = false,
+): SyncSessionHandle {
+  // 부모(WorkspaceDocumentPage)가 key={selectedDoc.id}로 문서를 전환하므로 문서마다 새 세션이 생성된다
+  const [session] = useState<SyncSessionHandle>(() => createSyncSession(documentId, offlinePreview))
+  return session
+}
+
+export function useDocumentSyncConnection({
+  session,
   teamId,
   documentId,
   offlinePreview = false,
   onDocumentGone,
   onForbidden,
-}: UseDocumentSyncOptions): DocumentSyncResult {
+}: UseDocumentSyncConnectionOptions): DocumentSyncStatusResult {
   const onDocumentGoneRef = useRef(onDocumentGone)
   const onForbiddenRef = useRef(onForbidden)
+  // StrictMode 재마운트 시 cleanup에서 비운 awareness user 정보를 복원한다
+  const savedLocalUserRef = useRef<unknown>(null)
   useEffect(() => {
     onDocumentGoneRef.current = onDocumentGone
     onForbiddenRef.current = onForbidden
   }, [onDocumentGone, onForbidden])
-
-  // 부모(WorkspaceDocumentPage)가 key={selectedDoc.id}로 문서를 전환하므로 문서마다 새 세션이 생성된다
-  const [session] = useState<SyncSessionHandle>(() => createSyncSession(documentId, offlinePreview))
 
   const [wsStatus, setWsStatus] = useState<WebSocketStatus>(() =>
     offlinePreview ? WebSocketStatus.Connected : WebSocketStatus.Connecting,
@@ -268,6 +288,12 @@ export function useDocumentSync({
     provider.on('close', handleClose)
     provider.on('authenticationFailed', handleAuthFailed)
 
+    if (provider.awareness && provider.awareness.getLocalState() === null) {
+      provider.awareness.setLocalState(
+        savedLocalUserRef.current ? { user: savedLocalUserRef.current } : {},
+      )
+    }
+
     if (!provider.isAttached) {
       provider.attach()
     }
@@ -283,6 +309,7 @@ export function useDocumentSync({
       provider.off('unsyncedChanges', handleUnsyncedChanges)
       provider.off('close', handleClose)
       provider.off('authenticationFailed', handleAuthFailed)
+      savedLocalUserRef.current = provider.awareness?.getLocalState()?.user ?? null
       // 문서 전환·탭 이탈 시 원격 화면에서 내 커서가 바로 사라지게 정리한다
       provider.awareness?.setLocalState(null)
       websocketProvider.disconnect()
@@ -346,9 +373,17 @@ export function useDocumentSync({
   }
 
   return {
-    session,
     saveState,
     hasUnsyncedChanges,
     retrySync,
+  }
+}
+
+export function useDocumentSync(options: UseDocumentSyncOptions): DocumentSyncResult {
+  const session = useDocumentSyncSession(options.documentId, options.offlinePreview)
+  const status = useDocumentSyncConnection({ ...options, session })
+  return {
+    session,
+    ...status,
   }
 }

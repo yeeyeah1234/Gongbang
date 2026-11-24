@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router'
 import { MoreVerticalIcon } from '../components/WorkspaceIcons'
 import { strip } from '../notice/validation'
@@ -157,13 +158,36 @@ export function WorkspaceItemRow({
         triggerRef.current?.focus()
       }
     }
+    const handleScroll = () => {
+      onCloseMenu()
+    }
     document.addEventListener('mousedown', handlePointerDown)
     window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('resize', onCloseMenu)
+    window.addEventListener('scroll', handleScroll, true)
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('resize', onCloseMenu)
+      window.removeEventListener('scroll', handleScroll, true)
     }
   }, [menuOpen, onCloseMenu])
+
+  useLayoutEffect(() => {
+    if (!menuOpen) return
+    const trigger = triggerRef.current
+    const menu = menuRef.current
+    if (!trigger || !menu) return
+
+    const rect = trigger.getBoundingClientRect()
+    const menuWidth = menu.offsetWidth || 144
+    const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8))
+    const top = openUp ? rect.top - 4 : rect.bottom + 4
+
+    // 동적 좌표라 AGENTS 2-1 인라인 style 예외
+    menu.style.left = `${left}px`
+    menu.style.top = `${top}px`
+  }, [menuOpen, openUp])
 
   if (editing) {
     return (
@@ -188,11 +212,21 @@ export function WorkspaceItemRow({
       if (trigger) {
         const rect = trigger.getBoundingClientRect()
         const scrollParent = trigger.closest('.overflow-y-auto')
-        const boundaryBottom = scrollParent
-          ? Math.min(scrollParent.getBoundingClientRect().bottom, window.innerHeight)
+        const scrollRect = scrollParent?.getBoundingClientRect()
+        const visibleTop = scrollRect ? Math.max(scrollRect.top, 0) : 0
+        const visibleBottom = scrollRect
+          ? Math.min(scrollRect.bottom, window.innerHeight)
           : window.innerHeight
         const estimatedHeight = item.canDelete ? 96 : 52
-        setOpenUp(rect.bottom + estimatedHeight + 8 > boundaryBottom)
+        const needed = estimatedHeight + 8
+        const spaceBelow = visibleBottom - rect.bottom
+        const spaceAbove = rect.top - visibleTop
+        // 기본은 아래로 열고, 스크롤 영역 보이는 범위 안에서 아래 공간이 부족하면서
+        // 위로 열 공간이 충분할 때만 위로 연다 (뷰포트 하단에 걸린 경우도 동일하게 보정)
+        const shouldOpenUp =
+          (spaceBelow < needed && spaceAbove >= needed) ||
+          (window.innerHeight - rect.bottom < needed && rect.top >= needed)
+        setOpenUp(shouldOpenUp)
       }
     }
     onToggleMenu(item.id)
@@ -245,41 +279,43 @@ export function WorkspaceItemRow({
         </button>
       </div>
 
-      {menuOpen && (
-        <div
-          ref={menuRef}
-          role="menu"
-          className={[
-            'absolute right-1.5 z-40 w-36 rounded-popover border border-line bg-surface py-1.5 shadow-pop',
-            openUp ? 'bottom-full mb-1' : 'top-full mt-1',
-          ].join(' ')}
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              onCloseMenu()
-              onStartRename(item.id)
-            }}
-            className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-small text-text transition-colors hover:bg-bg"
+      {menuOpen &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            className={[
+              'fixed top-0 left-0 z-40 w-36 rounded-popover border border-line bg-surface py-1.5 shadow-pop',
+              openUp ? '-translate-y-full' : '',
+            ].join(' ')}
           >
-            {labels.renameAction}
-          </button>
-          {item.canDelete && (
             <button
               type="button"
               role="menuitem"
               onClick={() => {
                 onCloseMenu()
-                onRequestDelete(item)
+                onStartRename(item.id)
               }}
-              className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-small text-danger transition-colors hover:bg-danger-soft"
+              className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-small text-text transition-colors hover:bg-bg"
             >
-              {labels.deleteAction}
+              {labels.renameAction}
             </button>
-          )}
-        </div>
-      )}
+            {item.canDelete && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onCloseMenu()
+                  onRequestDelete(item)
+                }}
+                className="flex w-full cursor-pointer items-center px-3.5 py-2 text-left text-small text-danger transition-colors hover:bg-danger-soft"
+              >
+                {labels.deleteAction}
+              </button>
+            )}
+          </div>,
+          document.body,
+        )}
     </li>
   )
 }
