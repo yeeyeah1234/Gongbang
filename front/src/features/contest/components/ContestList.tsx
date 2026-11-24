@@ -28,11 +28,14 @@ function ContestListSkeleton() {
   if (!visible) return null
 
   return (
-    <ul aria-hidden="true" className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
+    <ul
+      aria-hidden="true"
+      className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4"
+    >
       {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
         <li key={index} className="overflow-hidden rounded-card border border-line bg-surface">
           <div className="aspect-3/4 animate-pulse bg-surface-sub" />
-          <div className="flex flex-col gap-2 p-6">
+          <div className="flex flex-col gap-2 p-4 md:p-6">
             <div className="h-6 w-20 animate-pulse rounded-lg bg-surface-sub" />
             <div className="h-6 w-full animate-pulse rounded-lg bg-surface-sub" />
             <div className="h-5 w-2/3 animate-pulse rounded-lg bg-surface-sub" />
@@ -77,7 +80,7 @@ export function ContestList({ sort, category, onToast }: ContestListProps) {
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-6 md:grid-cols-3 xl:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6 xl:grid-cols-4">
         {contests.map((contest) => (
           <li key={contest.contestId}>
             <ContestCard contest={contest} onToast={onToast} />
