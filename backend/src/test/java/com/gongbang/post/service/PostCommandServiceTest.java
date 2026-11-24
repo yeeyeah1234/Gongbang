@@ -293,7 +293,15 @@ class PostCommandServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"javascript:alert(1)", "ftp://example.com", "example.com", "https://"})
+    @ValueSource(
+            strings = {
+                "javascript:alert(1)",
+                "ftp://example.com",
+                "example.com",
+                "https://",
+                "https:///path",
+                "https://a b"
+            })
     @DisplayName("관련 URL이 http(s)://로 시작하는 주소가 아니면 400 INVALID_INPUT")
     void 관련_URL_형식이_틀리면_INVALID_INPUT(String url) {
         assertThat(errorOf(contestRequest("제목", 4, TODAY, TODAY, url)))
@@ -315,6 +323,18 @@ class PostCommandServiceTest {
         given(contestQueryService.findCategoryId("IT_SW")).willReturn(Optional.empty());
 
         assertThat(errorOf(externalRequest(DEADLINE, null))).isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    @DisplayName("관련 URL은 스킴 대소문자와 상관없이 받고 앞뒤 공백을 지워 저장한다 (#120 공통 URL 정책)")
+    void 관련_URL_대문자_스킴() {
+        givenContestDeadline(DEADLINE);
+        givenSaveReturnsId(15L);
+
+        postCommandService.create(
+                AUTHOR_ID, contestRequest("제목", 4, TODAY, TODAY, " HTTPS://Example.com/a "), TODAY);
+
+        assertThat(savedPost().getRelatedUrl()).isEqualTo("HTTPS://Example.com/a");
     }
 
     @Test

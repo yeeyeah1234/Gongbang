@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
@@ -176,15 +177,27 @@ class BoardPostCommandServiceTest {
     }
 
     @Test
-    @DisplayName("결과물 링크는 결과물 자랑에서만 저장하고 http(s)만 받는다 (BRD-002 ②, javascript: 막기)")
+    @DisplayName("결과물 링크는 결과물 자랑에서만 저장하고 공통 URL 정책(대소문자 무관 http(s), 호스트 필수)만 받는다 (BRD-002 ②, #120)")
     void 결과물_링크() {
         given(boardPostRepository.save(any())).willAnswer(invocation -> invocation.getArgument(0));
 
         service.create(
                 AUTHOR_ID, request(BoardCategory.SHOWCASE, null, " https://demo.example.com "));
         assertThat(saved().getLinkUrl()).isEqualTo("https://demo.example.com");
+        clearInvocations(boardPostRepository);
+        service.create(
+                AUTHOR_ID, request(BoardCategory.SHOWCASE, null, "HTTPS://Demo.example.com/a"));
+        assertThat(saved().getLinkUrl()).isEqualTo("HTTPS://Demo.example.com/a");
 
-        for (String bad : new String[] {"javascript:alert(1)", "ftp://a", "https://"}) {
+        for (String bad :
+                new String[] {
+                    "javascript:alert(1)",
+                    "ftp://a",
+                    "https://",
+                    "https:///path",
+                    "https://a b",
+                    "https://" + "a".repeat(BoardPostCommandService.URL_MAX)
+                }) {
             assertThat(
                             fails(
                                             () ->
