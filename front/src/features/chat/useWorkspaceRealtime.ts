@@ -13,10 +13,12 @@ import type {
 } from './types'
 
 export type RoomMessageListener = (message: ChatMessageApiItem) => void
+export type TeamEventListener = (event: TeamEventPayload) => void
 
 export interface WorkspaceRealtimeBridge {
   connected: boolean
   subscribeRoom: (roomId: number, listener: RoomMessageListener) => () => void
+  subscribeTeamEvent: (listener: TeamEventListener) => () => void
   sendRoomMessage: (roomId: number, payload: ChatSendPayload) => boolean
 }
 
@@ -41,6 +43,7 @@ export function useWorkspaceRealtime({
   const clientRef = useRef<Client | null>(null)
   const roomListenersRef = useRef<Map<number, Set<RoomMessageListener>>>(new Map())
   const roomSubscriptionsRef = useRef<Map<number, StompSubscription>>(new Map())
+  const teamEventListenersRef = useRef<Set<TeamEventListener>>(new Set())
 
   const onRefreshNoticeRef = useRef(onRefreshNotice)
   const onKickedRef = useRef(onKicked)
@@ -84,6 +87,13 @@ export function useWorkspaceRealtime({
           connectedClient.subscribe(`/sub/teams/${teamId}/events`, (frame) => {
             const event = safeJsonParse<TeamEventPayload>(frame)
             if (!event) return
+
+            teamEventListenersRef.current.forEach((listener) => listener(event))
+
+            if (event.type.startsWith('DOCUMENT_')) {
+              void queryClient.invalidateQueries({ queryKey: ['workspace', teamId, 'documents'] })
+              return
+            }
 
             if (event.type.startsWith('NOTICE_')) {
               void onRefreshNoticeRef.current()
@@ -199,6 +209,13 @@ export function useWorkspaceRealtime({
     [attachRoomSubscription],
   )
 
+  const subscribeTeamEvent = useCallback((listener: TeamEventListener) => {
+    teamEventListenersRef.current.add(listener)
+    return () => {
+      teamEventListenersRef.current.delete(listener)
+    }
+  }, [])
+
   const sendRoomMessage = useCallback((roomId: number, payload: ChatSendPayload): boolean => {
     const client = clientRef.current
     if (!client?.connected) return false
@@ -213,8 +230,9 @@ export function useWorkspaceRealtime({
     () => ({
       connected,
       subscribeRoom,
+      subscribeTeamEvent,
       sendRoomMessage,
     }),
-    [connected, subscribeRoom, sendRoomMessage],
+    [connected, subscribeRoom, subscribeTeamEvent, sendRoomMessage],
   )
 }

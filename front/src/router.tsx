@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import SearchPage from './pages/SearchPage'
 import WorkspaceCalendarRoute from './pages/WorkspaceCalendarRoute'
 import WorkspaceChatPage from './pages/WorkspaceChatPage'
+import WorkspaceDocumentPage from './pages/WorkspaceDocumentPage'
 import WorkspaceListPage from './pages/WorkspaceListPage'
 import WorkspaceNoticePage from './pages/WorkspaceNoticePage'
 import { RequireLogin } from './features/auth/RequireLogin'
@@ -109,6 +110,38 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
           },
         ],
       },
+      {
+        path: '/dev/document-preview',
+        element: <Navigate to="/dev/document-preview/normal" replace />,
+      },
+      {
+        // DOC-01~04 문서 사이드바를 백엔드·로그인 없이 본다: {normal|empty|error|member}
+        path: '/dev/document-preview/:view',
+        lazy: async () => ({
+          Component: (await import('./pages/dev/DocumentPreviewPage')).default,
+        }),
+        children: [
+          {
+            path: 'docs/:documentId?',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/DocumentPreviewPage')).DocumentPreviewTab,
+            }),
+          },
+          {
+            // 첫 진입과 다른 탭은 문서 탭으로
+            index: true,
+            lazy: async () => ({
+              Component: (await import('./pages/dev/DocumentPreviewPage')).DocumentPreviewRedirect,
+            }),
+          },
+          {
+            path: '*',
+            lazy: async () => ({
+              Component: (await import('./pages/dev/DocumentPreviewPage')).DocumentPreviewRedirect,
+            }),
+          },
+        ],
+      },
     ]
   : []
 
@@ -179,7 +212,8 @@ export const router = createBrowserRouter([
           // 첫 입장은 채팅 탭
           { index: true, element: <Navigate to="chat" replace /> },
           { path: 'chat', element: <WorkspaceChatPage /> },
-          { path: 'docs', element: <WorkspacePlaceholder tab="docs" /> },
+          // DOC-01~04 문서 사이드바: documentId가 없으면 마지막으로 연 문서 또는 첫 문서로 옮긴다
+          { path: 'docs/:documentId?', element: <WorkspaceDocumentPage /> },
           { path: 'board', element: <WorkspacePlaceholder tab="board" /> },
           // CAL-01·03·04·05·08 월간 캘린더 (WorkspaceCalendarRoute가 lazy로 불러온다)
           { path: 'calendar', element: <WorkspaceCalendarRoute /> },
