@@ -14,6 +14,35 @@ import { Button } from '../../../components/ui/Button'
 import { memberColorIndex } from '../../workspace/onlineMembers'
 import type { ChatMessage, ChatRoom, TeamMember } from '../types'
 
+const MAX_CHAT_IMAGE_BYTES = 5 * 1024 * 1024
+const ALLOWED_CHAT_IMAGE_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/avif',
+])
+const ALLOWED_CHAT_IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif|avif)$/i
+
+interface SelectedChatImage {
+  file: File
+  previewUrl: string
+}
+
+function isAllowedChatImage(file: File): boolean {
+  const mime = file.type.toLowerCase()
+  if (mime) {
+    return ALLOWED_CHAT_IMAGE_MIME_TYPES.has(mime)
+  }
+  return ALLOWED_CHAT_IMAGE_EXTENSIONS.test(file.name)
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)}MB`
+}
+
 interface ChatTimelineProps {
   room: ChatRoom | undefined
   messages: ChatMessage[]
@@ -29,8 +58,8 @@ interface ChatTimelineProps {
   onReachBottom?: () => void
   onDismissAutoAlert: () => void
   onOpenSettings: () => void
-  onSendMessage: (content: string) => boolean
-  onUnsupportedFeature: (message: string) => void
+  onSendMessage: (payload: { content: string; file: File | null }) => Promise<boolean>
+  onValidationError: (message: string) => void
 }
 
 /** 중앙 채팅 타임라인 + D-day 자동 알림 + 메시지 입력창 */
@@ -50,14 +79,19 @@ export function ChatTimeline({
   onDismissAutoAlert,
   onOpenSettings,
   onSendMessage,
-  onUnsupportedFeature,
+  onValidationError,
 }: ChatTimelineProps) {
   const [draft, setDraft] = useState('')
+  const [selectedImage, setSelectedImage] = useState<SelectedChatImage | null>(null)
+  const [isSending, setIsSending] = useState(false)
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [seenLastId, setSeenLastId] = useState<number | null>(null)
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
+  const isMountedRef = useRef(true)
+  const sendingRef = useRef(false)
   const initializedRoomRef = useRef(false)
   const prevFirstIdRef = useRef<number | null>(null)
   const prevLastIdRef = useRef<number | null>(null)
@@ -124,6 +158,21 @@ export function ChatTimeline({
     }
   }, [isAtBottom, latestMessageId, onReachBottom])
 
+  useEffect(() => {
+    previewUrlRef.current = selectedImage?.previewUrl ?? null
+  }, [selectedImage])
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+        previewUrlRef.current = null
+      }
+    }
+  }, [])
+
   if (!room) {
     return (
       <section className="flex flex-1 flex-col items-center justify-center gap-4 rounded-card border border-line bg-surface p-8 text-center">
@@ -149,35 +198,80 @@ export function ChatTimeline({
     }
   }
 
+  const clearSelectedImage = () => {
+    if (sendingRef.current) return
+    setSelectedImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl)
+      return null
+    })
+  }
+
   const handleImageChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     event.target.value = ''
-    if (!file) return
-    // TODO(확인 필요): 공통 파일 업로드(uploaded_file) API가 연결되면 이미지 첨부 전송 구현
-    onUnsupportedFeature('이미지 첨부는 파일 업로드 모듈 연동 후 이용할 수 있어요')
+    if (!file || sendingRef.current) return
+
+    if (file.size === 0) {
+      onValidationError('빈 파일은 업로드할 수 없어요')
+      return
+    }
+    if (!isAllowedChatImage(file)) {
+      onValidationError('JPG, PNG, WEBP, GIF, AVIF 이미지만 첨부할 수 있어요')
+      return
+    }
+    if (file.size > MAX_CHAT_IMAGE_BYTES) {
+      onValidationError('이미지 파일 크기는 5MB 이하만 업로드할 수 있어요')
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setSelectedImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl)
+      return { file, previewUrl }
+    })
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (sendingRef.current) return
     const trimmed = draft.trim()
-    if (!trimmed) return
-    const sent = onSendMessage(trimmed)
-    if (!sent) return
-    setDraft('')
-    setIsAtBottom(true)
-    if (latestMessageId !== null) {
-      setSeenLastId(latestMessageId)
+    const imageToSend = selectedImage
+    if (!trimmed && !imageToSend) return
+
+    sendingRef.current = true
+    setIsSending(true)
+    try {
+      const sent = await onSendMessage({
+        content: trimmed,
+        file: imageToSend?.file ?? null,
+      })
+      if (!isMountedRef.current || !sent) return
+
+      setDraft('')
+      if (imageToSend) {
+        URL.revokeObjectURL(imageToSend.previewUrl)
+        setSelectedImage(null)
+      }
+      setIsAtBottom(true)
+      if (latestMessageId !== null) {
+        setSeenLastId(latestMessageId)
+      }
+    } finally {
+      sendingRef.current = false
+      if (isMountedRef.current) {
+        setIsSending(false)
+      }
     }
   }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
       event.preventDefault()
-      handleSubmit()
+      void handleSubmit()
     }
   }
 
   const participantCount = room.type === 'TEAM' ? members.length : 2
-  const canSend = draft.trim().length > 0 && isConnected
+  const canSend = (draft.trim().length > 0 || selectedImage !== null) && isConnected && !isSending
   const hasUnseenBelow =
     !isAtBottom && latestMessageId !== null && (seenLastId === null || latestMessageId > seenLastId)
 
@@ -304,11 +398,19 @@ export function ChatTimeline({
 
                       <div className="max-w-[70%] rounded-card bg-primary px-4 py-3 text-body text-surface">
                         {message.imageUrl && (
-                          <img
-                            src={message.imageUrl}
-                            alt="첨부 이미지"
-                            className="mb-2 max-h-60 rounded-popover object-cover"
-                          />
+                          <a
+                            href={message.imageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={message.content ? 'mb-2 block' : 'block'}
+                          >
+                            <img
+                              src={message.imageUrl}
+                              alt="첨부 이미지"
+                              loading="lazy"
+                              className="max-h-60 rounded-popover object-cover"
+                            />
+                          </a>
                         )}
                         {message.content && (
                           <p className="whitespace-pre-line">{message.content}</p>
@@ -336,11 +438,19 @@ export function ChatTimeline({
                         <div className="flex items-end gap-2">
                           <div className="rounded-card border border-line bg-surface px-4 py-3 text-body text-text">
                             {message.imageUrl && (
-                              <img
-                                src={message.imageUrl}
-                                alt="첨부 이미지"
-                                className="mb-2 max-h-60 rounded-popover object-cover"
-                              />
+                              <a
+                                href={message.imageUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={message.content ? 'mb-2 block' : 'block'}
+                              >
+                                <img
+                                  src={message.imageUrl}
+                                  alt="첨부 이미지"
+                                  loading="lazy"
+                                  className="max-h-60 rounded-popover object-cover"
+                                />
+                              </a>
                             )}
                             {message.content && (
                               <p className="whitespace-pre-line">{message.content}</p>
@@ -376,11 +486,42 @@ export function ChatTimeline({
 
       {/* 하단 입력창 */}
       <div className="px-6 pt-1 pb-6">
+        {selectedImage && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-card border border-line bg-bg px-3 py-2.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <img
+                src={selectedImage.previewUrl}
+                alt="선택한 이미지 미리보기"
+                className="h-14 w-14 shrink-0 rounded-input border border-line object-cover"
+              />
+              <div className="min-w-0">
+                <p className="truncate text-small font-medium text-text">
+                  {selectedImage.file.name}
+                </p>
+                <p className="text-caption text-text-sub">
+                  {formatFileSize(selectedImage.file.size)} ·{' '}
+                  {isSending ? '이미지 업로드 중…' : '전송 시 업로드돼요'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={clearSelectedImage}
+              disabled={isSending}
+              aria-label="첨부 이미지 제거"
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-text-sub transition-colors hover:bg-surface hover:text-text disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-end gap-3">
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif"
             onChange={handleImageChange}
             className="hidden"
           />
@@ -388,6 +529,7 @@ export function ChatTimeline({
           <Button
             variant="outline"
             size="md"
+            disabled={isSending}
             onClick={() => fileInputRef.current?.click()}
             aria-label="이미지 첨부"
             className="px-4"
@@ -398,20 +540,30 @@ export function ChatTimeline({
 
           <textarea
             value={draft}
+            readOnly={isSending}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={handleKeyDown}
             rows={1}
             maxLength={2000}
             placeholder={
               isConnected
-                ? '메시지를 입력하세요 (Enter: 전송 / Shift + Enter: 줄바꿈)'
+                ? selectedImage
+                  ? '사진과 함께 보낼 메시지를 입력하세요 (선택)'
+                  : '메시지를 입력하세요 (Enter: 전송 / Shift + Enter: 줄바꿈)'
                 : '실시간 채팅 서버에 연결하고 있습니다…'
             }
             className="max-h-32 min-h-11 flex-1 resize-none rounded-input border border-line-input bg-surface px-4 py-2 text-body text-text placeholder:text-text-disabled focus:border-2 focus:border-primary focus:outline-none"
           />
 
-          <Button variant="primary" size="md" disabled={!canSend} onClick={handleSubmit}>
-            전송
+          <Button
+            variant="primary"
+            size="md"
+            disabled={!canSend}
+            onClick={() => {
+              void handleSubmit()
+            }}
+          >
+            {isSending ? '전송 중…' : '전송'}
           </Button>
         </div>
       </div>

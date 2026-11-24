@@ -9,6 +9,7 @@ import com.gongbang.chat.dto.ChatSendRequest;
 import com.gongbang.chat.repository.ChatMessageRepository;
 import com.gongbang.chat.repository.ChatRoomMemberRepository;
 import com.gongbang.chat.repository.ChatRoomRepository;
+import com.gongbang.file.service.FileUploadService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.team.service.TeamMemberService;
@@ -31,6 +32,7 @@ public class ChatRealtimeService {
     private final ChatMessageRepository chatMessageRepository;
     private final TeamMemberService teamMemberService;
     private final TeamService teamService;
+    private final FileUploadService fileUploadService;
     private final ApplicationEventPublisher eventPublisher;
 
     /** STOMP `/pub/chat-rooms/{roomId}/send` 요청을 검증·저장하고 커밋 후 브로드캐스트 이벤트를 발행한다. */
@@ -48,6 +50,11 @@ public class ChatRealtimeService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.NOT_CHAT_ROOM_MEMBER));
 
         validateSendRequest(request);
+        Long validatedFileId = null;
+        if (request.type() == ChatMessageType.IMAGE) {
+            fileUploadService.requireOwnedChatFile(request.fileId(), senderId);
+            validatedFileId = request.fileId();
+        }
 
         ChatMessage saved =
                 chatMessageRepository.save(
@@ -56,7 +63,7 @@ public class ChatRealtimeService {
                                 senderId,
                                 request.type(),
                                 normalizeContent(request.content()),
-                                request.fileId()));
+                                validatedFileId));
 
         LocalDateTime sentAt =
                 saved.getCreatedAt() != null ? saved.getCreatedAt() : LocalDateTime.now();

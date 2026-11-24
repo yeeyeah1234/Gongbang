@@ -94,6 +94,12 @@ export interface ChatSendPayload {
   fileId?: number | null
 }
 
+// POST /api/files (공통 파일 업로드)
+export interface FileUploadApiResponse {
+  fileId: number
+  url: string
+}
+
 // 화면 표시용 팀원 모델
 export interface TeamMember {
   id: number

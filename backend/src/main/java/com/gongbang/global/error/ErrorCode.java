@@ -66,6 +66,13 @@ public enum ErrorCode {
     // NET-04, NET-06 (API 명세서)
     CANNOT_CHAT_SELF(HttpStatus.BAD_REQUEST, "CANNOT_CHAT_SELF", "자기 자신과는 1:1 채팅을 할 수 없어요"),
     CANNOT_KICK_SELF(HttpStatus.BAD_REQUEST, "CANNOT_KICK_SELF", "자기 자신은 강제 퇴장할 수 없어요"),
+
+    // FILE (API 명세서 POST /api/files)
+    FILE_TOO_LARGE(HttpStatus.BAD_REQUEST, "FILE_TOO_LARGE", "파일 크기는 5MB 이하만 업로드할 수 있어요"),
+    UNSUPPORTED_FILE_TYPE(
+            HttpStatus.BAD_REQUEST,
+            "UNSUPPORTED_FILE_TYPE",
+            "JPG, PNG, WEBP, GIF, AVIF 이미지만 업로드할 수 있어요"),
     // NET-02 신고 (API 명세서)
     CANNOT_REPORT_SELF(HttpStatus.BAD_REQUEST, "CANNOT_REPORT_SELF", "자기 자신은 신고할 수 없어요"),
 
