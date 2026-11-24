@@ -203,8 +203,7 @@ export function Gnb() {
             {menuLinks('bar')}
           </nav>
 
-          {/* 768px 미만에서는 닉네임 글자를 숨기고 사진만 둔다 (UserMenu 안의 닉네임 span) */}
-          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-4 max-md:[&_button>span.truncate]:hidden">
+          <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-2 md:gap-4">
             <SearchBar
               key={keywordParam}
               initialKeyword={keywordParam}
@@ -239,7 +238,7 @@ export function Gnb() {
             {isLoggedIn && (
               <>
                 <NotificationBell onError={toast.show} />
-                <UserMenu />
+                <UserMenu compact />
               </>
             )}
             <button

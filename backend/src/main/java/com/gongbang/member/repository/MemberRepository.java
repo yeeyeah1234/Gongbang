@@ -14,6 +14,16 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByEmail(String email);
 
+    @Query(
+            "select m from Member m where m.status = com.gongbang.member.domain.MemberStatus.ACTIVE and (lower(m.email) like lower(concat('%', :keyword, '%')) or lower(m.nickname) like lower(concat('%', :keyword, '%')))")
+    org.springframework.data.domain.Page<Member> searchActiveForAdmin(
+            @Param("keyword") String keyword, org.springframework.data.domain.Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Lock(
+            jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from Member m where m.id = :id")
+    Optional<Member> findForRoleUpdate(@Param("id") Long id);
+
     Optional<Member> findByNickname(String nickname);
 
     Optional<Member> findByKakaoId(String kakaoId);

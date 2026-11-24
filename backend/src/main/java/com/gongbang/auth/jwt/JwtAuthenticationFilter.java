@@ -25,6 +25,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER = "Bearer ";
 
     private final JwtProvider jwtProvider;
+    private final com.gongbang.member.service.MemberService members;
 
     @Override
     protected void doFilterInternal(
@@ -36,15 +37,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     .parseAccessToken(header.substring(BEARER.length()))
                     .ifPresent(
                             claims -> {
+                                var current =
+                                        members.findActiveMember(claims.memberId()).orElse(null);
+                                if (current == null || current.isSuspended()) return;
                                 LoginMember loginMember =
-                                        new LoginMember(claims.memberId(), claims.role());
+                                        new LoginMember(claims.memberId(), current.getRole());
                                 var authentication =
                                         new UsernamePasswordAuthenticationToken(
                                                 loginMember,
                                                 null,
                                                 List.of(
                                                         new SimpleGrantedAuthority(
-                                                                "ROLE_" + claims.role().name())));
+                                                                "ROLE_"
+                                                                        + current.getRole()
+                                                                                .name())));
                                 SecurityContextHolder.getContext()
                                         .setAuthentication(authentication);
                             });

@@ -34,10 +34,22 @@ import BoardEditPage from './pages/board/BoardEditPage'
 import BoardListPage from './pages/board/BoardListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 import { WorkspaceLayout } from './features/workspace/components/WorkspaceLayout'
+import AdminVerificationPage from './pages/admin/AdminVerificationPage'
+import { AdminLayout } from './features/admin/AdminLayout'
+import AdminMembersPage from './pages/admin/AdminMembersPage'
+import AdminNoticeManagementPage from './pages/admin/AdminNoticeManagementPage'
+import AdminReportManagementPage from './pages/admin/AdminReportManagementPage'
+import AdminMemberManagementPage from './pages/admin/AdminMemberManagementPage'
+import AdminPostManagementPage from './pages/admin/AdminPostManagementPage'
+import AdminContestManagementPage from './pages/admin/AdminContestManagementPage'
 
 // 개발 서버에서만 쓰는 화면. 배포 빌드에서는 import.meta.env.DEV가 false라 import 자체가 빠진다
 const devRoutes: RouteObject[] = import.meta.env.DEV
   ? [
+      {
+        path: '/dev/admin-preview/:tab?',
+        lazy: async () => ({ Component: (await import('./pages/dev/AdminPreviewPage')).default }),
+      },
       {
         // WS-02 헤더·탭·배너를 백엔드·로그인 없이 본다
         path: '/dev/workspace-preview/:tab?',
@@ -267,6 +279,25 @@ export const router = createBrowserRouter([
           { path: 'calendar', element: <WorkspaceCalendarRoute /> },
           // NTC-01: noticeId가 없으면 목록의 첫 공지로 옮긴다
           { path: 'notice/:noticeId?', element: <WorkspaceNoticePage /> },
+        ],
+      },
+    ],
+  },
+  {
+    element: <RequireLogin />,
+    children: [
+      {
+        path: '/admin',
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <Navigate to="verifications" replace /> },
+          { path: 'verifications', element: <AdminVerificationPage /> },
+          { path: 'notices', element: <AdminNoticeManagementPage /> },
+          { path: 'reports', element: <AdminReportManagementPage /> },
+          { path: 'members', element: <AdminMemberManagementPage /> },
+          { path: 'posts', element: <AdminPostManagementPage /> },
+          { path: 'contests', element: <AdminContestManagementPage /> },
+          { path: 'permissions', element: <AdminMembersPage /> },
         ],
       },
     ],

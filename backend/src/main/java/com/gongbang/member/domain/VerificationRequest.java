@@ -16,8 +16,7 @@ import lombok.NoArgsConstructor;
 /**
  * MY-08·09 인증 요청. 실명은 암호화해서 넣고, 결과가 나오면 NULL로 지운다 (AGENTS 9).
  *
- * <p>TODO(확인 필요): 운영자 확인 화면(ADM-01, GET·PATCH /api/admin/verifications)은 기능정의서 행이 아직 없어 만들지 않았다
- * (API 명세서 비고 「기능정의서 행 추가 필요」).
+ * <p>관리자 심사는 VerificationReviewService가 담당하며 증빙과 현재 이력 상태를 확인한다.
  */
 @Entity
 @Table(name = "verification_request")
@@ -65,6 +64,14 @@ public class VerificationRequest {
 
     @Column(name = "reviewed_at")
     private LocalDateTime reviewedAt;
+
+    public void review(VerifyStatus result, String reason, Long reviewerId) {
+        this.status = result;
+        this.rejectReason = result == VerifyStatus.REJECTED ? reason : null;
+        this.reviewerId = reviewerId;
+        this.reviewedAt = LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
+        this.realName = null;
+    }
 
     public VerificationRequest(
             Long memberId,

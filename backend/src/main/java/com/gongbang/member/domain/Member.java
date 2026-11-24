@@ -62,6 +62,11 @@ public class Member {
     @Column(name = "role", nullable = false, length = 10)
     private MemberRole role = MemberRole.USER;
 
+    public void grantAdmin() {
+        if (status != MemberStatus.ACTIVE) throw new IllegalStateException("활성 회원만 관리자 지정이 가능합니다");
+        this.role = MemberRole.ADMIN;
+    }
+
     @Column(name = "profile_image_url", length = 500)
     private String profileImageUrl;
 
@@ -93,6 +98,43 @@ public class Member {
 
     @Column(name = "locked_until")
     private LocalDateTime lockedUntil;
+
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
+    @Column(name = "warning_count", nullable = false)
+    private int warningCount;
+
+    @Column(name = "nickname_change_required", nullable = false)
+    private boolean nicknameChangeRequired;
+
+    @Column(name = "sanction_reason", length = 200)
+    private String sanctionReason;
+
+    @Column(name = "sanctioned_by")
+    private Long sanctionedBy;
+
+    @Column(name = "sanctioned_at")
+    private LocalDateTime sanctionedAt;
+
+    public boolean isSuspended() {
+        return suspendedUntil != null
+                && suspendedUntil.isAfter(LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul")));
+    }
+
+    public void moderate(
+            String action, String reason, LocalDateTime until, Long actor, LocalDateTime now) {
+        switch (action) {
+            case "WARN" -> warningCount++;
+            case "SUSPEND" -> suspendedUntil = until;
+            case "UNSUSPEND" -> suspendedUntil = null;
+            case "REQUIRE_NICKNAME" -> nicknameChangeRequired = true;
+            default -> throw new IllegalArgumentException("Unknown moderation action");
+        }
+        sanctionReason = reason;
+        sanctionedBy = actor;
+        sanctionedAt = now;
+    }
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
@@ -224,6 +266,7 @@ public class Member {
             String major,
             Grade grade,
             String portfolioUrl) {
+        if (!java.util.Objects.equals(this.nickname, nickname)) nicknameChangeRequired = false;
         this.nickname = nickname;
         this.profileImageUrl = profileImageUrl;
         this.bio = bio;

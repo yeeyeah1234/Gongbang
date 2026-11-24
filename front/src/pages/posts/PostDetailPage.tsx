@@ -15,6 +15,7 @@ import { usePostDetail } from '../../features/post/hooks'
 import { isHttpUrl } from '../../features/post/postForm'
 import type { PostDetail } from '../../features/post/types'
 import { MemberActionPopover } from '../../features/report/components/MemberActionPopover'
+import { PostModerationSection } from '../../features/report/components/PostModerationSection'
 import { useTimedToast } from '../../hooks/useTimedToast'
 
 const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
@@ -118,6 +119,11 @@ export default function PostDetailPage() {
             {post.content}
           </div>
 
+          <PostModerationSection
+            postId={post.postId}
+            authorId={post.author.memberId}
+            nickname={post.author.nickname ?? '작성자'}
+          />
           {/* ⑦ 댓글 영역 (INT-004 · NET-01) */}
           <CommentSection
             targetKind="post"

@@ -1,5 +1,6 @@
 // API 명세서 MY-01 GET /api/members/me
 export interface MyProfile {
+  nicknameChangeRequired?: boolean
   memberId: number
   email: string
   loginType: 'EMAIL' | 'KAKAO'

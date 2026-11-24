@@ -11,6 +11,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
+    @org.springframework.data.jpa.repository.Query(
+            "select distinct a.applicantId from Application a where a.postId = :postId")
+    java.util.List<Long> findApplicantIdsForAdmin(
+            @org.springframework.data.repository.query.Param("postId") Long postId);
 
     /** REC-001 ③: 거절된 지원도 있으면 다시 지원할 수 없다. */
     boolean existsByPostIdAndApplicantId(Long postId, Long applicantId);

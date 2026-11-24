@@ -24,6 +24,13 @@ public class ServiceNoticeController {
 
     private final ServiceNoticeService service;
 
+    @GetMapping("/api/admin/service-notices")
+    public ApiResponse<org.springframework.data.domain.Page<ServiceNoticeService.AdminNotice>> list(
+            @AuthenticationPrincipal LoginMember me,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page) {
+        return ApiResponse.success(service.list(me, page));
+    }
+
     @GetMapping("/api/service-notices/{serviceNoticeId}")
     public ApiResponse<ServiceNoticeResponse> get(@PathVariable Long serviceNoticeId) {
         return ApiResponse.success(service.get(serviceNoticeId));

@@ -21,6 +21,11 @@ public class ApplicationCloseService {
 
     private final ApplicationRepository applicationRepository;
 
+    @Transactional(readOnly = true)
+    public List<Long> findAllApplicantIds(Long postId) {
+        return applicationRepository.findApplicantIdsForAdmin(postId);
+    }
+
     /**
      * PST-004 ④: 모집글 삭제로 대기 중인 지원을 모두 종료(CLOSED)한다. 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근 뒤 부른다.
      *

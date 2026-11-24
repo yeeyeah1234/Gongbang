@@ -44,4 +44,22 @@ public class RealNameCipher {
             throw new IllegalStateException("실명 암호화 실패", e);
         }
     }
+
+    public String decrypt(String encrypted) {
+        if (encrypted == null) return null;
+        try {
+            byte[] bytes = Base64.getDecoder().decode(encrypted);
+            if (bytes.length < 28) throw new IllegalArgumentException("Invalid encrypted name");
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(
+                    Cipher.DECRYPT_MODE,
+                    key,
+                    new GCMParameterSpec(128, java.util.Arrays.copyOf(bytes, 12)));
+            return new String(
+                    cipher.doFinal(java.util.Arrays.copyOfRange(bytes, 12, bytes.length)),
+                    StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new IllegalStateException("실명 복호화 실패", e);
+        }
+    }
 }

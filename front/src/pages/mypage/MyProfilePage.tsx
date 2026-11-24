@@ -32,12 +32,12 @@ import {
   gradeLabel,
   roleLabel,
 } from '../../features/member/constants'
-import { uploadProfileImage } from '../../features/member/api'
 import {
   useDeleteHistory,
   useHistory,
   useMyProfile,
   useUpdateMyProfile,
+  useUploadProfileImage,
 } from '../../features/member/hooks'
 import type { Award, Career, Certificate, MyProfile } from '../../features/member/types'
 
@@ -103,6 +103,14 @@ export default function MyProfilePage() {
       }
     >
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        {profile.nicknameChangeRequired && (
+          <div
+            role="alert"
+            className="rounded-card border border-danger-line bg-danger-soft p-4 text-danger xl:col-span-2"
+          >
+            관리자가 닉네임 변경을 요청했습니다. 프로필 수정에서 새 닉네임으로 변경해 주세요.
+          </div>
+        )}
         {editing ? (
           <ProfileEditCard
             profile={profile}
@@ -200,6 +208,15 @@ export default function MyProfilePage() {
       )}
       {historyModal?.kind === 'award' && (
         <AwardModal
+          onRequestVerify={(a) => {
+            setHistoryModal(null)
+            setVerifyTarget({
+              kind: 'awards',
+              id: a.awardId,
+              title: `${a.contestName} · ${a.awardName}`,
+              proofFileId: a.proofFileId,
+            })
+          }}
           open
           item={historyModal.item}
           onClose={() => setHistoryModal(null)}
@@ -210,6 +227,7 @@ export default function MyProfilePage() {
         />
       )}
       <VerifyRequestModal
+        key={verifyTarget ? `${verifyTarget.kind}-${verifyTarget.id}` : 'closed'}
         target={verifyTarget}
         onClose={() => setVerifyTarget(null)}
         onDone={(m) => {
@@ -353,6 +371,7 @@ function ProfileEditCard({
   // MY-01 ③ 새로 고른 사진: [저장]을 누를 때 올린다. 고르면 바로 미리 보기
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const uploadPhoto = useUploadProfileImage()
   const photoInput = useRef<HTMLInputElement>(null)
   const photoPreview = useMemo(
     () => (photoFile ? URL.createObjectURL(photoFile) : null),
@@ -438,7 +457,8 @@ function ProfileEditCard({
     if (photoFile) {
       setUploading(true)
       try {
-        await uploadProfileImage(photoFile)
+        await uploadPhoto.mutateAsync(photoFile)
+        setPhotoFile(null)
       } catch (e) {
         setError(getErrorMessage(e))
         setUploading(false)

@@ -78,6 +78,12 @@ public class Contest {
         applyItem(category, item);
     }
 
+    public void updateByAdmin(String title, LocalDate endDate, Category category) {
+        this.title = title;
+        this.endDate = endDate;
+        this.category = category;
+    }
+
     private void applyItem(Category category, ContestBatchItem item) {
         this.sourceSite = item.sourceSite();
         this.homepageUrl = item.homepageUrl();

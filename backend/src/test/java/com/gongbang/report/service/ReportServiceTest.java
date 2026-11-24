@@ -34,12 +34,13 @@ class ReportServiceTest {
     @Mock private ReportRepository reportRepository;
     @Mock private MemberService memberService;
     @Mock private Member activeTarget;
+    @Mock private ReportTargetValidationService targets;
 
     private ReportService reportService;
 
     @BeforeEach
     void setUp() {
-        reportService = new ReportService(reportRepository, memberService);
+        reportService = new ReportService(reportRepository, memberService, targets);
     }
 
     @Test

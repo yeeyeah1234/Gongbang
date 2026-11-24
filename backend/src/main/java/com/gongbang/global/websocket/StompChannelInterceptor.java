@@ -79,13 +79,17 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 jwtProvider
                         .parseAccessToken(token)
                         .orElseThrow(() -> new MessageDeliveryException("유효하지 않거나 만료된 토큰입니다."));
-        if (memberService.findActiveMember(claims.memberId()).isEmpty()) {
+        if (memberService
+                .findActiveMember(claims.memberId())
+                .filter(m -> !m.isSuspended())
+                .isEmpty()) {
             throw new MessageDeliveryException("유효하지 않거나 탈퇴한 회원입니다.");
         }
         accessor.setUser(new StompPrincipal(claims.memberId(), claims.role()));
     }
 
     private void authorizeSubscription(String destination, StompPrincipal principal) {
+        requireNotSuspended(principal.memberId());
         if (destination == null || destination.isBlank()) {
             throw new MessageDeliveryException("구독 경로가 비어 있습니다.");
         }
@@ -130,6 +134,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     }
 
     private void authorizeSend(String destination, StompPrincipal principal) {
+        requireNotSuspended(principal.memberId());
         if (destination == null || destination.isBlank()) {
             throw new MessageDeliveryException("전송 경로가 비어 있습니다.");
         }
@@ -152,5 +157,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             return principal;
         }
         throw new MessageDeliveryException("인증된 STOMP 세션이 아닙니다.");
+    }
+
+    private void requireNotSuspended(Long id) {
+        if (memberService.findActiveMember(id).filter(m -> !m.isSuspended()).isEmpty())
+            throw new MessageDeliveryException("활성 상태이며 이용 정지되지 않은 회원만 사용할 수 있습니다.");
     }
 }

@@ -49,6 +49,23 @@ public class Report {
     @Column(name = "status", nullable = false, length = 10)
     private ReportStatus status;
 
+    @Column(length = 30)
+    private String action;
+
+    @Column(length = 200)
+    private String reviewNote;
+
+    private Long reviewerId;
+    private LocalDateTime reviewedAt;
+
+    public void review(String action, String note, Long actor, LocalDateTime now) {
+        this.status = "DISMISS".equals(action) ? ReportStatus.DISMISSED : ReportStatus.RESOLVED;
+        this.action = action;
+        this.reviewNote = note;
+        this.reviewerId = actor;
+        this.reviewedAt = now;
+    }
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

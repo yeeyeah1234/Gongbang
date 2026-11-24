@@ -8,6 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ScheduledNotificationRepository
         extends JpaRepository<ScheduledNotification, Long> {
+    boolean existsByTargetTypeAndTargetIdAndFireAtAndStatusNot(
+            String targetType,
+            Long targetId,
+            java.time.LocalDateTime fireAt,
+            ScheduledNotification.Status status);
 
     List<ScheduledNotification> findByTargetTypeAndTargetIdAndStatus(
             String targetType, Long targetId, Status status);

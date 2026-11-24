@@ -4,6 +4,7 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.team.domain.TeamRole;
 import com.gongbang.team.repository.TeamMemberRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +15,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class TeamMemberService {
 
     private final TeamMemberRepository teamMemberRepository;
+
+    @Transactional(readOnly = true)
+    public List<Long> findActiveMemberIds(Long teamId) {
+        return java.util.stream.Stream.concat(
+                        teamMemberRepository
+                                .findActiveMemberIdsByRole(teamId, TeamRole.MEMBER)
+                                .stream(),
+                        teamMemberRepository
+                                .findActiveMemberIdsByRole(teamId, TeamRole.LEADER)
+                                .stream())
+                .distinct()
+                .toList();
+    }
+
+    /** 공지 알림을 받을 현재 일반 팀원. 팀장과 나간 팀원은 제외한다. */
+    @Transactional(readOnly = true)
+    public List<Long> findActiveNonLeaderMemberIds(Long teamId) {
+        return teamMemberRepository.findActiveMemberIdsByRole(teamId, TeamRole.MEMBER);
+    }
 
     /** 현재 팀원인지 (left_at IS NULL). */
     @Transactional(readOnly = true)

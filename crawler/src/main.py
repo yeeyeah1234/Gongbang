@@ -144,7 +144,7 @@ def find_invalid_reason(payload):
     return None
 
 
-def main():
+def main(force=False):
     state = state_store.load()
     pending_state = {}
     contests_batch = []
@@ -159,7 +159,7 @@ def main():
         cached_deadline = state.get(source_url, {}).get("deadline")
         estimated_deadline = _estimate_deadline(item["dday"])
 
-        need_detail = cached_deadline is None or estimated_deadline != cached_deadline
+        need_detail = force or cached_deadline is None or estimated_deadline != cached_deadline
         if not need_detail:
             continue
 

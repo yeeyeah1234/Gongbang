@@ -23,6 +23,33 @@ public class ServiceNoticeService {
     private final NotificationService notificationService;
     private final MemberService memberService;
 
+    public record AdminNotice(
+            Long id,
+            String title,
+            String content,
+            LocalDateTime createdAt,
+            LocalDateTime deletedAt) {}
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<AdminNotice> list(LoginMember admin, int page) {
+        checkAdmin(admin);
+        if (page < 0) throw new BusinessException(ErrorCode.INVALID_INPUT);
+        return repository
+                .findAll(
+                        org.springframework.data.domain.PageRequest.of(
+                                page,
+                                20,
+                                org.springframework.data.domain.Sort.by("id").descending()))
+                .map(
+                        n ->
+                                new AdminNotice(
+                                        n.getId(),
+                                        n.getTitle(),
+                                        n.getContent(),
+                                        n.getCreatedAt(),
+                                        n.getDeletedAt()));
+    }
+
     @Transactional(readOnly = true)
     public ServiceNoticeResponse get(Long id) {
         return ServiceNoticeResponse.from(find(id));
@@ -55,7 +82,7 @@ public class ServiceNoticeService {
     @Transactional
     public Long update(LoginMember admin, Long id, ServiceNoticeRequest request) {
         checkAdmin(admin);
-        ServiceNotice notice = find(id);
+        ServiceNotice notice = findForUpdate(id);
         notice.update(request.title().trim(), request.content().trim());
         return notice.getId();
     }
@@ -63,7 +90,7 @@ public class ServiceNoticeService {
     @Transactional
     public void delete(LoginMember admin, Long id) {
         checkAdmin(admin);
-        find(id).delete(LocalDateTime.now());
+        findForUpdate(id).delete(LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul")));
     }
 
     private ServiceNotice find(Long id) {
@@ -73,8 +100,17 @@ public class ServiceNoticeService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
     }
 
-    private static void checkAdmin(LoginMember member) {
-        if (member == null || !member.isAdmin()) {
+    private ServiceNotice findForUpdate(Long id) {
+        return repository
+                .findForUpdate(id)
+                .filter(n -> !n.isDeleted())
+                .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+    }
+
+    private void checkAdmin(LoginMember member) {
+        if (member == null) throw new BusinessException(ErrorCode.NOT_ADMIN);
+        var current = memberService.getActiveMember(member.getMemberId());
+        if (!current.isAdmin() || current.isSuspended()) {
             throw new BusinessException(ErrorCode.NOT_ADMIN);
         }
     }

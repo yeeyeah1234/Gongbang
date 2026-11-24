@@ -29,6 +29,12 @@ public class CalendarService {
 
     private final CalendarEventRepository calendarEventRepository;
 
+    @Transactional(readOnly = true)
+    public java.util.Optional<com.gongbang.workspace.calendar.domain.CalendarEvent> findForReminder(
+            Long eventId) {
+        return calendarEventRepository.findById(eventId);
+    }
+
     /**
      * CAL-06: 팀의 공모전 마감 자동 일정을 만들거나 날짜를 고친다. 모집글이나 마감일이 없으면 아무것도 하지 않는다.
      *
@@ -37,6 +43,8 @@ public class CalendarService {
      */
     @Transactional
     public void upsertAutoEvent(Long teamId) {
+        calendarEventRepository.upsertMilestone(teamId, null, "공모전 마감 D-7", "CONTEST_D7", 7);
+        calendarEventRepository.upsertMilestone(teamId, null, "공모전 마감 D-1", "CONTEST_D1", 1);
         calendarEventRepository.upsertContestDeadlineForTeam(
                 teamId,
                 AUTO_DEADLINE_TITLE,
@@ -55,10 +63,22 @@ public class CalendarService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public void upsertAutoEventsByContest(Long contestId) {
+        syncContestMilestones(contestId);
+    }
+
+    @Transactional
+    public void syncContestMilestones(Long contestId) {
         calendarEventRepository.upsertContestDeadlineForContest(
                 contestId,
                 AUTO_DEADLINE_TITLE,
                 AUTO_DEADLINE_COLOR,
                 CalendarEventAutoType.CONTEST_DEADLINE.name());
+        calendarEventRepository.upsertMilestone(null, contestId, "공모전 마감 D-7", "CONTEST_D7", 7);
+        calendarEventRepository.upsertMilestone(null, contestId, "공모전 마감 D-1", "CONTEST_D1", 1);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<com.gongbang.workspace.calendar.domain.CalendarEvent> milestones() {
+        return calendarEventRepository.findMilestones();
     }
 }

@@ -14,6 +14,7 @@ import { EmailCodeField } from '../../features/auth/components/EmailCodeField'
 import { PasswordInput } from '../../features/auth/components/PasswordInput'
 import { PasswordRules } from '../../features/auth/components/PasswordRules'
 import { StepIndicator } from '../../features/auth/components/StepIndicator'
+import { SocialLoginButtons } from '../../features/auth/components/SocialLoginButtons'
 import { TERMS_VERSION, TermsModal } from '../../features/auth/components/TermsModal'
 import { WithdrawnAccountModal } from '../../features/auth/components/WithdrawnAccountModal'
 import { isNicknameFormatValid, isPasswordValid } from '../../features/auth/passwordRules'
@@ -195,6 +196,12 @@ export default function SignupPage() {
 
   return (
     <AuthCard title={step === 2 ? '이메일 인증' : '회원가입'} wide={step === 4}>
+      {step === 1 && (
+        <div className="mb-8">
+          <SocialLoginButtons redirectTo={redirectTo} onUnavailable={toast.show} />
+          <p className="mt-4 text-center text-small text-text-sub">또는 이메일로 회원가입</p>
+        </div>
+      )}
       <StepIndicator current={step} />
 
       {step === 1 && (
