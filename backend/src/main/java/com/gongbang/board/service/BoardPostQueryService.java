@@ -7,6 +7,7 @@ import com.gongbang.board.dto.BoardPostListItemResponse;
 import com.gongbang.board.dto.BoardPostListItemResponse.AuthorInfo;
 import com.gongbang.board.dto.BoardPostListItemResponse.ContestInfo;
 import com.gongbang.board.repository.BoardPostRepository;
+import com.gongbang.comment.service.CommentCountService;
 import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.common.PageResponse;
@@ -60,6 +61,7 @@ public class BoardPostQueryService {
     private final ContestLookupService contestLookupService;
     private final MemberService memberService;
     private final BoardPostImageService boardPostImageService;
+    private final CommentCountService commentCountService;
 
     /** 다른 도메인(댓글 BRD-005 등)용: 삭제되지 않은 커뮤니티 게시글. 없거나 삭제됐으면 404 BOARD_POST_NOT_FOUND. */
     public BoardPost getActivePost(Long boardPostId) {
@@ -161,7 +163,7 @@ public class BoardPostQueryService {
         throw new BusinessException(ErrorCode.INVALID_INPUT);
     }
 
-    /** 공모전 이름과 작성자 닉네임을 한 번에 읽어 목록 항목으로 만든다. */
+    /** 공모전 이름, 작성자 닉네임, 댓글 수(BRD-001 ④)를 한 번에 읽어 목록 항목으로 만든다. */
     private List<BoardPostListItemResponse> toItems(List<BoardPost> posts) {
         Set<Long> contestIds =
                 posts.stream()
@@ -169,6 +171,9 @@ public class BoardPostQueryService {
                         .filter(Objects::nonNull)
                         .collect(Collectors.toSet());
         Map<Long, ContestSummary> contests = contestLookupService.findSummaries(contestIds);
+        Map<Long, Long> commentCounts =
+                commentCountService.countByBoardPostIds(
+                        posts.stream().map(BoardPost::getId).toList());
         Map<Long, MemberProfileSummary> authors =
                 memberService.getProfileSummaries(
                         posts.stream().map(BoardPost::getAuthorId).collect(Collectors.toSet()));
@@ -186,7 +191,8 @@ public class BoardPostQueryService {
                                     contest == null
                                             ? null
                                             : new ContestInfo(contest.contestId(), contest.title()),
-                                    new AuthorInfo(post.getAuthorId(), author.nickname()));
+                                    new AuthorInfo(post.getAuthorId(), author.nickname()),
+                                    commentCounts.getOrDefault(post.getId(), 0L));
                         })
                 .toList();
     }

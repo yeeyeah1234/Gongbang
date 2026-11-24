@@ -29,6 +29,7 @@ export interface BoardListItem {
   createdAt: string // 한국 시간 YYYY-MM-DDTHH:mm:ss
   viewCount: number
   likeCount: number
+  commentCount: number // 삭제·숨김되지 않은 댓글·답글 (BRD-001 ④)
 }
 
 export interface BoardImage {

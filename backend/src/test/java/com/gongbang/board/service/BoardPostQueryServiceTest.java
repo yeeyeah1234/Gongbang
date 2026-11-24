@@ -13,6 +13,7 @@ import com.gongbang.board.domain.BoardCategory;
 import com.gongbang.board.domain.BoardPost;
 import com.gongbang.board.dto.BoardPostDetailResponse;
 import com.gongbang.board.repository.BoardPostRepository;
+import com.gongbang.comment.service.CommentCountService;
 import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.error.ErrorCode;
@@ -48,6 +49,7 @@ class BoardPostQueryServiceTest {
     @Mock private ContestLookupService contestLookupService;
     @Mock private MemberService memberService;
     @Mock private BoardPostImageService boardPostImageService;
+    @Mock private CommentCountService commentCountService;
 
     private BoardPostQueryService service;
 
@@ -58,7 +60,8 @@ class BoardPostQueryServiceTest {
                         boardPostRepository,
                         contestLookupService,
                         memberService,
-                        boardPostImageService);
+                        boardPostImageService,
+                        commentCountService);
     }
 
     private static BoardPost post(Long contestId) {
@@ -102,7 +105,7 @@ class BoardPostQueryServiceTest {
     }
 
     @Test
-    @DisplayName("목록 항목에 공모전 이름과 작성자 닉네임을 붙인다 (BRD-001 ④)")
+    @DisplayName("목록 항목에 공모전 이름, 작성자 닉네임, 댓글 수를 붙인다 (BRD-001 ④)")
     void 목록_항목() {
         given(boardPostRepository.findActive(any(), any(), any()))
                 .willReturn(new PageImpl<>(List.of(post(3L))));
@@ -118,11 +121,15 @@ class BoardPostQueryServiceTest {
                                 AUTHOR_ID,
                                 new MemberProfileSummary(AUTHOR_ID, "작성자", null, List.of())));
 
+        given(commentCountService.countByBoardPostIds(List.of(POST_ID)))
+                .willReturn(Map.of(POST_ID, 2L));
+
         var item = service.getPosts(null, null, null, 0, 20).items().get(0);
 
         assertThat(item.contest().title()).isEqualTo("공모전");
         assertThat(item.author().nickname()).isEqualTo("작성자");
         assertThat(item.viewCount()).isEqualTo(5);
+        assertThat(item.commentCount()).isEqualTo(2);
     }
 
     @Test

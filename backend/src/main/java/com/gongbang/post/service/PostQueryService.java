@@ -1,5 +1,6 @@
 package com.gongbang.post.service;
 
+import com.gongbang.comment.service.CommentCountService;
 import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.common.PageResponse;
@@ -41,6 +42,7 @@ public class PostQueryService {
     private final RecruitPostRepository recruitPostRepository;
     private final ContestLookupService contestLookupService;
     private final MemberService memberService;
+    private final CommentCountService commentCountService;
 
     /** 다른 도메인(지원자 목록 REC-003 등)용: 삭제되지 않은 모집글. 없거나 삭제됐으면 404 POST_NOT_FOUND. 잠그지 않는다. */
     public RecruitPost getActivePost(Long postId) {
@@ -87,9 +89,8 @@ public class PostQueryService {
     }
 
     /**
-     * MY-02 · INT-002 ③ 마이페이지 「내 글 관리」 모집글 탭. 내가 쓴 글(삭제된 글 제외)을 최신순으로 준다 (④).
-     *
-     * <p>TODO(확인 필요): 댓글(김건우 comment)이 develop에 들어오면 글마다 댓글 수를 채운다. 지금은 댓글 테이블이 없어 0이다.
+     * MY-02 · INT-002 ③ 마이페이지 「내 글 관리」 모집글 탭. 내가 쓴 글(삭제된 글 제외)을 최신순으로 준다 (④). 댓글 수는 삭제·숨김되지 않은
+     * 댓글·답글·비공개 댓글을 센다 (NET-01).
      */
     public PageResponse<MyPostItemResponse> getMyPosts(Long memberId, int page, int size) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
@@ -98,8 +99,16 @@ public class PostQueryService {
         Page<RecruitPost> posts =
                 recruitPostRepository.findByAuthorIdAndDeletedAtIsNull(
                         memberId, PageRequest.of(page, size, LATEST));
+        Map<Long, Long> commentCounts =
+                commentCountService.countByPostIds(
+                        posts.getContent().stream().map(RecruitPost::getId).toList());
         List<MyPostItemResponse> items =
-                posts.getContent().stream().map(post -> MyPostItemResponse.of(post, 0)).toList();
+                posts.getContent().stream()
+                        .map(
+                                post ->
+                                        MyPostItemResponse.of(
+                                                post, commentCounts.getOrDefault(post.getId(), 0L)))
+                        .toList();
         return PageResponse.of(items, page, size, posts.getTotalElements());
     }
 

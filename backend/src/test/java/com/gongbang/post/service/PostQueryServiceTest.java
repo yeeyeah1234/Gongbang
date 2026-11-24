@@ -12,6 +12,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.gongbang.comment.service.CommentCountService;
 import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.common.PageResponse;
@@ -55,13 +56,18 @@ class PostQueryServiceTest {
     @Mock private RecruitPostRepository recruitPostRepository;
     @Mock private ContestLookupService contestLookupService;
     @Mock private MemberService memberService;
+    @Mock private CommentCountService commentCountService;
 
     private PostQueryService postQueryService;
 
     @BeforeEach
     void setUp() {
         postQueryService =
-                new PostQueryService(recruitPostRepository, contestLookupService, memberService);
+                new PostQueryService(
+                        recruitPostRepository,
+                        contestLookupService,
+                        memberService,
+                        commentCountService);
         // 닉네임을 보지 않는 테스트용 기본값
         lenient()
                 .when(memberService.getProfileSummaries(anyCollection()))
@@ -199,12 +205,14 @@ class PostQueryServiceTest {
     }
 
     @Test
-    @DisplayName("내 모집글은 내가 쓴 삭제 안 된 글을 최신순 페이지로 주고, 댓글 수는 아직 0이다 (MY-02)")
+    @DisplayName("내 모집글은 내가 쓴 삭제 안 된 글을 최신순 페이지로 주고, 글마다 댓글 수를 채운다 (댓글 없으면 0, MY-02)")
     void 내_모집글을_최신순_페이지로_준다() {
         RecruitPost post = contestPost(1L, 3L);
         ReflectionTestUtils.setField(post, "status", PostStatus.COMPLETED);
+        RecruitPost noComment = contestPost(2L, 3L);
         given(recruitPostRepository.findByAuthorIdAndDeletedAtIsNull(any(), any()))
-                .willReturn(new PageImpl<>(List.of(post), PageRequest.of(1, 10), 11));
+                .willReturn(new PageImpl<>(List.of(post, noComment), PageRequest.of(1, 10), 12));
+        given(commentCountService.countByPostIds(List.of(1L, 2L))).willReturn(Map.of(1L, 4L));
 
         PageResponse<MyPostItemResponse> response = postQueryService.getMyPosts(7L, 1, 10);
 
@@ -214,12 +222,18 @@ class PostQueryServiceTest {
         assertThat(pageable.getValue().getPageSize()).isEqualTo(10);
         assertThat(pageable.getValue().getSort()).isEqualTo(PostQueryService.LATEST);
 
-        assertThat(response.totalCount()).isEqualTo(11);
+        assertThat(response.totalCount()).isEqualTo(12);
         assertThat(response.hasNext()).isFalse();
         assertThat(response.items())
                 .containsExactly(
                         new MyPostItemResponse(
-                                1L, "AI 팀원 모집", post.getCreatedAt(), 0, PostStatus.COMPLETED));
+                                1L, "AI 팀원 모집", post.getCreatedAt(), 4, PostStatus.COMPLETED),
+                        new MyPostItemResponse(
+                                2L,
+                                "AI 팀원 모집",
+                                noComment.getCreatedAt(),
+                                0,
+                                noComment.getStatus()));
     }
 
     @ParameterizedTest
