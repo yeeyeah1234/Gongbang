@@ -6,6 +6,8 @@ import com.gongbang.workspace.document.domain.DocumentChangeType;
 import com.gongbang.workspace.document.domain.DocumentChangedEvent;
 import com.gongbang.workspace.notice.domain.NoticeChangeType;
 import com.gongbang.workspace.notice.domain.NoticeChangedEvent;
+import com.gongbang.workspace.whiteboard.domain.WhiteboardChangeType;
+import com.gongbang.workspace.whiteboard.domain.WhiteboardChangedEvent;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -13,7 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/** 트랜잭션 커밋 뒤(`AFTER_COMMIT`)에만 팀·개인·공지·일정·문서 STOMP 메시지를 브로커로 보낸다. */
+/** 트랜잭션 커밋 뒤(`AFTER_COMMIT`)에만 팀·개인·공지·일정·문서·화이트보드 STOMP 메시지를 브로커로 보낸다. */
 @Component
 @RequiredArgsConstructor
 public class StompAfterCommitEventListener {
@@ -72,6 +74,19 @@ public class StompAfterCommitEventListener {
         messagingTemplate.convertAndSend(teamEventsDestination(event.teamId()), message);
     }
 
+    /** 화이트보드 변경 이벤트를 팀 이벤트(`/sub/teams/{teamId}/events`)로 브리지한다 (WB-01, API 명세서 WHITEBOARD_*). */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onWhiteboardChanged(WhiteboardChangedEvent event) {
+        TeamEventMessage message =
+                new TeamEventMessage(
+                        toWhiteboardEventType(event.type()),
+                        event.teamId(),
+                        event.whiteboardId(),
+                        event.actorId(),
+                        LocalDateTime.now());
+        messagingTemplate.convertAndSend(teamEventsDestination(event.teamId()), message);
+    }
+
     static String teamEventsDestination(Long teamId) {
         return "/sub/teams/" + teamId + "/events";
     }
@@ -103,6 +118,14 @@ public class StompAfterCommitEventListener {
             case RENAMED -> "DOCUMENT_RENAMED";
             case DELETED -> "DOCUMENT_DELETED";
             case SAVED -> "DOCUMENT_SAVED";
+        };
+    }
+
+    private static String toWhiteboardEventType(WhiteboardChangeType type) {
+        return switch (type) {
+            case CREATED -> "WHITEBOARD_CREATED";
+            case UPDATED -> "WHITEBOARD_UPDATED";
+            case DELETED -> "WHITEBOARD_DELETED";
         };
     }
 }

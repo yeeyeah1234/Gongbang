@@ -10,6 +10,8 @@ import com.gongbang.workspace.document.domain.DocumentChangeType;
 import com.gongbang.workspace.document.domain.DocumentChangedEvent;
 import com.gongbang.workspace.notice.domain.NoticeChangeType;
 import com.gongbang.workspace.notice.domain.NoticeChangedEvent;
+import com.gongbang.workspace.whiteboard.domain.WhiteboardChangeType;
+import com.gongbang.workspace.whiteboard.domain.WhiteboardChangedEvent;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -117,5 +119,28 @@ class StompAfterCommitEventListenerTest {
                         org.assertj.core.groups.Tuple.tuple("DOCUMENT_RENAMED", 3L, 300L),
                         org.assertj.core.groups.Tuple.tuple("DOCUMENT_DELETED", 3L, 300L),
                         org.assertj.core.groups.Tuple.tuple("DOCUMENT_SAVED", 3L, 300L));
+    }
+
+    @Test
+    @DisplayName("화이트보드 변경 이벤트는 WHITEBOARD_* 팀 이벤트로 브리지하고 actorId를 넣는다")
+    void 화이트보드이벤트_브리지() {
+        for (WhiteboardChangeType type : WhiteboardChangeType.values()) {
+            listener.onWhiteboardChanged(new WhiteboardChangedEvent(3L, 400L, type, 7L));
+        }
+
+        ArgumentCaptor<TeamEventMessage> captor = ArgumentCaptor.forClass(TeamEventMessage.class);
+        verify(messagingTemplate, org.mockito.Mockito.times(3))
+                .convertAndSend(eq("/sub/teams/3/events"), captor.capture());
+
+        assertThat(captor.getAllValues())
+                .extracting(
+                        TeamEventMessage::type,
+                        TeamEventMessage::teamId,
+                        TeamEventMessage::targetId,
+                        TeamEventMessage::actorId)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("WHITEBOARD_CREATED", 3L, 400L, 7L),
+                        org.assertj.core.groups.Tuple.tuple("WHITEBOARD_UPDATED", 3L, 400L, 7L),
+                        org.assertj.core.groups.Tuple.tuple("WHITEBOARD_DELETED", 3L, 400L, 7L));
     }
 }
