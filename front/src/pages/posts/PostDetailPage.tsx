@@ -124,8 +124,11 @@ export default function PostDetailPage() {
         {/* PST-005 ⑤ 사진은 공모전 상세(MAIN-02 ③) 포스터 칸과 같은 세로 3:4로 위에 두고,
             PST-006 ②③ 지원 패널만 GNB(72px) 아래에 고정한다. 둘을 함께 고정하면 화면보다 길어져 사진 아래가 잘린다 */}
         <aside className="flex flex-col gap-6">
-          <RepresentativeImage post={post} />
-          <div className="lg:sticky lg:top-24">
+          {/* 한 칸 화면(lg 미만)에서는 지원 패널을 먼저, 사진은 공모전 상세 포스터 칸과 같은 최대 400px로 가운데에 */}
+          <div className="order-2 mx-auto w-full max-w-100 lg:order-1 lg:max-w-none">
+            <RepresentativeImage post={post} />
+          </div>
+          <div className="order-1 lg:sticky lg:top-24 lg:order-2">
             <PostApplyPanel post={post} onError={toast.show} />
           </div>
         </aside>

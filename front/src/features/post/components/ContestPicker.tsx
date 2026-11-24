@@ -36,7 +36,7 @@ export function ContestPicker({ values, errors, onChange }: ContestPickerProps) 
 
   return (
     <div className="flex flex-col">
-      <div className="mb-2 flex items-center justify-between gap-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <span id="post-contest-label" className="text-body font-bold text-text">
           공모전<span className="ml-1 font-normal text-text-sub">(필수)</span>
         </span>
@@ -85,7 +85,10 @@ export function SelectedContestBox({
     <div className="flex min-h-14 items-center gap-3 rounded-input border border-line-input bg-surface px-4 py-2">
       <Badge className="shrink-0">{contest.categoryName}</Badge>
       <span className="min-w-0 flex-1 truncate text-body font-bold text-text">{contest.title}</span>
-      <span className="shrink-0 text-small text-text-sub">마감 {formatDate(contest.deadline)}</span>
+      {/* 좁은 화면에서는 제목이 보이도록 마감일을 숨긴다 */}
+      <span className="hidden shrink-0 text-small text-text-sub sm:inline">
+        마감 {formatDate(contest.deadline)}
+      </span>
       <Button variant="text" size="sm" onClick={onClear}>
         다시 고르기
       </Button>
@@ -217,9 +220,10 @@ function ExternalContestFields({ values, errors, onChange }: ContestPickerProps)
   const { data: categories } = useCategories()
 
   return (
-    <fieldset className="rounded-card border border-line-strong p-6">
+    <fieldset className="min-w-0 rounded-card border border-line-strong p-4 sm:p-6">
       <legend className="px-2 text-body font-bold text-text">외부 공모전 (직접 입력)</legend>
-      <div className="grid grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4">
+      {/* 넓은 화면은 한 줄 네 칸, 중간 화면은 두 칸씩, 좁은 화면은 한 칸씩 */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <Input
           id="post-external-title"
           label="공모전명"

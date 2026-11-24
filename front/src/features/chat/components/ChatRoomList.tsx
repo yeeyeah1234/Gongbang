@@ -20,7 +20,10 @@ const SORT_LABELS: Record<RoomSortOrder, string> = {
   unread: '안 읽은 순',
 }
 
-/** STYLE_GUIDE.md 4장·5-5·5-7 좌측 참여 중인 채팅방 목록 패널 (너비 340~400px) */
+/**
+ * STYLE_GUIDE.md 4장·5-5·5-7 좌측 참여 중인 채팅방 목록 패널 (너비 340~400px).
+ * 1024px 미만은 메신저 앱 목록처럼 테두리 없이 화면 끝까지 붙이고, 방은 구분선으로 나눈 줄로 보여 준다.
+ */
 export function ChatRoomList({
   rooms,
   selectedRoomId,
@@ -48,9 +51,9 @@ export function ChatRoomList({
   return (
     <section
       aria-label="참여 중인 채팅방"
-      className="flex w-full shrink-0 flex-col rounded-card border border-line bg-surface p-5 lg:w-[360px]"
+      className="flex w-full flex-1 flex-col bg-surface lg:w-[360px] lg:flex-none lg:shrink-0 lg:rounded-card lg:border lg:border-line lg:p-5"
     >
-      <div className="mb-4 flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 border-b border-divider px-4 py-3 lg:mb-4 lg:border-b-0 lg:p-0">
         <h2 className="text-subheading font-bold text-text">참여 중인 채팅방</h2>
 
         <div ref={sortRef} className="relative">
@@ -111,7 +114,7 @@ export function ChatRoomList({
           <p className="text-body text-text-sub">참여 중인 채팅방이 없습니다</p>
         </div>
       ) : (
-        <ul className="flex flex-1 flex-col gap-3 overflow-y-auto">
+        <ul className="flex flex-1 flex-col overflow-y-auto lg:gap-3">
           {rooms.map((room) => {
             const isSelected = room.id === selectedRoomId
             return (
@@ -120,8 +123,9 @@ export function ChatRoomList({
                   type="button"
                   onClick={() => onSelectRoom(room.id)}
                   className={[
-                    'flex w-full cursor-pointer flex-col gap-2 rounded-popover px-5 py-4 text-left transition-colors',
-                    isSelected ? 'bg-primary-soft' : 'border border-line bg-surface hover:bg-bg',
+                    'flex w-full cursor-pointer flex-col gap-1.5 border-b border-divider bg-surface px-4 py-3 text-left transition-colors hover:bg-bg lg:gap-2 lg:rounded-popover lg:px-5 lg:py-4',
+                    // 선택 표시는 목록과 방이 나란히 보이는 1024px 이상에서만
+                    isSelected ? 'lg:border-b-0 lg:bg-primary-soft' : 'lg:border lg:border-line',
                     room.isEnded ? 'opacity-50' : '',
                   ]
                     .filter(Boolean)

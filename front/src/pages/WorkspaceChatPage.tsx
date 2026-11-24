@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { getErrorMessage } from '../api/errors'
 import { Toast } from '../components/ui/Toast'
 import {
@@ -24,6 +24,19 @@ import type { ChatMessage, RoomSortOrder, TeamMember } from '../features/chat/ty
 import { useWorkspace } from '../features/workspace/context'
 import { getDeadlineBadge } from '../features/workspace/deadline'
 
+// 1024px(lg) 이상이면 목록과 방을 나란히, 미만이면 메신저 앱처럼 목록 → 방 화면으로 들어간다
+const WIDE_QUERY = '(min-width: 1024px)'
+
+function subscribeWide(onChange: () => void) {
+  const media = window.matchMedia(WIDE_QUERY)
+  media.addEventListener('change', onChange)
+  return () => media.removeEventListener('change', onChange)
+}
+
+function useIsWide() {
+  return useSyncExternalStore(subscribeWide, () => window.matchMedia(WIDE_QUERY).matches)
+}
+
 function buildDdayAlertMessage(deadline: string | null): string {
   const badge = getDeadlineBadge(deadline)
   if (!badge) return ''
@@ -46,6 +59,10 @@ export default function WorkspaceChatPage() {
 
   const [showAutoAlert, setShowAutoAlert] = useState(true)
   const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null)
+  // 1024px 미만에서 방 화면이 열려 있는지. 닫혀 있으면 방을 그리지 않아 보지 않은 방을 읽음 처리하지 않는다
+  const [roomOpen, setRoomOpen] = useState(false)
+  const isWide = useIsWide()
+  const showTimeline = isWide || roomOpen
   const [sortOrder, setSortOrder] = useState<RoomSortOrder>('latest')
 
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -162,6 +179,7 @@ export default function WorkspaceChatPage() {
 
   const handleSelectRoom = (roomId: number) => {
     setSelectedRoomId(roomId)
+    setRoomOpen(true)
   }
 
   const handleSendMessage = async ({
@@ -211,6 +229,7 @@ export default function WorkspaceChatPage() {
     openDirectChatMutation.mutate(targetMember.id, {
       onSuccess: (data) => {
         setSelectedRoomId(data.roomId)
+        setRoomOpen(true)
         setDrawerOpen(false)
       },
       onError: (error) => {
@@ -251,7 +270,8 @@ export default function WorkspaceChatPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
+    // 1024px 미만: 워크스페이스 본문 여백(WorkspaceLayout의 px-6 py-6)을 지워 목록을 화면 끝까지 붙인다
+    <div className="-mx-6 -my-6 flex min-h-0 flex-1 flex-col lg:mx-0 lg:my-0 lg:flex-row lg:gap-6">
       <ChatRoomList
         rooms={sortedRooms}
         selectedRoomId={activeRoomId}
@@ -265,27 +285,30 @@ export default function WorkspaceChatPage() {
         onSelectRoom={handleSelectRoom}
       />
 
-      <ChatTimeline
-        key={activeRoomId ?? 'empty'}
-        room={selectedRoom}
-        messages={currentMessages}
-        members={members}
-        currentUserId={summary.myMemberId}
-        autoAlertMessage={autoAlertMessage}
-        showAutoAlert={showAutoAlert}
-        isLoadingMessages={messagesQuery.isLoading}
-        hasNextPage={messagesQuery.hasNextPage}
-        isFetchingNextPage={messagesQuery.isFetchingNextPage}
-        isConnected={realtime?.connected ?? false}
-        onLoadOlder={() => {
-          void messagesQuery.fetchNextPage()
-        }}
-        onReachBottom={handleReachBottom}
-        onDismissAutoAlert={() => setShowAutoAlert(false)}
-        onOpenSettings={() => setDrawerOpen(true)}
-        onSendMessage={handleSendMessage}
-        onValidationError={showToast}
-      />
+      {showTimeline && (
+        <ChatTimeline
+          key={activeRoomId ?? 'empty'}
+          room={selectedRoom}
+          messages={currentMessages}
+          members={members}
+          currentUserId={summary.myMemberId}
+          autoAlertMessage={autoAlertMessage}
+          showAutoAlert={showAutoAlert}
+          isLoadingMessages={messagesQuery.isLoading}
+          hasNextPage={messagesQuery.hasNextPage}
+          isFetchingNextPage={messagesQuery.isFetchingNextPage}
+          isConnected={realtime?.connected ?? false}
+          onLoadOlder={() => {
+            void messagesQuery.fetchNextPage()
+          }}
+          onReachBottom={handleReachBottom}
+          onDismissAutoAlert={() => setShowAutoAlert(false)}
+          onOpenSettings={() => setDrawerOpen(true)}
+          onBack={isWide ? undefined : () => setRoomOpen(false)}
+          onSendMessage={handleSendMessage}
+          onValidationError={showToast}
+        />
+      )}
 
       <RoomSettingsDrawer
         open={drawerOpen}

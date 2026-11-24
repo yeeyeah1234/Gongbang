@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ChangeEvent, KeyboardEvent } from 'react'
 import {
   ArrowDownIcon,
+  ArrowLeftIcon,
   CloseIcon,
   FlagIcon,
   ImagePlusIcon,
@@ -23,6 +24,26 @@ const ALLOWED_CHAT_IMAGE_MIME_TYPES = new Set([
   'image/avif',
 ])
 const ALLOWED_CHAT_IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif|avif)$/i
+
+// 1024px 미만 방 화면 머리의 「방 설정 / 팀원 관리」 메뉴 버튼 (Icons.tsx와 같은 24px 선 아이콘 형식)
+function MenuIcon({ className = 'h-6 w-6' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className={className}
+    >
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </svg>
+  )
+}
 
 interface SelectedChatImage {
   file: File
@@ -58,6 +79,8 @@ interface ChatTimelineProps {
   onReachBottom?: () => void
   onDismissAutoAlert: () => void
   onOpenSettings: () => void
+  // 1024px 미만 메신저형 화면에서 방 목록으로 돌아가기 (넘기지 않으면 버튼을 그리지 않는다)
+  onBack?: () => void
   onSendMessage: (payload: { content: string; file: File | null }) => Promise<boolean>
   onValidationError: (message: string) => void
 }
@@ -78,6 +101,7 @@ export function ChatTimeline({
   onReachBottom,
   onDismissAutoAlert,
   onOpenSettings,
+  onBack,
   onSendMessage,
   onValidationError,
 }: ChatTimelineProps) {
@@ -276,14 +300,25 @@ export function ChatTimeline({
     !isAtBottom && latestMessageId !== null && (seenLastId === null || latestMessageId > seenLastId)
 
   return (
+    // 1024px 미만: 메신저 앱처럼 화면 전체를 덮는 방 화면 (워크스페이스 헤더·탭 위, 서랍·모달보다 아래)
     <section
       aria-label="채팅방 대화 내용"
-      className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-card border border-line bg-surface"
+      className="flex min-w-0 flex-1 flex-col overflow-hidden bg-surface max-lg:fixed max-lg:inset-0 max-lg:z-30 max-lg:h-dvh lg:rounded-card lg:border lg:border-line"
     >
       {/* 채팅방 상단 헤더 */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-divider px-6 py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <h2 className="truncate text-subheading font-bold text-text">{room.name}</h2>
+      <div className="flex items-center justify-between gap-2 border-b border-divider px-2 py-2 lg:flex-wrap lg:gap-3 lg:px-6 lg:py-4">
+        <div className="flex min-w-0 items-center gap-2 lg:gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="채팅방 목록으로"
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-text transition-colors hover:bg-bg lg:hidden"
+            >
+              <ArrowLeftIcon className="h-5 w-5" />
+            </button>
+          )}
+          <h2 className="truncate text-body font-bold text-text lg:text-subheading">{room.name}</h2>
           <Badge variant="primary-soft">
             {room.type === 'TEAM' ? `참여 ${participantCount}명` : '1:1 채팅'}
           </Badge>
@@ -291,15 +326,25 @@ export function ChatTimeline({
           {!isConnected && <Badge variant="surface-sub">연결 중</Badge>}
         </div>
 
-        <Button variant="outline" size="sm" onClick={onOpenSettings}>
-          <SlidersIcon className="h-4 w-4" />
-          <span>방 설정 / 팀원 관리</span>
-        </Button>
+        <span className="hidden lg:block">
+          <Button variant="outline" size="sm" onClick={onOpenSettings}>
+            <SlidersIcon className="h-4 w-4" />
+            <span>방 설정 / 팀원 관리</span>
+          </Button>
+        </span>
+        <button
+          type="button"
+          onClick={onOpenSettings}
+          aria-label="방 설정 / 팀원 관리"
+          className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-text transition-colors hover:bg-bg lg:hidden"
+        >
+          <MenuIcon />
+        </button>
       </div>
 
       {/* D-day 자동 알림 배너 */}
       {showAutoAlert && autoAlertMessage && room.type === 'TEAM' && (
-        <div className="mx-6 mt-4 flex items-center justify-between gap-3 rounded-popover border border-danger-line bg-danger-soft px-4 py-3">
+        <div className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-popover border border-danger-line bg-danger-soft px-4 py-3 lg:mx-6 lg:mt-4">
           <div className="flex min-w-0 items-center gap-2">
             <FlagIcon className="h-4 w-4 shrink-0 text-danger" />
             <p className="truncate text-small font-medium text-danger">{autoAlertMessage}</p>
@@ -316,11 +361,11 @@ export function ChatTimeline({
       )}
 
       {/* 메시지 타임라인 영역 */}
-      <div className="relative mx-6 my-4 flex min-h-0 flex-1 flex-col overflow-hidden rounded-card bg-bg">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-bg lg:mx-6 lg:my-4 lg:rounded-card">
         <div
           ref={scrollRef}
           onScroll={handleScroll}
-          className="flex-1 space-y-5 overflow-y-auto p-6"
+          className="flex-1 space-y-5 overflow-y-auto p-4 lg:p-6"
         >
           {hasNextPage && onLoadOlder && (
             <div className="flex justify-center">
@@ -485,7 +530,7 @@ export function ChatTimeline({
       </div>
 
       {/* 하단 입력창 */}
-      <div className="px-6 pt-1 pb-6">
+      <div className="border-t border-divider px-3 pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] lg:border-t-0 lg:px-6 lg:pt-1 lg:pb-6">
         {selectedImage && (
           <div className="mb-3 flex items-center justify-between gap-3 rounded-card border border-line bg-bg px-3 py-2.5">
             <div className="flex min-w-0 items-center gap-3">
@@ -517,7 +562,7 @@ export function ChatTimeline({
           </div>
         )}
 
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-2 lg:gap-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -546,11 +591,18 @@ export function ChatTimeline({
             rows={1}
             maxLength={2000}
             placeholder={
+              // 1024px 미만 메신저형 화면(onBack 있음)은 한 줄에 들어가는 짧은 문구
               isConnected
                 ? selectedImage
-                  ? '사진과 함께 보낼 메시지를 입력하세요 (선택)'
-                  : '메시지를 입력하세요 (Enter: 전송 / Shift + Enter: 줄바꿈)'
-                : '실시간 채팅 서버에 연결하고 있습니다…'
+                  ? onBack
+                    ? '메시지 (선택)'
+                    : '사진과 함께 보낼 메시지를 입력하세요 (선택)'
+                  : onBack
+                    ? '메시지를 입력하세요'
+                    : '메시지를 입력하세요 (Enter: 전송 / Shift + Enter: 줄바꿈)'
+                : onBack
+                  ? '연결 중…'
+                  : '실시간 채팅 서버에 연결하고 있습니다…'
             }
             className="max-h-32 min-h-11 flex-1 resize-none rounded-input border border-line-input bg-surface px-4 py-2 text-body text-text placeholder:text-text-disabled focus:border-2 focus:border-primary focus:outline-none"
           />

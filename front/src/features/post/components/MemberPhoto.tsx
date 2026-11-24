@@ -11,13 +11,14 @@ export function MemberPhoto({
   // 크기와 글자 크기 (예: 'size-8 text-caption')
   className: string
 }) {
-  const [failed, setFailed] = useState(false)
-  if (url && !failed) {
+  // 실패한 주소를 기억해, 다른 사진 주소로 바뀌면 다시 불러온다 (ProfilePhoto와 같은 방식)
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  if (url && url !== failedUrl) {
     return (
       <img
         src={url}
         alt=""
-        onError={() => setFailed(true)}
+        onError={() => setFailedUrl(url)}
         className={`${className} shrink-0 rounded-full object-cover`}
       />
     )

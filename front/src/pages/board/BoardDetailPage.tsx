@@ -191,13 +191,14 @@ function ContestCard({ contest }: { contest: NonNullable<BoardDetail['contest']>
   return (
     <Link
       to={`/contests/${contest.contestId}`}
-      className="mt-6 flex items-center justify-between gap-6 rounded-card border border-line bg-surface px-6 py-4 hover:bg-bg"
+      // 모집글 상세 공모전 카드와 같은 모양: 배지 줄 + 제목 줄, 「공모전 보기」는 오른쪽 아래
+      className="mt-6 flex items-end justify-between gap-6 rounded-card border border-line bg-surface px-6 py-4 hover:bg-bg"
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <Badge variant="primary-soft" className="shrink-0">
-          {contest.categoryName}
-        </Badge>
-        {contest.dDay >= 0 ? <DDayBadge dDay={contest.dDay} /> : <Badge>마감</Badge>}
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="primary-soft">{contest.categoryName}</Badge>
+          {contest.dDay >= 0 ? <DDayBadge dDay={contest.dDay} /> : <Badge>마감</Badge>}
+        </div>
         <span className="truncate text-body-lg font-bold text-text">{contest.title}</span>
       </div>
       <span className="shrink-0 text-small text-text-sub">공모전 보기 ›</span>
