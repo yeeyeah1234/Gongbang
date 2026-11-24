@@ -7,18 +7,6 @@ ALTER TABLE member
     ADD COLUMN sanctioned_by BIGINT UNSIGNED NULL,
     ADD COLUMN sanctioned_at DATETIME NULL;
 
-CREATE TABLE comment (
-    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    post_id BIGINT UNSIGNED NOT NULL,
-    author_id BIGINT UNSIGNED NOT NULL,
-    content VARCHAR(2000) NOT NULL,
-    deleted_at DATETIME NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_comment_post (post_id),
-    FOREIGN KEY (post_id) REFERENCES recruit_post(id),
-    FOREIGN KEY (author_id) REFERENCES member(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
 ALTER TABLE report
     ADD COLUMN action VARCHAR(30) NULL,
     ADD COLUMN review_note VARCHAR(200) NULL,

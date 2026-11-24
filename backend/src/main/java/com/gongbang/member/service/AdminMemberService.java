@@ -52,6 +52,17 @@ public class AdminMemberService {
 
     @Transactional
     public Item grant(Long actorId, Long memberId) {
-        throw new BusinessException(ErrorCode.NOT_ADMIN, "관리자 권한은 다른 회원에게 부여할 수 없습니다");
+        requireAdmin(actorId);
+        Member target =
+                repository
+                        .findForRoleUpdate(memberId)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (!target.isActive() || target.isSuspended())
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        if (target.getRole() != MemberRole.ADMIN) {
+            target.grantAdmin();
+            log.info("Admin role granted: actorId={}, memberId={}", actorId, memberId);
+        }
+        return Item.from(target);
     }
 }

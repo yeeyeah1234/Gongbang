@@ -13,7 +13,7 @@ const ITEMS = [
   { to: '/mypage/settings', label: '설정' },
 ]
 
-export function UserMenu() {
+export function UserMenu({ compact = false }: { compact?: boolean }) {
   const navigate = useNavigate()
   const member = useLoginMember()
   const [open, setOpen] = useState(false)
@@ -48,14 +48,21 @@ export function UserMenu() {
     <div ref={ref} className="relative shrink-0">
       <button
         type="button"
+        aria-label={`${nickname || '사용자'} 메뉴`}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="flex h-10 cursor-pointer items-center gap-2 rounded-full pr-2 pl-1 hover:bg-bg"
       >
         <ProfilePhoto url={member?.profileImageUrl ?? null} name={nickname} size="md" />
-        <span className="max-w-24 truncate text-body font-bold text-text">{nickname}</span>
-        <ChevronDownIcon />
+        <span
+          className={`max-w-24 truncate text-body font-bold text-text ${compact ? 'max-md:hidden' : ''}`}
+        >
+          {nickname}
+        </span>
+        <span className={compact ? 'max-md:hidden' : ''}>
+          <ChevronDownIcon />
+        </span>
       </button>
       {open && (
         <ul

@@ -506,8 +506,22 @@ function MemberDetail({ item, act }: { item: AdminItem; act: Act }) {
         >
           로그인 잠금 해제
         </Button>
-        <p className="mt-4 text-small text-text-sub">
-          잠금 해제는 이용 정지를 해제하지 않습니다. 관리자 권한은 다른 회원에게 부여할 수 없습니다.
+        <p className="mt-4 text-small text-text-sub">잠금 해제는 이용 정지를 해제하지 않습니다.</p>
+        <Button
+          className="mt-4"
+          disabled={item.status !== 'ACTIVE' || item.role === 'ADMIN'}
+          onClick={() =>
+            act({
+              label: '관리자 권한 부여 (다른 회원에게 관리자 권한을 부여할 수 있는 동일 권한)',
+              path: `members/${item.id}/admin-role`,
+              method: 'post',
+            })
+          }
+        >
+          {item.role === 'ADMIN' ? '관리자 권한 보유' : '관리자 권한 부여'}
+        </Button>
+        <p className="mt-3 text-small text-text-sub">
+          모든 관리자는 동일한 관리 권한을 가지며, 다른 회원에게도 관리자 권한을 부여할 수 있습니다.
         </p>
       </div>
       <ActionForm

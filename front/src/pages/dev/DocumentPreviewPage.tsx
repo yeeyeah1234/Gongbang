@@ -37,7 +37,7 @@ export default function DocumentPreviewPage() {
 }
 
 export function DocumentPreviewTab() {
-  return <WorkspaceDocumentPage basePath={`${BASE_PATH}/${useParams().view}/docs`} />
+  return <WorkspaceDocumentPage basePath={`${BASE_PATH}/${useParams().view}/docs`} offlinePreview />
 }
 
 // 미리보기에는 문서 탭만 있어 첫 진입과 다른 탭은 문서로 보낸다

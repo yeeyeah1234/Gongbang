@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { ChevronDownIcon, FlagIcon, UserIcon } from '../../../components/icons/Icons'
 import { useIsLoggedIn, useLoginMember } from '../../auth/store'
 import { LoginRequiredModal } from '../../post/components/LoginRequiredModal'
+import type { ReportTargetType } from '../types'
 import { ReportModal } from './ReportModal'
 
 interface MemberActionPopoverProps {
@@ -10,6 +11,8 @@ interface MemberActionPopoverProps {
   nickname: string
   children: ReactNode
   redirectTo: string
+  reportTargetType?: ReportTargetType
+  reportTargetId?: number | null
   onReportSuccess?: (message: string) => void
 }
 
@@ -24,6 +27,8 @@ export function MemberActionPopover({
   nickname,
   children,
   redirectTo,
+  reportTargetType = 'MEMBER',
+  reportTargetId = null,
   onReportSuccess,
 }: MemberActionPopoverProps) {
   const isLoggedIn = useIsLoggedIn()
@@ -71,18 +76,18 @@ export function MemberActionPopover({
 
   return (
     <>
-      <div ref={containerRef} className="relative inline-block">
+      <div ref={containerRef} className="relative inline-block max-w-full min-w-0">
         <button
           type="button"
           aria-haspopup="menu"
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((prev) => !prev)}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-full py-0.5 pr-1 font-bold text-text transition-colors hover:text-primary"
+          className="inline-flex max-w-full cursor-pointer items-center gap-1.5 rounded-full py-0.5 pr-1 font-bold text-text transition-colors hover:text-primary max-sm:min-h-10"
         >
           {children}
           <ChevronDownIcon
             className={[
-              'size-4 text-text-sub transition-transform',
+              'size-4 shrink-0 text-text-sub transition-transform',
               menuOpen ? 'rotate-180' : '',
             ].join(' ')}
           />
@@ -92,7 +97,7 @@ export function MemberActionPopover({
           <ul
             role="menu"
             aria-label={`${nickname} 메뉴`}
-            className="absolute top-full left-0 z-30 mt-2 w-[176px] rounded-popover border border-line bg-surface py-1.5 shadow-pop"
+            className="absolute top-full left-0 z-30 mt-2 w-[176px] max-w-[calc(100vw-32px)] rounded-popover border border-line bg-surface py-1.5 shadow-pop"
           >
             <li role="none">
               <Link
@@ -124,7 +129,8 @@ export function MemberActionPopover({
         open={reportOpen}
         reportedMemberId={memberId}
         targetNickname={nickname}
-        targetType="MEMBER"
+        targetType={reportTargetType}
+        targetId={reportTargetId}
         onClose={() => setReportOpen(false)}
         onSubmitted={onReportSuccess}
       />

@@ -71,9 +71,9 @@ export function NotificationBell({ onError }: { onError?: (message: string) => v
         <div
           role="dialog"
           aria-label="알림"
-          className="absolute right-0 z-40 mt-2 w-[380px] rounded-popover border border-line bg-surface shadow-pop"
+          className="fixed inset-x-4 top-[80px] z-40 flex max-h-[calc(100dvh-96px)] flex-col overflow-hidden rounded-popover border border-line bg-surface shadow-pop sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 sm:w-[380px]"
         >
-          <div className="flex items-center justify-between border-b border-divider px-4 py-3">
+          <div className="flex shrink-0 items-center justify-between border-b border-divider px-4 py-3">
             <span className="text-body font-bold text-text">알림 {count > 0 ? count : ''}</span>
             <button
               type="button"
@@ -86,7 +86,7 @@ export function NotificationBell({ onError }: { onError?: (message: string) => v
                     ),
                 })
               }
-              className="cursor-pointer text-caption text-text-sub hover:text-text"
+              className="min-h-10 cursor-pointer text-caption text-text-sub hover:text-text"
             >
               모두 읽음
             </button>
@@ -96,7 +96,7 @@ export function NotificationBell({ onError }: { onError?: (message: string) => v
           ) : items.length === 0 ? (
             <p className="px-4 py-10 text-center text-small text-text-sub">새 알림이 없어요</p>
           ) : (
-            <ul className="max-h-[420px] overflow-y-auto">
+            <ul className="max-h-[420px] min-h-0 overflow-y-auto overscroll-contain">
               {items.map((item) => (
                 <NotificationRow
                   key={item.notificationId}
@@ -111,7 +111,7 @@ export function NotificationBell({ onError }: { onError?: (message: string) => v
           <Link
             to="/notifications"
             onClick={() => setOpen(false)}
-            className="block border-t border-divider py-3 text-center text-small font-bold text-text hover:bg-bg"
+            className="block shrink-0 border-t border-divider py-3 text-center text-small font-bold text-text hover:bg-bg"
           >
             알림 전체 보기 ›
           </Link>

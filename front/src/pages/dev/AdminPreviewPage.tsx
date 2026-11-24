@@ -133,7 +133,7 @@ function installPreview() {
           number: 0,
         }
       } else if (url.endsWith('/admin-role')) {
-        throw new Error('관리자 권한 부여는 허용되지 않습니다.')
+        data = operations(url, request.method ?? 'post', body, request.params)
       } else if (url.startsWith('/api/files/')) {
         return {
           data: samplePdf(),

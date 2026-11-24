@@ -6,7 +6,7 @@ import { getApiError, getErrorMessage } from '../api/errors'
 import { Toast } from '../components/ui/Toast'
 import { useLoginMember } from '../features/auth/store'
 import { useWorkspace } from '../features/workspace/context'
-import { DocumentEditorPlaceholder } from '../features/workspace/document/components/DocumentEditorPlaceholder'
+import { DocumentEditorPane } from '../features/workspace/document/components/DocumentEditorPane'
 import { DocumentEmptyState } from '../features/workspace/document/components/DocumentEmptyState'
 import {
   documentKeys,
@@ -49,6 +49,8 @@ const DOCUMENT_LABELS: WorkspaceSidebarLabels = {
 interface WorkspaceDocumentPageProps {
   // 개발용 미리보기만 넘긴다. 기본은 /workspaces/:teamId/docs
   basePath?: string
+  // 개발용 미리보기에서는 sync-server 없이 로컬 에디터로 연다
+  offlinePreview?: boolean
 }
 
 function parseDocumentId(param: string | undefined): number | null {
@@ -56,14 +58,23 @@ function parseDocumentId(param: string | undefined): number | null {
   return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
-// DOC-01~04 문서 탭: /workspaces/:teamId/docs/:documentId?
-export default function WorkspaceDocumentPage({ basePath }: WorkspaceDocumentPageProps) {
+// DOC-01~10 문서 탭: /workspaces/:teamId/docs/:documentId?
+export default function WorkspaceDocumentPage({
+  basePath,
+  offlinePreview = false,
+}: WorkspaceDocumentPageProps) {
   const { teamId } = useWorkspace()
   // 팀이 바뀌면 토스트·편집 상태까지 처음부터
-  return <DocumentTab key={teamId} basePath={basePath ?? `/workspaces/${teamId}/docs`} />
+  return (
+    <DocumentTab
+      key={teamId}
+      basePath={basePath ?? `/workspaces/${teamId}/docs`}
+      offlinePreview={offlinePreview}
+    />
+  )
 }
 
-function DocumentTab({ basePath }: { basePath: string }) {
+function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePreview: boolean }) {
   const { teamId, summary, realtime } = useWorkspace()
   const { documentId: param } = useParams()
   const navigate = useNavigate()
@@ -119,7 +130,7 @@ function DocumentTab({ basePath }: { basePath: string }) {
     openFirstOrEmpty(excludeId)
   })
 
-  const handleExternalDelete = useEffectEvent((deletedId: number) => {
+  const notifyExternalDelete = (deletedId: number) => {
     if (selfDeletedIdsRef.current.has(deletedId) || notifiedDeletedIdsRef.current.has(deletedId)) {
       return
     }
@@ -128,6 +139,10 @@ function DocumentTab({ basePath }: { basePath: string }) {
     if (deleteTarget?.id === deletedId) setDeleteTarget(null)
     toast.show(GONE_MESSAGE)
     openFirstOrEmpty(deletedId)
+  }
+
+  const handleExternalDelete = useEffectEvent((deletedId: number) => {
+    notifyExternalDelete(deletedId)
   })
 
   // DOC-04 실시간: 내가 보고 있던 문서가 다른 사람에게 삭제되면 토스트 후 첫 문서로
@@ -288,6 +303,15 @@ function DocumentTab({ basePath }: { basePath: string }) {
     })
   }
 
+  const handleEditorGone = (deletedId: number) => {
+    notifyExternalDelete(deletedId)
+    void refreshDocuments()
+  }
+
+  const handleEditorForbidden = () => {
+    void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
+  }
+
   const empty = documents !== undefined && documents.length === 0
   const listFailed = listQuery.isError && !documents
   const modalOpen = deleteTarget !== null
@@ -320,12 +344,18 @@ function DocumentTab({ basePath }: { basePath: string }) {
               onCancelRename={() => setRenamingId(null)}
               onRequestDelete={(item) => setDeleteTarget(item)}
             />
-            <div key={selectedDoc?.id ?? 'loading'} className="min-w-0 flex-1 lg:overflow-y-auto">
+            <div
+              key={selectedDoc?.id ?? 'loading'}
+              className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden"
+            >
               {selectedDoc ? (
-                <DocumentEditorPlaceholder
+                <DocumentEditorPane
                   teamId={teamId}
                   documentId={selectedDoc.id}
                   title={selectedDoc.title}
+                  offlinePreview={offlinePreview}
+                  onDocumentGone={handleEditorGone}
+                  onForbidden={handleEditorForbidden}
                 />
               ) : (
                 <NoticeSkeleton />

@@ -49,7 +49,7 @@ class WhiteboardQueryServiceTest {
     }
 
     @Test
-    @DisplayName("목록: repository 순서대로, 마지막 수정자 닉네임을 채우고 저장한 적 없으면 null, 못 찾으면 「탈퇴한 사용자」")
+    @DisplayName("목록: repository 순서대로, 마지막 수정자 닉네임을 MemberService에서 받은 그대로 채우고 저장한 적 없으면 null")
     void 목록_팀원() {
         when(whiteboardRepository.findSummaries(TEAM_ID))
                 .thenReturn(
@@ -57,11 +57,14 @@ class WhiteboardQueryServiceTest {
                                 new WhiteboardSummary(3L, "저장됨", ME, OTHER_ID, AT),
                                 new WhiteboardSummary(2L, "새 보드", OTHER_ID, null, AT),
                                 new WhiteboardSummary(1L, "탈퇴자 수정", ME, GONE_ID, AT)));
+        // MemberService는 탈퇴·삭제된 회원도 「탈퇴한 사용자」로 채워 준다
         when(memberService.getProfileSummaries(Set.of(OTHER_ID, GONE_ID)))
                 .thenReturn(
                         Map.of(
                                 OTHER_ID,
-                                new MemberProfileSummary(OTHER_ID, "상현", null, List.of())));
+                                new MemberProfileSummary(OTHER_ID, "상현", null, List.of()),
+                                GONE_ID,
+                                new MemberProfileSummary(GONE_ID, "탈퇴한 사용자", null, List.of())));
 
         List<WhiteboardListItemResponse> result =
                 whiteboardQueryService.getWhiteboards(ME, TEAM_ID);

@@ -102,3 +102,237 @@
   background-color: var(--color-bg);
   color: var(--color-text);
 }
+
+/* ───────── Tiptap 문서 에디터 (DOC-05~09, features/workspace/document/components/DocumentEditor.tsx) ─────────
+ * ProseMirror 본문 서식과 원격 커서·선택 영역만 .gb-editor 아래로 좁혀 정의한다.
+ * 색·글자 크기·모서리 값은 theme.css 토큰 변수만 쓴다. */
+
+.gb-editor .ProseMirror {
+  min-height: 100%;
+  outline: none;
+  color: var(--color-text);
+  font-size: var(--text-body);
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+.gb-editor .ProseMirror > * + * {
+  margin-top: 0.5rem;
+}
+
+.gb-editor .ProseMirror h1 {
+  margin-top: 1.25rem;
+  font-size: var(--text-title);
+  line-height: var(--text-title--line-height);
+  font-weight: 700;
+}
+
+.gb-editor .ProseMirror h2 {
+  margin-top: 1rem;
+  font-size: var(--text-heading);
+  line-height: var(--text-heading--line-height);
+  font-weight: 700;
+}
+
+.gb-editor .ProseMirror h3 {
+  margin-top: 0.75rem;
+  font-size: var(--text-subheading);
+  line-height: var(--text-subheading--line-height);
+  font-weight: 700;
+}
+
+.gb-editor .ProseMirror h1:first-child,
+.gb-editor .ProseMirror h2:first-child,
+.gb-editor .ProseMirror h3:first-child {
+  margin-top: 0;
+}
+
+.gb-editor .ProseMirror ul:not([data-type='taskList']) {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
+
+.gb-editor .ProseMirror ul:not([data-type='taskList']) ul:not([data-type='taskList']) {
+  list-style-type: circle;
+}
+
+.gb-editor
+  .ProseMirror
+  ul:not([data-type='taskList'])
+  ul:not([data-type='taskList'])
+  ul:not([data-type='taskList']) {
+  list-style-type: square;
+}
+
+.gb-editor .ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+}
+
+.gb-editor .ProseMirror li > p {
+  margin: 0;
+}
+
+.gb-editor .ProseMirror li > ul,
+.gb-editor .ProseMirror li > ol {
+  margin-top: 0.25rem;
+}
+
+/* 체크리스트 (DOC-06): 체크된 항목은 취소선 + 회색 */
+.gb-editor .ProseMirror ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.gb-editor .ProseMirror ul[data-type='taskList'] ul[data-type='taskList'] {
+  padding-left: 1.5rem;
+  margin-top: 0.25rem;
+}
+
+.gb-editor .ProseMirror ul[data-type='taskList'] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.gb-editor .ProseMirror ul[data-type='taskList'] li > label {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  margin-top: 0.25rem;
+  user-select: none;
+}
+
+.gb-editor .ProseMirror ul[data-type='taskList'] li > label input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.gb-editor .ProseMirror ul[data-type='taskList'] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gb-editor .ProseMirror ul[data-type='taskList'] li[data-checked='true'] > div > p {
+  text-decoration: line-through;
+  color: var(--color-text-sub);
+}
+
+/* 링크 (DOC-06) */
+.gb-editor .ProseMirror a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.gb-editor .ProseMirror a:hover {
+  color: var(--color-primary-hover);
+}
+
+/* 인라인 코드·코드 블록 (DOC-06): 고정폭·회색 배경 */
+.gb-editor .ProseMirror code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--text-small);
+  background-color: var(--color-surface-sub);
+  border-radius: 4px;
+  padding: 0.125rem 0.375rem;
+}
+
+.gb-editor .ProseMirror pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: var(--text-small);
+  line-height: 1.6;
+  background-color: var(--color-surface-sub);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-input);
+  padding: 0.875rem 1rem;
+  overflow-x: auto;
+}
+
+.gb-editor .ProseMirror pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.gb-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--color-line-strong);
+  padding-left: 1rem;
+  color: var(--color-text-sub);
+}
+
+.gb-editor .ProseMirror hr {
+  border: 0;
+  border-top: 1px solid var(--color-divider);
+  margin: 1rem 0;
+}
+
+/* 원격 팀원 커서·선택 영역 (DOC-09): theme.css의 8색 토큰 매핑 */
+.gb-editor [data-member-color='1'] {
+  --gb-caret-color: var(--color-member-1);
+}
+.gb-editor [data-member-color='2'] {
+  --gb-caret-color: var(--color-member-2);
+}
+.gb-editor [data-member-color='3'] {
+  --gb-caret-color: var(--color-member-3);
+}
+.gb-editor [data-member-color='4'] {
+  --gb-caret-color: var(--color-member-4);
+}
+.gb-editor [data-member-color='5'] {
+  --gb-caret-color: var(--color-member-5);
+}
+.gb-editor [data-member-color='6'] {
+  --gb-caret-color: var(--color-member-6);
+}
+.gb-editor [data-member-color='7'] {
+  --gb-caret-color: var(--color-member-7);
+}
+.gb-editor [data-member-color='8'] {
+  --gb-caret-color: var(--color-member-8);
+}
+
+.gb-editor .gb-caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 2px solid var(--gb-caret-color, var(--color-member-1));
+  pointer-events: none;
+  word-break: normal;
+}
+
+.gb-editor .gb-caret-label {
+  position: absolute;
+  top: -1.45em;
+  left: -2px;
+  padding: 1px 6px;
+  border-radius: 4px 4px 4px 0;
+  background-color: var(--gb-caret-color, var(--color-member-1));
+  color: var(--color-surface);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: 600;
+  font-style: normal;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.gb-editor .gb-caret-label[data-hidden='true'] {
+  opacity: 0;
+}
+
+.gb-editor .gb-caret-selection {
+  background-color: color-mix(
+    in srgb,
+    var(--gb-caret-color, var(--color-member-1)) 20%,
+    transparent
+  );
+}

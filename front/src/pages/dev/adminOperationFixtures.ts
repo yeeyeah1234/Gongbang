@@ -114,6 +114,13 @@ export function operationFixtures() {
   ): unknown => {
     const [, , , resource, idText, action] = url.split('/')
     const id = Number(idText)
+    if (resource === 'members' && action === 'admin-role') {
+      const member = rows['member-management'].find((row) => row.id === id)
+      if (!member || member.status !== 'ACTIVE')
+        throw new Error('활성 회원만 관리자로 지정할 수 있습니다.')
+      member.role = 'ADMIN'
+      return { ...member }
+    }
     if (resource === 'categories') {
       if (method === 'patch') Object.assign(categories.find((c) => c.id === id) ?? {}, body)
       return categories.map((c) => ({ ...c }))
