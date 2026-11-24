@@ -6,10 +6,12 @@ export function ImageSlider({
   images,
   label,
   altPrefix,
+  aspectClass = 'aspect-4/3',
 }: {
   images: { imageId: number; url: string }[]
   label: string // 영역 이름 (「공모전 사진」, 「결과물 사진」)
   altPrefix: string // 사진 대체 글 앞부분
+  aspectClass?: string // 칸 비율 (모집글 오른쪽 칸은 공모전 포스터와 같은 aspect-3/4)
 }) {
   const [index, setIndex] = useState(0)
   const [failed, setFailed] = useState<Set<number>>(() => new Set())
@@ -29,7 +31,7 @@ export function ImageSlider({
         if (event.key === 'ArrowLeft') go(index - 1)
         if (event.key === 'ArrowRight') go(index + 1)
       }}
-      className="relative aspect-4/3 overflow-hidden rounded-card border border-line bg-surface-sub focus-visible:outline-2 focus-visible:outline-primary"
+      className={`relative ${aspectClass} overflow-hidden rounded-card border border-line bg-surface-sub focus-visible:outline-2 focus-visible:outline-primary`}
     >
       <div aria-live="polite" className="size-full">
         {failed.has(current.imageId) ? (

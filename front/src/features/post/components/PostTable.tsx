@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router'
 import { Badge } from '../../../components/ui/Badge'
 import { formatPostDate } from '../format'
+import { StatusBadge } from './PostApplyPanel'
 import type { PostListItem } from '../types'
 
 interface PostTableProps {
@@ -82,11 +83,7 @@ export function PostTable({ posts }: PostTableProps) {
                 {post.currentCount}/{post.targetCount}
               </td>
               <td className="px-3">
-                {post.status === 'RECRUITING' ? (
-                  <Badge variant="primary-soft">모집중</Badge>
-                ) : (
-                  <Badge variant="surface-sub">모집완료</Badge>
-                )}
+                <StatusBadge status={post.status} recruitEndDate={post.recruitEndDate} />
               </td>
             </tr>
           ))}
