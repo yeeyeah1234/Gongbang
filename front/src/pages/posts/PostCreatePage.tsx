@@ -92,7 +92,7 @@ export default function PostCreatePage() {
   }
 
   return (
-    <main className="mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]">
+    <main className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]">
       <title>모집글 작성 | 공방</title>
       <h1 className="text-title font-bold text-text">모집글 작성</h1>
       <PostForm

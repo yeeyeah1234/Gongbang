@@ -41,7 +41,7 @@ export default function PostListPage() {
   }
 
   return (
-    <main className="mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]">
+    <main className="mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]">
       <title>커뮤니티 | 공방</title>
       {/* ① 위쪽 탭으로 커뮤니티 게시판(BRD-001)과 오간다 */}
       <CommunityTabs />

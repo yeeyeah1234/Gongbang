@@ -18,7 +18,7 @@ import { MemberActionPopover } from '../../features/report/components/MemberActi
 import { PostModerationSection } from '../../features/report/components/PostModerationSection'
 import { useTimedToast } from '../../hooks/useTimedToast'
 
-const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
+const PAGE_CLASS = 'mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]'
 
 // 2026-11-03 → 2026.11.03
 function formatDate(date: string) {
@@ -51,7 +51,7 @@ export default function PostDetailPage() {
     // PST-004 ⑤ 삭제되었거나 없는 글
     const notFound = getApiError(error).code === 'POST_NOT_FOUND' || !(postId > 0)
     return (
-      <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center`}>
+      <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center md:py-32`}>
         <title>모집글 | 공방</title>
         <p className="text-subheading font-bold text-text">
           {notFound
@@ -74,10 +74,13 @@ export default function PostDetailPage() {
   if (isPending) return <DetailSkeleton />
 
   return (
-    <main className={PAGE_CLASS}>
+    // 768px 미만은 아래 고정 지원 버튼 줄에 댓글 끝이 가리지 않게 아래 여백을 더 둔다
+    <main className={`${PAGE_CLASS} max-md:pb-28`}>
       <title>{`${post.title} | 공방`}</title>
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_400px] xl:gap-16">
-        <article className="min-w-0">
+      {/* STYLE_GUIDE 8-3: 1024px 미만은 한 줄로 「제목·핵심 정보 → 사진·지원 패널 → 본문·댓글」.
+          넓은 화면은 왼쪽에 정보·본문, 오른쪽에 사진과 고정 지원 패널 (오른쪽 칸이 두 줄을 차지) */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_400px] lg:grid-rows-[auto_1fr] lg:gap-x-10 xl:gap-x-16">
+        <header className="order-1 min-w-0 lg:order-none lg:col-start-1 lg:row-start-1">
           <ContestCard contest={post.contest} />
 
           <div className="mt-8 flex items-start justify-between gap-6">
@@ -87,7 +90,7 @@ export default function PostDetailPage() {
               <div className="flex shrink-0 gap-2 pt-1">
                 <Link
                   to={`/posts/${post.postId}/edit`}
-                  className="inline-flex h-9 items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg"
+                  className="inline-flex h-10 items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg lg:h-9"
                 >
                   수정
                 </Link>
@@ -114,8 +117,10 @@ export default function PostDetailPage() {
               </InfoRow>
             )}
           </dl>
+        </header>
 
-          <div className="mt-8 rounded-card bg-surface-sub p-6 text-body break-words whitespace-pre-wrap text-text">
+        <article className="order-3 min-w-0 lg:order-none lg:col-start-1 lg:row-start-2">
+          <div className="rounded-card bg-surface-sub p-6 text-body break-words whitespace-pre-wrap text-text">
             {post.content}
           </div>
 
@@ -136,12 +141,12 @@ export default function PostDetailPage() {
 
         {/* PST-005 ⑤ 사진은 공모전 상세(MAIN-02 ③) 포스터 칸과 같은 세로 3:4로 위에 두고,
             PST-006 ②③ 지원 패널만 GNB(72px) 아래에 고정한다. 둘을 함께 고정하면 화면보다 길어져 사진 아래가 잘린다 */}
-        <aside className="flex flex-col gap-6">
-          {/* 한 칸 화면(lg 미만)에서는 지원 패널을 먼저, 사진은 공모전 상세 포스터 칸과 같은 최대 400px로 가운데에 */}
-          <div className="order-2 mx-auto w-full max-w-100 lg:order-1 lg:max-w-none">
+        <aside className="order-2 flex flex-col gap-6 lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          {/* 한 칸 화면(lg 미만)에서는 공모전 상세 포스터 칸과 같이 최대 400px(휴대폰 288px)로 가운데에 */}
+          <div className="mx-auto w-full max-w-72 sm:max-w-100 lg:max-w-none">
             <RepresentativeImage post={post} />
           </div>
-          <div className="order-1 lg:sticky lg:top-24 lg:order-2">
+          <div className="lg:sticky lg:top-24">
             <PostApplyPanel post={post} onError={toast.show} />
           </div>
         </aside>

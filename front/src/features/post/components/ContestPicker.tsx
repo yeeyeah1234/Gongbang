@@ -45,7 +45,7 @@ export function ContestPicker({ values, errors, onChange }: ContestPickerProps) 
           aria-pressed={isExternal}
           onClick={() => onChange({ contestMode: isExternal ? 'service' : 'external' })}
           className={[
-            'rounded-pill inline-flex cursor-pointer items-center gap-1 px-3 py-1 text-small hover:bg-bg',
+            'rounded-pill inline-flex min-h-10 cursor-pointer items-center gap-1 px-3 py-1 text-small hover:bg-bg lg:min-h-0',
             isExternal ? 'font-bold text-primary' : 'text-text-sub',
           ].join(' ')}
         >

@@ -14,7 +14,7 @@ import { useContestDetail } from '../../features/contest/hooks'
 import { POST_IMAGE_MESSAGES } from '../../features/post/postImages'
 import type { PostImageDraft } from '../../features/post/postImages'
 
-const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
+const PAGE_CLASS = 'mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]'
 
 // BRD-002 게시글 작성. 로그인 회원만 들어온다 (RequireLogin).
 // ③ 공모전 상세의 「이 공모전 이야기 쓰기」는 ?contestId=로 들어와 말머리·공모전이 미리 골라져 있다

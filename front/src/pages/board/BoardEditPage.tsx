@@ -14,7 +14,7 @@ import type { BoardDetail } from '../../features/board/types'
 import { POST_IMAGE_MESSAGES, toDrafts } from '../../features/post/postImages'
 import type { PostImageDraft } from '../../features/post/postImages'
 
-const PAGE_CLASS = 'mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]'
+const PAGE_CLASS = 'mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]'
 
 // BRD-003 게시글 수정. 로그인 회원만 들어오고(RequireLogin), 작성자가 아니면 막는다.
 // 서버도 작성자인지 다시 확인한다 (403 NOT_BOARD_POST_AUTHOR).
@@ -151,7 +151,7 @@ function imagesChanged(saved: BoardDetail['images'], drafts: PostImageDraft[]) {
 
 function Blocked({ message, to, label }: { message: string; to: string; label: string }) {
   return (
-    <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center`}>
+    <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center md:py-32`}>
       <title>글 수정 | 공방</title>
       <p className="text-subheading font-bold text-text">{message}</p>
       <Link

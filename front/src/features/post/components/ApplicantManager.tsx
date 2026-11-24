@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { getErrorMessage } from '../../../api/errors'
 import { Button } from '../../../components/ui/Button'
+import type { ButtonSize } from '../../../components/ui/Button'
 import { Modal } from '../../../components/ui/Modal'
 import { useAcceptApplication, useApplicants, useRejectApplication } from '../hooks'
 import type { Applicant, ApplicantStatus, PostDetail } from '../types'
@@ -11,6 +12,8 @@ interface ApplicantManagerProps {
   post: PostDetail
   // 서버가 막은 이유를 페이지 토스트로 띄운다 (REC-004 ③, PST-006 ⑧)
   onError: (message: string) => void
+  // 휴대폰 아래 고정 줄에서는 md (STYLE_GUIDE 8-3). 기본은 패널 안의 lg
+  size?: ButtonSize
 }
 
 // INT-003 ①: 새 지원 알림은 「상세 주소?applicants=open」으로 와서 지원자 관리 모달을 바로 연다 (RecruitNotifier)
@@ -33,7 +36,7 @@ function displayName(applicant: Applicant) {
 }
 
 // REC-003 지원자 관리 / Figma 03-6·04-1. 작성자 패널의 「지원자 관리 (대기 N)」 버튼과 모달.
-export function ApplicantManager({ post, onError }: ApplicantManagerProps) {
+export function ApplicantManager({ post, onError, size = 'lg' }: ApplicantManagerProps) {
   // 모달이 열려 있는지는 주소 표시로 정한다. 알림을 눌러 같은 상세로 다시 와도 열린다.
   const [searchParams, setSearchParams] = useSearchParams()
   const open = searchParams.get(OPEN_PARAM) === OPEN_VALUE
@@ -54,7 +57,7 @@ export function ApplicantManager({ post, onError }: ApplicantManagerProps) {
 
   return (
     <>
-      <Button variant="primary" size="lg" className="w-full" onClick={() => setOpen(true)}>
+      <Button variant="primary" size={size} className="w-full" onClick={() => setOpen(true)}>
         지원자 관리{pendingCount !== undefined && ` (대기 ${pendingCount})`}
       </Button>
       {open && <ApplicantModal post={post} onClose={() => setOpen(false)} onError={onError} />}
@@ -246,7 +249,7 @@ function ApplicantRow({
         {member.nickname !== null && (
           <Link
             to={`/members/${member.memberId}`}
-            className="inline-flex h-9 items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium whitespace-nowrap text-text hover:bg-bg"
+            className="inline-flex h-10 items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium whitespace-nowrap text-text hover:bg-bg lg:h-9"
           >
             프로필 보기
           </Link>

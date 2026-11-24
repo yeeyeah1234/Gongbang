@@ -17,7 +17,7 @@ import { isHttpUrl } from '../../features/post/postForm'
 import { MemberActionPopover } from '../../features/report/components/MemberActionPopover'
 import { useTimedToast } from '../../hooks/useTimedToast'
 
-const PAGE_CLASS = 'mx-auto max-w-[1100px] px-6 py-12 lg:px-12'
+const PAGE_CLASS = 'mx-auto max-w-[1100px] px-4 py-8 md:px-6 md:py-12 lg:px-12'
 
 // 2026-11-02T14:20:00 → 2026.11.02 14:20
 function formatDateTime(dateTime: string) {
@@ -45,7 +45,7 @@ export default function BoardDetailPage() {
     // BRD-003 ⑤ 삭제되었거나 없는 글
     const notFound = getApiError(error).code === 'BOARD_POST_NOT_FOUND' || !(boardPostId > 0)
     return (
-      <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center`}>
+      <main className={`${PAGE_CLASS} flex flex-col items-center gap-6 py-32 text-center md:py-32`}>
         <title>커뮤니티 게시판 | 공방</title>
         <p className="text-subheading font-bold text-text">
           {notFound
@@ -78,7 +78,10 @@ export default function BoardDetailPage() {
   return (
     <main className={PAGE_CLASS}>
       <title>{`${post.title} | 공방`}</title>
-      <Link to="/board" className="text-small text-text-sub hover:underline">
+      <Link
+        to="/board"
+        className="inline-flex min-h-10 items-center text-small text-text-sub hover:underline lg:min-h-0"
+      >
         ‹ 커뮤니티 게시판
       </Link>
 
@@ -91,7 +94,7 @@ export default function BoardDetailPage() {
             <div className="flex shrink-0 gap-2 pt-1">
               <Link
                 to={`/board/${post.boardPostId}/edit`}
-                className="inline-flex h-9 items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg"
+                className="inline-flex h-10 items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg lg:h-9"
               >
                 수정
               </Link>
@@ -246,7 +249,7 @@ function DeleteButton({ post, onError }: { post: BoardDetail; onError: (m: strin
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-9 cursor-pointer items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg"
+        className="inline-flex h-10 cursor-pointer items-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text hover:bg-bg lg:h-9"
       >
         삭제
       </button>
