@@ -60,21 +60,36 @@ export function releaseDraft(draft: PostImageDraft) {
 
 // 화면의 사진 목록(drafts)을 서버에 맞춘다: 뺀 사진 삭제 → 새 사진 차례로 올리기 → 순서가 다르면 순서 변경.
 // 올리지 못한 사진은 건너뛰고 끝까지 진행한 뒤 실패한 장수를 돌려준다 (글은 이미 저장됐으므로 멈추지 않는다).
+// 사진 API 묶음. 기본은 모집글(PST-007), 커뮤니티 결과물 사진(BRD-006)은 게시판 API를 넘긴다.
+export interface ImageApi {
+  upload: (args: { postId: number; file: File }) => Promise<{ images: PostImage[] }>
+  remove: (args: { postId: number; imageId: number }) => Promise<unknown>
+  reorder: (args: { postId: number; imageIds: number[] }) => Promise<unknown>
+}
+
+export const POST_IMAGE_API: ImageApi = {
+  upload: uploadPostImage,
+  remove: deletePostImage,
+  reorder: reorderPostImages,
+}
+
 export async function savePostImages({
   postId,
   saved,
   drafts,
+  api = POST_IMAGE_API,
 }: {
   postId: number
   saved: PostImage[]
   drafts: PostImageDraft[]
+  api?: ImageApi
 }) {
   let failed = 0
   const keptIds = new Set(drafts.flatMap((d) => (d.kind === 'saved' ? [d.imageId] : [])))
   for (const image of saved) {
     if (keptIds.has(image.imageId)) continue
     try {
-      await deletePostImage({ postId, imageId: image.imageId })
+      await api.remove({ postId, imageId: image.imageId })
     } catch {
       failed += 1
     }
@@ -89,7 +104,7 @@ export async function savePostImages({
       continue
     }
     try {
-      const { images } = await uploadPostImage({ postId, file: draft.file })
+      const { images } = await api.upload({ postId, file: draft.file })
       current = images
       finalIds.push(images[images.length - 1].imageId)
     } catch {
@@ -102,7 +117,7 @@ export async function savePostImages({
     currentIds.length === finalIds.length && currentIds.every((id, i) => id === finalIds[i])
   if (!sameOrder && finalIds.length === currentIds.length && finalIds.length > 1) {
     try {
-      await reorderPostImages({ postId, imageIds: finalIds })
+      await api.reorder({ postId, imageIds: finalIds })
     } catch {
       failed += 1
     }

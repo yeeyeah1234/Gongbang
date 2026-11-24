@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { useIsLoggedIn } from '../../features/auth/store'
+import { CommunityTabs } from '../../features/board/components/CommunityTabs'
 import { LoginRequiredModal } from '../../features/post/components/LoginRequiredModal'
 import { PostPagination } from '../../features/post/components/PostPagination'
 import { PostTable } from '../../features/post/components/PostTable'
@@ -42,7 +43,9 @@ export default function PostListPage() {
   return (
     <main className="mx-auto max-w-[1680px] px-6 py-12 lg:px-12 xl:px-[120px]">
       <title>커뮤니티 | 공방</title>
-      <div className="flex items-center justify-between gap-6">
+      {/* ① 위쪽 탭으로 커뮤니티 게시판(BRD-001)과 오간다 */}
+      <CommunityTabs />
+      <div className="mt-8 flex items-center justify-between gap-6">
         <h1 className="text-title font-bold text-text">팀원 모집</h1>
         {/* 빈 화면에서는 안내 아래 버튼 하나만 둔다 (한 화면에 Primary 하나) */}
         {!isEmpty && (
