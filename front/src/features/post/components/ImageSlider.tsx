@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DefaultThumbnail } from '../../contest/components/ContestCard'
 
 // PST-007 ⑥·BRD-006 ⑤ 올린 사진 슬라이드: 좌우 버튼·키보드 화살표·아래 점으로 넘긴다. 첫 장이 대표
@@ -15,7 +15,44 @@ export function ImageSlider({
 }) {
   const [index, setIndex] = useState(0)
   const [failed, setFailed] = useState<Set<number>>(() => new Set())
+  // 처음 보이는 대표 사진(첫 장)을 다 받았거나 실패했는지. 그 뒤에 나머지 사진을 미리 받는다
+  const [firstSettled, setFirstSettled] = useState(false)
   const count = images.length
+  const restUrls = images
+    .slice(1)
+    .map((image) => image.url)
+    .join('\n')
+
+  // 넘기기 전에 나머지 사진을 미리 받아 둔다. 대표 사진이 끝난 뒤, 브라우저가 한가할 때 한 장씩 낮은 우선순위로 받는다
+  useEffect(() => {
+    if (!firstSettled || !restUrls) return
+    const urls = restUrls.split('\n')
+    let cancelled = false
+    const loadNext = (i: number) => {
+      if (cancelled || i >= urls.length) return
+      const image = new Image()
+      image.fetchPriority = 'low'
+      image.decoding = 'async'
+      image.onload = image.onerror = () => loadNext(i + 1)
+      image.src = urls[i]
+    }
+    // Safari에는 requestIdleCallback이 없어 잠깐 기다렸다가 시작한다
+    // (타입 정의에는 늘 있는 것으로 되어 있어 없을 수도 있다고 적어 둔다)
+    const requestIdle = (window as Partial<Window>).requestIdleCallback
+    if (requestIdle) {
+      // window에서 떼어 부르면 브라우저가 막으므로 window.로 부른다
+      const handle = window.requestIdleCallback(() => loadNext(0))
+      return () => {
+        cancelled = true
+        window.cancelIdleCallback(handle)
+      }
+    }
+    const timer = window.setTimeout(() => loadNext(0), 300)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [firstSettled, restUrls])
   const current = images[Math.min(index, count - 1)]
   const go = (next: number) => setIndex((next + count) % count)
 
@@ -41,7 +78,11 @@ export function ImageSlider({
             key={current.imageId}
             src={current.url}
             alt={`${altPrefix} ${index + 1} / ${count}`}
-            onError={() => setFailed((prev) => new Set(prev).add(current.imageId))}
+            onLoad={() => setFirstSettled(true)}
+            onError={() => {
+              setFailed((prev) => new Set(prev).add(current.imageId))
+              setFirstSettled(true)
+            }}
             className="size-full object-cover"
           />
         )}
