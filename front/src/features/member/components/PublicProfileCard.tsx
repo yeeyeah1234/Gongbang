@@ -2,7 +2,7 @@ import { Link } from 'react-router'
 import { useCategories } from '../../contest/hooks'
 import { roleLabel } from '../constants'
 import { usePublicProfile } from '../hooks'
-import { ProfilePhoto } from './ProfilePhoto'
+import { ProfilePhoto } from '../../../components/ui/ProfilePhoto'
 
 interface PublicProfileCardProps {
   memberId: number

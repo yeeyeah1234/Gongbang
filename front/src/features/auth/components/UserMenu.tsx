@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ChevronDownIcon } from '../../../components/icons/Icons'
-import { ProfilePhoto } from '../../member/components/ProfilePhoto'
+import { ProfilePhoto } from '../../../components/ui/ProfilePhoto'
 import { signOut } from '../session'
 import { useLoginMember } from '../store'
 

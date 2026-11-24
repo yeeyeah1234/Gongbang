@@ -6,7 +6,7 @@ import { Button } from '../../../components/ui/Button'
 import { Modal } from '../../../components/ui/Modal'
 import { useIsLoggedIn, useLoginMember } from '../../auth/store'
 import { LoginRequiredModal } from '../../post/components/LoginRequiredModal'
-import { MemberPhoto } from '../../post/components/MemberPhoto'
+import { ProfilePhoto } from '../../../components/ui/ProfilePhoto'
 import { MemberActionPopover } from '../../report/components/MemberActionPopover'
 import {
   useComments,
@@ -233,10 +233,11 @@ export function CommentSection({
               reportTargetId={item.commentId}
               onReportSuccess={onNotify}
             >
-              <MemberPhoto
+              <ProfilePhoto
                 url={item.author?.profileImageUrl ?? null}
-                nickname={nickname}
-                className="size-8 shrink-0 text-caption"
+                name={nickname}
+                size="sm"
+                decorative
               />
               <span className="max-w-[160px] truncate text-body sm:max-w-[240px]">{nickname}</span>
             </MemberActionPopover>

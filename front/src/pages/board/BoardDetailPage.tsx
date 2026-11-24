@@ -12,7 +12,7 @@ import type { BoardDetail } from '../../features/board/types'
 import { CommentSection } from '../../features/comment/components/CommentSection'
 import { DDayBadge } from '../../features/contest/components/ContestCard'
 import { ImageSlider } from '../../features/post/components/ImageSlider'
-import { MemberPhoto } from '../../features/post/components/MemberPhoto'
+import { ProfilePhoto } from '../../components/ui/ProfilePhoto'
 import { isHttpUrl } from '../../features/post/postForm'
 import { MemberActionPopover } from '../../features/report/components/MemberActionPopover'
 import { useTimedToast } from '../../hooks/useTimedToast'
@@ -177,11 +177,7 @@ function AuthorLine({
         redirectTo={`/board/${post.boardPostId}`}
         onReportSuccess={onReportSuccess}
       >
-        <MemberPhoto
-          url={post.author.profileImageUrl}
-          nickname={nickname}
-          className="size-8 text-caption"
-        />
+        <ProfilePhoto url={post.author.profileImageUrl} name={nickname} size="sm" decorative />
         {nickname}
       </MemberActionPopover>
       <span aria-hidden="true">·</span>
