@@ -171,15 +171,14 @@ public class BoardPostQueryService {
                                     post.getContestId() == null
                                             ? null
                                             : contests.get(post.getContestId());
+                            // 탈퇴·없는 회원도 MemberService가 「탈퇴한 사용자」로 채워 준다 (MY-11)
                             MemberProfileSummary author = authors.get(post.getAuthorId());
                             return BoardPostListItemResponse.of(
                                     post,
                                     contest == null
                                             ? null
                                             : new ContestInfo(contest.contestId(), contest.title()),
-                                    new AuthorInfo(
-                                            post.getAuthorId(),
-                                            author == null ? "탈퇴한 사용자" : author.nickname()));
+                                    new AuthorInfo(post.getAuthorId(), author.nickname()));
                         })
                 .toList();
     }
