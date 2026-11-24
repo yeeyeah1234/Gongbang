@@ -49,6 +49,9 @@ export const ListMaxDepth = Extension.create({
   addKeyboardShortcuts() {
     return {
       Tab: () => {
+        if (!this.editor || this.editor.isDestroyed) {
+          return false
+        }
         const { selection } = this.editor.state
         const { $from } = selection
         const currentItem = findCurrentListItemNode($from)

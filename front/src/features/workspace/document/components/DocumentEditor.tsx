@@ -1,7 +1,7 @@
 import { Collaboration } from '@tiptap/extension-collaboration'
 import { CollaborationCaret } from '@tiptap/extension-collaboration-caret'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useLoginMember } from '../../../auth/store'
@@ -55,6 +55,10 @@ function createCaretIdleTracker(): CaretIdleTracker {
       hiddenKeys.clear()
     },
   }
+}
+
+function isEditorAlive(editor: Editor | null): editor is Editor {
+  return editor !== null && !editor.isDestroyed
 }
 
 // DOC-05~10 Tiptap + Yjs 동시 편집 에디터 (DocumentEditorPane이 React.lazy로 불러온다)
@@ -210,7 +214,7 @@ export default function DocumentEditor({
 
   // 로그인 사용자 닉네임·색이 늦게 채워지면 awareness user 정보 갱신
   useEffect(() => {
-    if (!editor || !session.provider) return
+    if (!isEditorAlive(editor) || !session.provider) return
     editor.commands.updateUser({
       name: nickname,
       colorIndex: myColorIndex,
@@ -222,9 +226,10 @@ export default function DocumentEditor({
   // DOC-06: Ctrl+K / Cmd+K 링크 삽입·수정 단축키
   useEffect(() => {
     const container = editorContainerRef.current
-    if (!container || !editor) return
+    if (!container || !isEditorAlive(editor)) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!isEditorAlive(editor)) return
       if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         const existingHref = (editor.getAttributes('link').href as string | undefined) ?? ''
@@ -335,7 +340,7 @@ export default function DocumentEditor({
   }, [session, caretIdleTracker])
 
   const openLinkModal = () => {
-    if (!editor) return
+    if (!isEditorAlive(editor)) return
     const existingHref = (editor.getAttributes('link').href as string | undefined) ?? ''
     setLinkModalState({
       open: true,
@@ -346,11 +351,16 @@ export default function DocumentEditor({
 
   const closeLinkModal = () => {
     setLinkModalState((prev) => ({ ...prev, open: false }))
-    editor?.commands.focus()
+    if (isEditorAlive(editor)) {
+      editor.commands.focus()
+    }
   }
 
   const handleApplyLink = (url: string) => {
-    if (!editor) return
+    if (!isEditorAlive(editor)) {
+      setLinkModalState((prev) => ({ ...prev, open: false }))
+      return
+    }
     const { empty } = editor.state.selection
     if (empty && !editor.isActive('link')) {
       // 선택 영역이 없으면 링크 주소를 텍스트로 삽입하면서 링크 적용
@@ -388,7 +398,9 @@ export default function DocumentEditor({
   }
 
   const handleRemoveLink = () => {
-    editor?.chain().focus().extendMarkRange('link').unsetLink().run()
+    if (isEditorAlive(editor)) {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+    }
     setLinkModalState((prev) => ({ ...prev, open: false }))
   }
 
@@ -405,8 +417,8 @@ export default function DocumentEditor({
         ref={editorContainerRef}
         className="gb-editor min-h-0 flex-1 overflow-y-auto px-6 py-6 pb-16 lg:px-8"
         onClick={(event) => {
-          if (event.target === event.currentTarget) {
-            editor?.commands.focus('end')
+          if (event.target === event.currentTarget && isEditorAlive(editor)) {
+            editor.commands.focus('end')
           }
         }}
       >

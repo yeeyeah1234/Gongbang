@@ -4,7 +4,7 @@ const DEFAULT_DEV_SYNC_URL = 'ws://127.0.0.1:1234'
  * 문서 동기화 서버(Hocuspocus) WebSocket 주소.
  * - VITE_SYNC_URL이 있으면 그 값
  * - 없고 개발 모드면 ws://127.0.0.1:1234
- * - 없고 배포 모드면 현재 페이지 주소 기준(wss/ws + location.host + /sync)
+ * - 없고 배포 모드면 현재 페이지 주소 기준(wss/ws + location.host + /sync/)
  */
 export function resolveSyncServerUrl(): string {
   const configured = import.meta.env.VITE_SYNC_URL?.trim()
@@ -15,7 +15,7 @@ export function resolveSyncServerUrl(): string {
     return DEFAULT_DEV_SYNC_URL
   }
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${protocol}//${window.location.host}/sync`
+  return `${protocol}//${window.location.host}/sync/`
 }
 
 /**
