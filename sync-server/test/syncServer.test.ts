@@ -559,7 +559,19 @@ describe('POST /internal/disconnect 팀원 연결 끊기 (WS-06)', () => {
       getConnections: () => [targetConn, otherMemberConn, otherTeamConn],
     } as unknown as Document;
 
+    const targetTeamConn = makeFakeConnection('targetTeam', {
+      teamId: 3,
+      memberId: 7,
+      nickname: '상현',
+      leader: false,
+      colorIndex: 2,
+    });
+    const fakeTeamDoc = {
+      getConnections: () => [targetTeamConn],
+    } as unknown as Document;
+
     server.hocuspocus.documents.set('doc:500', fakeDoc);
+    server.hocuspocus.documents.set('team:3', fakeTeamDoc);
 
     await server.listen();
     try {
@@ -575,10 +587,117 @@ describe('POST /internal/disconnect 팀원 연결 끊기 (WS-06)', () => {
       assert.equal(res.status, 200);
       const body = (await res.json()) as { success: boolean };
       assert.equal(body.success, true);
-      assert.deepEqual(closedIds, ['target']);
+      assert.deepEqual(closedIds, ['target', 'targetTeam']);
     } finally {
       server.hocuspocus.documents.clear();
       await server.destroy();
     }
+  });
+});
+
+describe('team:{teamId} 워크스페이스 접속자 연결 (WS-03)', () => {
+  it('onAuthenticate: 200이면 /internal/teams/{teamId}/access를 호출하고 leader·colorIndex를 포함한 context를 돌려준다', async () => {
+    let calledUrl = '';
+    let calledMethod = '';
+    let authHeader = '';
+    let syncKeyHeader = '';
+
+    const fakeFetch: FetchLike = async (input, init) => {
+      calledUrl = String(input);
+      calledMethod = init?.method ?? 'GET';
+      const headers = new Headers(init?.headers);
+      authHeader = headers.get('authorization') ?? '';
+      syncKeyHeader = headers.get('x-sync-key') ?? '';
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: { memberId: 7, nickname: '상현', teamId: 3, leader: true, colorIndex: 1 },
+          error: null,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    const { hooks } = createSyncServer({
+      config: createTestConfig(),
+      fetchFn: fakeFetch,
+    });
+
+    const context = await hooks.onAuthenticate({
+      documentName: 'team:3',
+      token: TEST_TOKEN,
+    });
+
+    assert.equal(calledMethod, 'GET');
+    assert.equal(calledUrl, 'http://127.0.0.1:8090/internal/teams/3/access');
+    assert.equal(authHeader, `Bearer ${TEST_TOKEN}`);
+    assert.equal(syncKeyHeader, TEST_KEY);
+    assert.deepEqual(context, {
+      memberId: 7,
+      nickname: '상현',
+      teamId: 3,
+      leader: true,
+      colorIndex: 1,
+    });
+  });
+
+  for (const status of [401, 403, 404] as const) {
+    it(`onAuthenticate: Spring이 ${status}를 돌려주면 연결을 거절하고 키·토큰을 오류에 남기지 않는다`, async () => {
+      const fakeFetch: FetchLike = async () =>
+        new Response(
+          JSON.stringify({
+            success: false,
+            data: null,
+            error: { code: 'ERR', message: '거절' },
+          }),
+          { status, headers: { 'Content-Type': 'application/json' } },
+        );
+
+      const { hooks } = createSyncServer({
+        config: createTestConfig(),
+        fetchFn: fakeFetch,
+      });
+
+      await assert.rejects(
+        () => hooks.onAuthenticate({ documentName: 'team:3', token: TEST_TOKEN }),
+        (err: unknown) => {
+          assert.ok(err instanceof SpringAccessError);
+          assert.equal(err.status, status);
+          assert.ok(!err.message.includes(TEST_KEY));
+          assert.ok(!err.message.includes(TEST_TOKEN));
+          return true;
+        },
+      );
+    });
+  }
+
+  it('onLoadDocument · onChange · onStoreDocument: team 연결은 Spring 불러오기·저장 API를 호출하지 않는다', async () => {
+    let fetchCount = 0;
+    const fakeFetch: FetchLike = async () => {
+      fetchCount += 1;
+      return new Response(null, { status: 500 });
+    };
+
+    const { hooks } = createSyncServer({
+      config: createTestConfig(),
+      fetchFn: fakeFetch,
+    });
+
+    const doc = new Y.Doc() as unknown as Document;
+    await hooks.onLoadDocument({ documentName: 'team:3', document: doc });
+    await hooks.onChange({
+      documentName: 'team:3',
+      context: { memberId: 7, nickname: '상현', teamId: 3, leader: false, colorIndex: 2 },
+    });
+    await hooks.onStoreDocument({
+      documentName: 'team:3',
+      document: doc,
+      lastContext: { memberId: 7, nickname: '상현', teamId: 3, leader: false, colorIndex: 2 },
+      instance: createFakeHocuspocusInstance([]),
+    });
+
+    assert.equal(fetchCount, 0);
+    assert.equal(doc.getText('content').toString(), '');
   });
 });

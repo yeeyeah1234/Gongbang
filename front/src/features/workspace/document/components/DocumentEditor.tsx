@@ -158,7 +158,7 @@ export default function DocumentEditor({
   onDocumentGone,
   onForbidden,
 }: DocumentEditorProps) {
-  const { summary } = useWorkspace()
+  const { summary, myColorIndex: teamColorIndex } = useWorkspace()
   const loginMember = useLoginMember()
   const editorContainerRef = useRef<HTMLDivElement | null>(null)
   const editorRef = useRef<Editor | null>(null)
@@ -170,7 +170,10 @@ export default function DocumentEditor({
   const session = useDocumentSyncSession(documentId, offlinePreview)
 
   const nickname = loginMember?.nickname ?? '팀원'
-  const cursorColor = resolveCursorColor({ memberId: summary.myMemberId })
+  const cursorColor = resolveCursorColor({
+    memberId: summary.myMemberId,
+    colorIndex: teamColorIndex,
+  })
   const myMemberId = summary.myMemberId
   const myColorIndex = cursorColor.colorIndex
   const myClientKey = `${myMemberId}-${session.instanceId}`

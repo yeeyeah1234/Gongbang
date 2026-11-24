@@ -5,6 +5,14 @@ export interface DocumentAccess {
   leader?: boolean;
 }
 
+export interface TeamAccess {
+  memberId: number;
+  nickname: string;
+  teamId: number;
+  leader: boolean;
+  colorIndex: number;
+}
+
 export class SpringAccessError extends Error {
   readonly status: number | undefined;
 
@@ -43,6 +51,7 @@ export interface SpringClientOptions {
 
 export interface SpringClient {
   checkDocumentAccess(documentId: number, token: string): Promise<DocumentAccess>;
+  checkTeamAccess(teamId: number, token: string): Promise<TeamAccess>;
   loadDocumentContent(documentId: number): Promise<Uint8Array | null>;
   saveDocumentContent(
     documentId: number,
@@ -121,6 +130,61 @@ export function createSpringClient(options: SpringClientOptions): SpringClient {
       nickname: data.nickname,
       teamId: data.teamId,
       leader: typeof data.leader === 'boolean' ? data.leader : undefined,
+    };
+  }
+
+  async function checkTeamAccess(teamId: number, token: string): Promise<TeamAccess> {
+    const url = `${baseUrl}/internal/teams/${teamId}/access`;
+    let response: Response;
+    try {
+      response = await fetchFn(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          [SYNC_KEY_HEADER]: internalKey,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      });
+    } catch (error) {
+      throw new SpringAccessError(
+        `팀 권한 확인 요청 실패: ${summarizeError(error)}`,
+      );
+    }
+
+    if (response.status !== 200) {
+      throw new SpringAccessError(
+        `팀 권한 확인 거절 (HTTP ${response.status})`,
+        response.status,
+      );
+    }
+
+    let body: ApiSuccessResponse<Record<string, unknown>>;
+    try {
+      body = (await response.json()) as ApiSuccessResponse<Record<string, unknown>>;
+    } catch {
+      throw new SpringAccessError('팀 권한 응답 JSON 파싱 실패', 200);
+    }
+
+    const data = body?.data;
+    if (
+      body?.success !== true ||
+      !data ||
+      typeof data.memberId !== 'number' ||
+      typeof data.nickname !== 'string' ||
+      typeof data.teamId !== 'number' ||
+      typeof data.leader !== 'boolean' ||
+      typeof data.colorIndex !== 'number'
+    ) {
+      throw new SpringAccessError('팀 권한 응답 형식이 올바르지 않습니다', 200);
+    }
+
+    return {
+      memberId: data.memberId,
+      nickname: data.nickname,
+      teamId: data.teamId,
+      leader: data.leader,
+      colorIndex: data.colorIndex,
     };
   }
 
@@ -212,6 +276,7 @@ export function createSpringClient(options: SpringClientOptions): SpringClient {
 
   return {
     checkDocumentAccess,
+    checkTeamAccess,
     loadDocumentContent,
     saveDocumentContent,
   };

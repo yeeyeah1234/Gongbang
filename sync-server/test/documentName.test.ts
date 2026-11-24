@@ -19,6 +19,19 @@ describe('문서 이름 해석 (parseDocumentName)', () => {
     });
   });
 
+  it('team:{양의정수} 형식이면 type=team과 숫자 id를 돌려준다', () => {
+    assert.deepEqual(parseDocumentName('team:1'), {
+      type: 'team',
+      id: 1,
+      raw: 'team:1',
+    });
+    assert.deepEqual(parseDocumentName('team:42'), {
+      type: 'team',
+      id: 42,
+      raw: 'team:42',
+    });
+  });
+
   it('잘못된 형식이거나 지원하지 않는 접두사는 거절한다', () => {
     const invalidNames = [
       '',
@@ -30,8 +43,12 @@ describe('문서 이름 해석 (parseDocumentName)', () => {
       'doc:1:2',
       'doc: 1',
       'DOC:1',
+      'team:',
+      'team:0',
+      'team:-1',
+      'team:01',
+      'TEAM:3',
       'board:10',
-      'team:3',
       'unknown:5',
       'doc:999999999999999999999',
     ];

@@ -24,3 +24,10 @@ export function resolveSyncServerUrl(): string {
 export function buildSyncDocumentName(documentId: number): string {
   return `doc:${documentId}`
 }
+
+/**
+ * sync-server/src/documentName.ts 규칙("team:{teamId}")에 맞춘 팀 접속자 방 이름 (WS-03).
+ */
+export function buildSyncTeamName(teamId: number): string {
+  return `team:${teamId}`
+}

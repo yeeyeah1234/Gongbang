@@ -75,7 +75,7 @@ export default function WorkspaceDocumentPage({
 }
 
 function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePreview: boolean }) {
-  const { teamId, summary, realtime } = useWorkspace()
+  const { teamId, summary, realtime, setActiveDocTitle } = useWorkspace()
   const { documentId: param } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -115,6 +115,18 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
   useEffect(() => {
     if (selectedDoc) writeLastDocumentId(teamId, selectedDoc.id)
   }, [teamId, selectedDoc])
+
+  // WS-03 ④ 열린 문서 제목이 바뀔 때만 접속자 awareness의 docTitle 갱신
+  const selectedDocTitle = selectedDoc?.title ?? null
+  useEffect(() => {
+    setActiveDocTitle?.(selectedDocTitle)
+  }, [setActiveDocTitle, selectedDocTitle])
+
+  useEffect(() => {
+    return () => {
+      setActiveDocTitle?.(null)
+    }
+  }, [setActiveDocTitle])
 
   const openFirstOrEmpty = (excludeId?: number) => {
     const nextDoc = (documents ?? []).find((item) => item.id !== excludeId)

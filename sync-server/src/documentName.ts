@@ -1,10 +1,10 @@
 /**
  * 동기화 문서 이름 해석기.
- * 현재 지원: "doc:{documentId}"
- * 추후 "board:{id}", "team:{teamId}" 등을 이 모듈 한 곳에서 확장한다.
+ * 현재 지원: "doc:{documentId}", "team:{teamId}"
+ * 추후 "board:{id}" 등을 이 모듈 한 곳에서 확장한다.
  */
 export type ParsedDocumentName = {
-  type: 'doc';
+  type: 'doc' | 'team';
   id: number;
   raw: string;
 };
@@ -38,8 +38,8 @@ export function parseDocumentName(name: string): ParsedDocumentName {
     throw new InvalidDocumentNameError(name);
   }
 
-  if (prefix === 'doc') {
-    return { type: 'doc', id, raw: name };
+  if (prefix === 'doc' || prefix === 'team') {
+    return { type: prefix, id, raw: name };
   }
 
   throw new InvalidDocumentNameError(name);

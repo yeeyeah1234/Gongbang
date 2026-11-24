@@ -8,6 +8,8 @@ interface AvatarProps {
   colorIndex: MemberColorIndex
   size?: AvatarSize
   isLeader?: boolean
+  /** 기본값은 name. null을 넘기면 네이티브 title 속성을 붙이지 않는다(커스텀 툴팁과 겹침 방지). */
+  title?: string | null
   className?: string
 }
 
@@ -33,14 +35,16 @@ export function Avatar({
   colorIndex,
   size = 'md',
   isLeader = false,
+  title,
   className = '',
 }: AvatarProps) {
   const shortLabel = name.length > 2 ? name.slice(-2) : name
+  const nativeTitle = title === undefined ? name : (title ?? undefined)
 
   return (
     <div className={['relative inline-flex shrink-0', className].filter(Boolean).join(' ')}>
       <div
-        title={name}
+        title={nativeTitle}
         className={[
           'flex items-center justify-center rounded-full border-2 bg-surface font-bold select-none',
           MEMBER_COLOR_CLASSES[colorIndex],
