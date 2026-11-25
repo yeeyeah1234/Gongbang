@@ -97,8 +97,7 @@ export function EventFormModal({
         </>
       }
     >
-      {/* 공통 Modal에는 스크롤이 없어 낮은 화면에서 버튼이 밖으로 나간다. 본문만 스크롤 */}
-      <div className="-mx-1 flex max-h-[calc(100dvh-16rem)] flex-col gap-4 overflow-y-auto px-1">
+      <div className="flex flex-col gap-4">
         <div className="relative shrink-0">
           <Input
             id="event-title"
@@ -125,7 +124,7 @@ export function EventFormModal({
           </span>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-4">
+        <div className="grid shrink-0 grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             id="event-start-date"
             label="시작일"
@@ -157,7 +156,7 @@ export function EventFormModal({
         />
 
         {/* CAL-03 ⑤ 종일이면 시간은 고를 수 없다 */}
-        <div className="grid shrink-0 grid-cols-2 gap-4">
+        <div className="grid shrink-0 grid-cols-1 gap-4 sm:grid-cols-2">
           <TimeSelect
             id="event-start-time"
             label="시작 시간"
