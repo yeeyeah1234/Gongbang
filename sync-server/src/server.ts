@@ -110,6 +110,16 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
         };
       }
 
+      if (parsed.type === 'whiteboard') {
+        const access = await springClient.checkWhiteboardAccess(parsed.id, trimmedToken);
+        return {
+          memberId: access.memberId,
+          nickname: access.nickname,
+          teamId: access.teamId,
+          colorIndex: access.colorIndex,
+        };
+      }
+
       const access = await springClient.checkDocumentAccess(parsed.id, trimmedToken);
       return {
         memberId: access.memberId,
@@ -127,14 +137,17 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
       deletedDocuments.delete(documentName);
 
       try {
-        const bytes = await springClient.loadDocumentContent(parsed.id);
+        const bytes =
+          parsed.type === 'whiteboard'
+            ? await springClient.loadWhiteboardContent(parsed.id)
+            : await springClient.loadDocumentContent(parsed.id);
         if (bytes && bytes.byteLength > 0) {
           Y.applyUpdate(document, bytes);
         }
       } catch (error) {
         const reason = error instanceof Error ? error.message : 'UnknownError';
         logger.error(
-          `문서 본문 불러오기 실패로 연결을 거절합니다. documentName=${documentName}, reason=${reason}`,
+          `본문 불러오기 실패로 연결을 거절합니다. documentName=${documentName}, reason=${reason}`,
         );
         throw error;
       }
@@ -172,13 +185,16 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
       }
 
       const state = Y.encodeStateAsUpdate(document);
-      const result = await springClient.saveDocumentContent(parsed.id, editorId, state);
+      const result =
+        parsed.type === 'whiteboard'
+          ? await springClient.saveWhiteboardContent(parsed.id, editorId, state)
+          : await springClient.saveDocumentContent(parsed.id, editorId, state);
 
       if (result.status === 'not_found') {
         deletedDocuments.add(documentName);
         lastEditorByDocument.delete(documentName);
         logger.warn(
-          `문서가 삭제되어(404) 연결을 모두 종료하고 재저장을 중단합니다. documentName=${documentName}`,
+          `대상이 삭제되어(404) 연결을 모두 종료하고 재저장을 중단합니다. documentName=${documentName}`,
         );
         instance.closeConnections(documentName);
         return;
@@ -186,7 +202,7 @@ export function createSyncServer(options: CreateSyncServerOptions): SyncServerHa
 
       if (result.status === 'error') {
         logger.error(
-          `문서 저장 실패(다음 저장 때 재시도). documentName=${documentName}, editorId=${editorId}, reason=${result.reason}`,
+          `본문 저장 실패(다음 저장 때 재시도). documentName=${documentName}, editorId=${editorId}, reason=${result.reason}`,
         );
       }
     },

@@ -13,6 +13,14 @@ export interface TeamAccess {
   colorIndex: number;
 }
 
+export interface WhiteboardAccess {
+  whiteboardId: number;
+  teamId: number;
+  memberId: number;
+  nickname: string;
+  colorIndex: number;
+}
+
 export class SpringAccessError extends Error {
   readonly status: number | undefined;
 
@@ -52,10 +60,17 @@ export interface SpringClientOptions {
 export interface SpringClient {
   checkDocumentAccess(documentId: number, token: string): Promise<DocumentAccess>;
   checkTeamAccess(teamId: number, token: string): Promise<TeamAccess>;
+  checkWhiteboardAccess(whiteboardId: number, token: string): Promise<WhiteboardAccess>;
   loadDocumentContent(documentId: number): Promise<Uint8Array | null>;
   saveDocumentContent(
     documentId: number,
     editorId: number,
+    content: Uint8Array,
+  ): Promise<SaveDocumentResult>;
+  loadWhiteboardContent(whiteboardId: number): Promise<Uint8Array | null>;
+  saveWhiteboardContent(
+    whiteboardId: number,
+    lastEditorId: number,
     content: Uint8Array,
   ): Promise<SaveDocumentResult>;
 }
@@ -188,8 +203,65 @@ export function createSpringClient(options: SpringClientOptions): SpringClient {
     };
   }
 
-  async function loadDocumentContent(documentId: number): Promise<Uint8Array | null> {
-    const url = `${baseUrl}/internal/documents/${documentId}/content`;
+  async function checkWhiteboardAccess(
+    whiteboardId: number,
+    token: string,
+  ): Promise<WhiteboardAccess> {
+    // WB-10: 백엔드 WhiteboardController가 API 명세서대로 /api/whiteboards/{id}/access에 둔다
+    const url = `${baseUrl}/api/whiteboards/${whiteboardId}/access`;
+    let response: Response;
+    try {
+      response = await fetchFn(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+        signal: AbortSignal.timeout(requestTimeoutMs),
+      });
+    } catch (error) {
+      throw new SpringAccessError(
+        `화이트보드 권한 확인 요청 실패: ${summarizeError(error)}`,
+      );
+    }
+
+    if (response.status !== 200) {
+      throw new SpringAccessError(
+        `화이트보드 권한 확인 거절 (HTTP ${response.status})`,
+        response.status,
+      );
+    }
+
+    let body: ApiSuccessResponse<Record<string, unknown>>;
+    try {
+      body = (await response.json()) as ApiSuccessResponse<Record<string, unknown>>;
+    } catch {
+      throw new SpringAccessError('화이트보드 권한 응답 JSON 파싱 실패', 200);
+    }
+
+    const data = body?.data;
+    if (
+      body?.success !== true ||
+      !data ||
+      typeof data.whiteboardId !== 'number' ||
+      typeof data.teamId !== 'number' ||
+      typeof data.memberId !== 'number' ||
+      typeof data.nickname !== 'string' ||
+      typeof data.colorIndex !== 'number'
+    ) {
+      throw new SpringAccessError('화이트보드 권한 응답 형식이 올바르지 않습니다', 200);
+    }
+
+    return {
+      whiteboardId: data.whiteboardId,
+      teamId: data.teamId,
+      memberId: data.memberId,
+      nickname: data.nickname,
+      colorIndex: data.colorIndex,
+    };
+  }
+
+  async function loadBinaryContent(url: string, label: string): Promise<Uint8Array | null> {
     let response: Response;
     try {
       response = await fetchFn(url, {
@@ -201,7 +273,7 @@ export function createSpringClient(options: SpringClientOptions): SpringClient {
       });
     } catch (error) {
       throw new SpringLoadError(
-        `문서 본문 불러오기 요청 실패: ${summarizeError(error)}`,
+        `${label} 본문 불러오기 요청 실패: ${summarizeError(error)}`,
       );
     }
 
@@ -215,17 +287,15 @@ export function createSpringClient(options: SpringClientOptions): SpringClient {
     }
 
     throw new SpringLoadError(
-      `문서 본문 불러오기 실패 (HTTP ${response.status})`,
+      `${label} 본문 불러오기 실패 (HTTP ${response.status})`,
       response.status,
     );
   }
 
-  async function saveDocumentContent(
-    documentId: number,
-    editorId: number,
+  async function saveBinaryContent(
+    url: string,
     content: Uint8Array,
   ): Promise<SaveDocumentResult> {
-    const url = `${baseUrl}/internal/documents/${documentId}/content?editorId=${encodeURIComponent(String(editorId))}`;
     const bodyBytes = new Uint8Array(content);
 
     let lastResult: SaveDocumentResult = { status: 'error', reason: '알 수 없는 오류' };
@@ -274,11 +344,43 @@ export function createSpringClient(options: SpringClientOptions): SpringClient {
     return lastResult;
   }
 
+  async function loadDocumentContent(documentId: number): Promise<Uint8Array | null> {
+    return loadBinaryContent(`${baseUrl}/internal/documents/${documentId}/content`, '문서');
+  }
+
+  async function saveDocumentContent(
+    documentId: number,
+    editorId: number,
+    content: Uint8Array,
+  ): Promise<SaveDocumentResult> {
+    const url = `${baseUrl}/internal/documents/${documentId}/content?editorId=${encodeURIComponent(String(editorId))}`;
+    return saveBinaryContent(url, content);
+  }
+
+  async function loadWhiteboardContent(whiteboardId: number): Promise<Uint8Array | null> {
+    return loadBinaryContent(
+      `${baseUrl}/internal/whiteboards/${whiteboardId}/content`,
+      '화이트보드',
+    );
+  }
+
+  async function saveWhiteboardContent(
+    whiteboardId: number,
+    lastEditorId: number,
+    content: Uint8Array,
+  ): Promise<SaveDocumentResult> {
+    const url = `${baseUrl}/internal/whiteboards/${whiteboardId}/content?lastEditorId=${encodeURIComponent(String(lastEditorId))}`;
+    return saveBinaryContent(url, content);
+  }
+
   return {
     checkDocumentAccess,
     checkTeamAccess,
+    checkWhiteboardAccess,
     loadDocumentContent,
     saveDocumentContent,
+    loadWhiteboardContent,
+    saveWhiteboardContent,
   };
 }
 

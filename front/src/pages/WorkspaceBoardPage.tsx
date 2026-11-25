@@ -4,7 +4,7 @@ import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getApiError, getErrorMessage } from '../api/errors'
 import { Toast } from '../components/ui/Toast'
-import { BoardCanvasPlaceholder } from '../features/workspace/board/components/BoardCanvasPlaceholder'
+import { BoardCanvasPane } from '../features/workspace/board/components/BoardCanvasPane'
 import { BoardEmptyState } from '../features/workspace/board/components/BoardEmptyState'
 import {
   boardKeys,
@@ -49,6 +49,8 @@ const BOARD_LABELS: WorkspaceSidebarLabels = {
 interface WorkspaceBoardPageProps {
   // 개발용 미리보기만 넘긴다. 기본은 /workspaces/:teamId/board
   basePath?: string
+  // 개발용 미리보기에서는 sync-server 없이 로컬 캔버스로 연다
+  offlinePreview?: boolean
 }
 
 function parseBoardId(param: string | undefined): number | null {
@@ -56,15 +58,24 @@ function parseBoardId(param: string | undefined): number | null {
   return Number.isSafeInteger(id) && id > 0 ? id : null
 }
 
-// WB-01 화이트보드 탭: /workspaces/:teamId/board/:boardId? (문서 탭 WorkspaceDocumentPage와 같은 동작)
-export default function WorkspaceBoardPage({ basePath }: WorkspaceBoardPageProps) {
+// WB-01~10 화이트보드 탭: /workspaces/:teamId/board/:boardId? (문서 탭 WorkspaceDocumentPage와 같은 동작)
+export default function WorkspaceBoardPage({
+  basePath,
+  offlinePreview = false,
+}: WorkspaceBoardPageProps) {
   const { teamId } = useWorkspace()
   // 팀이 바뀌면 토스트·편집 상태까지 처음부터
-  return <BoardTab key={teamId} basePath={basePath ?? `/workspaces/${teamId}/board`} />
+  return (
+    <BoardTab
+      key={teamId}
+      basePath={basePath ?? `/workspaces/${teamId}/board`}
+      offlinePreview={offlinePreview}
+    />
+  )
 }
 
-function BoardTab({ basePath }: { basePath: string }) {
-  const { teamId, summary, realtime } = useWorkspace()
+function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePreview: boolean }) {
+  const { teamId, summary, realtime, setActiveDocTitle } = useWorkspace()
   const { boardId: param } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -104,6 +115,18 @@ function BoardTab({ basePath }: { basePath: string }) {
     if (selectedBoard) writeLastBoardId(teamId, selectedBoard.id)
   }, [teamId, selectedBoard])
 
+  // WS-03 ④ 열린 보드 제목이 바뀔 때만 접속자 awareness 툴팁(화이트보드 > 보드명) 갱신
+  const selectedBoardTitle = selectedBoard?.title ?? null
+  useEffect(() => {
+    setActiveDocTitle?.(selectedBoardTitle)
+  }, [setActiveDocTitle, selectedBoardTitle])
+
+  useEffect(() => {
+    return () => {
+      setActiveDocTitle?.(null)
+    }
+  }, [setActiveDocTitle])
+
   const openFirstOrEmpty = (excludeId?: number) => {
     const nextBoard = (boards ?? []).find((item) => item.id !== excludeId)
     if (nextBoard) {
@@ -118,7 +141,7 @@ function BoardTab({ basePath }: { basePath: string }) {
     openFirstOrEmpty(excludeId)
   })
 
-  const handleExternalDelete = useEffectEvent((deletedId: number) => {
+  const notifyExternalDelete = (deletedId: number) => {
     if (selfDeletedIdsRef.current.has(deletedId) || notifiedDeletedIdsRef.current.has(deletedId)) {
       return
     }
@@ -127,6 +150,10 @@ function BoardTab({ basePath }: { basePath: string }) {
     if (deleteTarget?.id === deletedId) setDeleteTarget(null)
     toast.show(GONE_MESSAGE)
     openFirstOrEmpty(deletedId)
+  }
+
+  const handleExternalDelete = useEffectEvent((deletedId: number) => {
+    notifyExternalDelete(deletedId)
   })
 
   // 실시간: 내가 보고 있던 보드가 다른 사람에게 삭제되면 토스트 후 첫 보드로 (DOC-04 ④와 같음)
@@ -289,6 +316,15 @@ function BoardTab({ basePath }: { basePath: string }) {
     })
   }
 
+  const handleBoardGone = (deletedId: number) => {
+    notifyExternalDelete(deletedId)
+    void refreshBoards()
+  }
+
+  const handleBoardForbidden = () => {
+    void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
+  }
+
   const empty = boards !== undefined && boards.length === 0
   const listFailed = listQuery.isError && !boards
   const modalOpen = deleteTarget !== null
@@ -321,9 +357,18 @@ function BoardTab({ basePath }: { basePath: string }) {
               onCancelRename={() => setRenamingId(null)}
               onRequestDelete={(item) => setDeleteTarget(item)}
             />
-            <div key={selectedBoard?.id ?? 'loading'} className="min-w-0 flex-1 lg:overflow-y-auto">
+            <div
+              key={selectedBoard?.id ?? 'loading'}
+              className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden"
+            >
               {selectedBoard ? (
-                <BoardCanvasPlaceholder boardId={selectedBoard.id} />
+                <BoardCanvasPane
+                  teamId={teamId}
+                  boardId={selectedBoard.id}
+                  offlinePreview={offlinePreview}
+                  onBoardGone={handleBoardGone}
+                  onForbidden={handleBoardForbidden}
+                />
               ) : (
                 <NoticeSkeleton />
               )}
