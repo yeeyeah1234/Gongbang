@@ -11,6 +11,7 @@ interface NoticeListProps {
   basePath: string
   selectedId: number | null
   busy: boolean
+  isWide?: boolean
   // 팀장일 때만 넘긴다
   onCreate?: () => void
 }
@@ -25,6 +26,7 @@ export function NoticeList({
   basePath,
   selectedId,
   busy,
+  isWide = true,
   onCreate,
 }: NoticeListProps) {
   const {
@@ -49,19 +51,19 @@ export function NoticeList({
         // 여러 번 바뀐 것이 묶여 오므로 마지막 값이 지금 상태
         if (entries[entries.length - 1].isIntersecting) void fetchNextPage({ cancelRefetch: false })
       },
-      // 기준은 창이 아니라 목록 칸: 목록 아래쪽이 창 밖에 있어도 끝까지 내리면 부른다
-      { root: scrollRef.current, rootMargin: LOAD_MORE_MARGIN },
+      // PC는 목록 칸 기준, 1024px 미만은 페이지(뷰포트) 스크롤 기준
+      { root: isWide ? scrollRef.current : null, rootMargin: LOAD_MORE_MARGIN },
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
     // dataUpdatedAt: observer는 보임/안 보임이 바뀔 때만 알리고, 응답이 빠르면 isFetching=true가 렌더되지 않는다.
     // 쪽이 붙을 때마다 다시 감시해야 감지 지점이 계속 보일 때 이어서 부른다
-  }, [hasNextPage, isFetching, isFetchNextPageError, fetchNextPage, dataUpdatedAt])
+  }, [hasNextPage, isFetching, isFetchNextPageError, fetchNextPage, dataUpdatedAt, isWide])
 
   return (
     <aside
       aria-label="공지 목록"
-      className="flex shrink-0 flex-col border-b border-line lg:min-h-0 lg:w-[340px] lg:border-r lg:border-b-0"
+      className="flex flex-1 flex-col bg-surface lg:min-h-0 lg:w-[340px] lg:flex-none lg:shrink-0 lg:border-r lg:border-line"
     >
       {onCreate && (
         <div className="flex shrink-0 flex-col items-start gap-2 border-b border-divider p-4">
@@ -69,13 +71,10 @@ export function NoticeList({
           <p className="text-small text-text-sub">작성 버튼은 팀장에게만 보여요</p>
         </div>
       )}
-      <div
-        ref={scrollRef}
-        className="relative max-h-80 min-h-0 overflow-y-auto p-2 lg:max-h-none lg:flex-1"
-      >
+      <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-y-auto lg:p-2">
         {data ? (
           <>
-            <ul className="flex flex-col gap-1">
+            <ul className="flex flex-col lg:gap-1">
               {items.map((notice) => (
                 <NoticeListItem
                   key={notice.noticeId}

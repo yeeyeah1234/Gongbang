@@ -54,7 +54,7 @@ export function WorkspaceItemSidebar({
   return (
     <aside
       aria-label={labels.navAriaLabel}
-      className="flex shrink-0 flex-col border-b border-line lg:min-h-0 lg:w-[280px] lg:border-r lg:border-b-0"
+      className="flex flex-1 flex-col bg-surface lg:min-h-0 lg:w-[280px] lg:flex-none lg:shrink-0 lg:border-r lg:border-line"
     >
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-divider px-4 py-3.5">
         <h2 className="text-subheading font-bold text-text">{labels.heading}</h2>
@@ -70,12 +70,9 @@ export function WorkspaceItemSidebar({
         </Button>
       </div>
 
-      <div
-        onScroll={closeMenu}
-        className="relative max-h-80 min-h-0 overflow-y-auto p-2 lg:max-h-none lg:flex-1"
-      >
+      <div onScroll={closeMenu} className="relative min-h-0 flex-1 overflow-y-auto lg:p-2">
         {items ? (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col lg:gap-1">
             {items.map((item) => (
               <WorkspaceItemRow
                 key={item.id}

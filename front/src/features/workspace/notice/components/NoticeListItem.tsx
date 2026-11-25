@@ -17,8 +17,8 @@ export function NoticeListItem({ notice, to, selected }: NoticeListItemProps) {
         to={to}
         aria-current={selected ? 'page' : undefined}
         className={[
-          'flex flex-col gap-1 rounded-popover px-5 py-4 transition-colors',
-          selected ? 'bg-primary-soft' : 'hover:bg-bg',
+          'flex flex-col gap-1 border-b border-divider px-4 py-3.5 transition-colors lg:rounded-popover lg:border-b-0 lg:px-5 lg:py-4',
+          selected ? 'hover:bg-bg lg:bg-primary-soft lg:hover:bg-primary-soft' : 'hover:bg-bg',
         ].join(' ')}
       >
         {notice.isPinned && (

@@ -25,18 +25,18 @@ export function WorkspaceTabs({
   return (
     <nav
       aria-label="워크스페이스 탭"
-      className="h-[72px] shrink-0 border-b border-divider bg-surface"
+      className="h-14 shrink-0 border-b border-divider bg-surface sm:h-[72px]"
     >
-      <div className="mx-auto flex h-full max-w-[1680px] items-center gap-4 px-6 lg:px-12 xl:px-[120px]">
-        {/* 탭이 넘치면 탭 목록만 가로로 스크롤되고, 펼치기 버튼은 오른쪽 끝에 남는다 */}
-        <div className="flex h-full min-w-0 flex-1 items-end gap-10 overflow-x-auto">
+      <div className="mx-auto flex h-full max-w-[1680px] items-center gap-3 px-4 sm:gap-4 sm:px-6 lg:px-12 xl:px-[120px]">
+        {/* 탭이 넘치면 탭 목록만 가로로 스크롤(스크롤바 숨김)되고, 펼치기 버튼은 오른쪽 끝에 남는다 */}
+        <div className="flex h-full min-w-0 flex-1 [scrollbar-width:none] items-end gap-5 overflow-x-auto sm:gap-7 lg:gap-10 [&::-webkit-scrollbar]:hidden">
           {WORKSPACE_TABS.map((tab) => (
             <NavLink
               key={tab.key}
               to={`${basePath}/${tab.key}`}
               className={({ isActive }) =>
                 [
-                  'inline-flex h-[52px] shrink-0 items-center gap-2 border-b-2 text-subheading whitespace-nowrap transition-colors',
+                  'inline-flex h-11 shrink-0 items-center gap-1.5 border-b-2 text-body whitespace-nowrap transition-colors sm:h-[52px] sm:gap-2 sm:text-subheading',
                   isActive
                     ? 'border-primary font-bold text-text'
                     : 'border-transparent font-normal text-text-sub hover:text-text',
@@ -55,7 +55,7 @@ export function WorkspaceTabs({
             aria-label="고정 공지 펼치기"
             title="고정 공지 펼치기"
             aria-expanded={false}
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary-soft text-primary transition-colors hover:bg-primary hover:text-surface"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary-soft text-primary transition-colors hover:bg-primary hover:text-surface sm:h-10 sm:w-10"
           >
             <PinIcon className="h-5 w-5" />
           </button>

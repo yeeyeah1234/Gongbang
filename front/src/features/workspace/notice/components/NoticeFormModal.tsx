@@ -54,8 +54,7 @@ export function NoticeFormModal({
         </>
       }
     >
-      {/* 공통 Modal에는 스크롤이 없어 낮은 화면에서 버튼이 밖으로 나간다. 본문만 스크롤 */}
-      <div className="-mx-1 flex max-h-[calc(100dvh-16rem)] flex-col gap-4 overflow-y-auto px-1">
+      <div className="flex flex-col gap-4">
         <div className="relative shrink-0">
           <Input
             id="notice-title"

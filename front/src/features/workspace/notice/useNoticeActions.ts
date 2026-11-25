@@ -18,10 +18,17 @@ interface NoticeActionsOptions {
   list: ReturnType<typeof useNoticeList>
   basePath: string
   selectedId: number | null
+  isWide: boolean
 }
 
 // NTC-03 삭제, NTC-04 고정·해제
-export function useNoticeActions({ dialog, list, basePath, selectedId }: NoticeActionsOptions) {
+export function useNoticeActions({
+  dialog,
+  list,
+  basePath,
+  selectedId,
+  isWide,
+}: NoticeActionsOptions) {
   const { teamId } = useWorkspace()
   const queryClient = useQueryClient()
   const { key } = useLocation()
@@ -78,7 +85,7 @@ export function useNoticeActions({ dialog, list, basePath, selectedId }: NoticeA
 
   const confirmDelete = async (noticeId: number) => {
     if (!dialog.begin()) return
-    const neighbor = await findNeighbor(noticeId)
+    const neighbor = isWide ? await findNeighbor(noticeId) : null
     if (!dialog.isStillHere(noticeId)) return dialog.end()
 
     setDeleting({ noticeId, key })

@@ -20,20 +20,20 @@ export function PinnedNoticeBanner({ notice, collapsed, onCollapse, to }: Pinned
 
   return (
     <div className="shrink-0 border-b border-divider bg-primary-soft">
-      <div className="mx-auto flex min-h-[84px] max-w-[1680px] items-center justify-between gap-4 px-6 py-4 lg:px-12 xl:px-[120px]">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="mx-auto flex min-h-14 max-w-[1680px] items-center justify-between gap-3 px-4 py-3 sm:min-h-[84px] sm:gap-4 sm:px-6 sm:py-4 lg:px-12 xl:px-[120px]">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <PinIcon className="h-5 w-5 shrink-0 text-primary" />
-          <span className="shrink-0 text-body font-bold text-primary">고정 공지</span>
+          <span className="shrink-0 text-small font-bold text-primary sm:text-body">고정 공지</span>
           {to ? (
             <Link
               to={to}
-              className="truncate text-body text-text hover:underline"
+              className="truncate text-small text-text hover:underline sm:text-body"
               title={notice.title}
             >
               {notice.title}
             </Link>
           ) : (
-            <p className="truncate text-body text-text" title={notice.title}>
+            <p className="truncate text-small text-text sm:text-body" title={notice.title}>
               {notice.title}
             </p>
           )}

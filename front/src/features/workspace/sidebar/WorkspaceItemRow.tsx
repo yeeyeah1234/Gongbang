@@ -75,7 +75,7 @@ function InlineRenameRow({
   }
 
   return (
-    <div className="rounded-popover bg-primary-soft px-3 py-2.5">
+    <div className="border-b border-divider bg-primary-soft px-4 py-3 lg:rounded-popover lg:border-b-0 lg:px-3 lg:py-2.5">
       <input
         ref={inputRef}
         type="text"
@@ -238,20 +238,22 @@ export function WorkspaceItemRow({
     <li className="group relative">
       <div
         className={[
-          'relative flex items-center rounded-popover transition-colors',
-          selected ? 'bg-primary-soft' : 'hover:bg-bg',
+          'relative flex items-center border-b border-divider transition-colors lg:rounded-popover lg:border-b-0',
+          selected
+            ? 'bg-surface hover:bg-bg lg:bg-primary-soft lg:hover:bg-primary-soft'
+            : 'hover:bg-bg',
         ].join(' ')}
       >
         <Link
           to={to}
           aria-current={selected ? 'page' : undefined}
-          className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-popover py-2.5 pr-10 pl-3 focus-visible:outline-2 focus-visible:outline-primary"
+          className="flex min-w-0 flex-1 flex-col gap-0.5 py-3.5 pr-12 pl-4 focus-visible:outline-2 focus-visible:outline-primary lg:rounded-popover lg:py-2.5 lg:pr-10 lg:pl-3"
         >
           <span
             title={item.title}
             className={[
               'truncate text-body text-text',
-              selected ? 'font-bold' : 'font-normal',
+              selected ? 'font-normal lg:font-bold' : 'font-normal',
             ].join(' ')}
           >
             {item.title}
@@ -269,10 +271,10 @@ export function WorkspaceItemRow({
           aria-expanded={menuOpen}
           onClick={handleToggleMenu}
           className={[
-            'absolute top-1/2 right-1.5 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-text-sub transition-opacity hover:bg-surface hover:text-text focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary',
+            'absolute top-1/2 right-2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-text-sub transition-opacity hover:bg-surface hover:text-text focus-visible:pointer-events-auto focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-primary lg:right-1.5 lg:h-7 lg:w-7',
             showTrigger
               ? 'pointer-events-auto opacity-100'
-              : 'pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100',
+              : 'pointer-events-auto opacity-100 lg:pointer-events-none lg:opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:opacity-100',
           ].join(' ')}
         >
           <MoreVerticalIcon className="h-4 w-4" />
