@@ -3,6 +3,8 @@ package com.gongbang.report.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import com.gongbang.board.domain.BoardPost;
+import com.gongbang.board.service.BoardPostQueryService;
 import com.gongbang.chat.service.ChatReportService;
 import com.gongbang.comment.service.CommentModerationService;
 import com.gongbang.global.error.ErrorCode;
@@ -15,9 +17,10 @@ import org.junit.jupiter.api.Test;
 class ReportTargetValidationServiceTest {
     final CommentModerationService comments = mock(CommentModerationService.class);
     final AdminPostService posts = mock(AdminPostService.class);
+    final BoardPostQueryService boardPosts = mock(BoardPostQueryService.class);
     final ChatReportService chat = mock(ChatReportService.class);
     final ReportTargetValidationService service =
-            new ReportTargetValidationService(comments, posts, chat);
+            new ReportTargetValidationService(comments, posts, boardPosts, chat);
 
     @Test
     void 다른사람의댓글로_무관한회원을신고할수없다() {
@@ -66,5 +69,65 @@ class ReportTargetValidationServiceTest {
                                                 ReportReasonCode.ABUSE,
                                                 null)))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void 실제작성자가일치하는커뮤니티게시글은_신고가능하다() {
+        BoardPost boardPost = mock(BoardPost.class);
+        when(boardPost.getAuthorId()).thenReturn(2L);
+        when(boardPosts.getActivePost(15L)).thenReturn(boardPost);
+
+        assertThatCode(
+                        () ->
+                                service.validate(
+                                        1L,
+                                        new ReportCreateRequest(
+                                                2L,
+                                                ReportTargetType.BOARD_POST,
+                                                15L,
+                                                ReportReasonCode.SPAM,
+                                                "홍보 도배")))
+                .doesNotThrowAnyException();
+    }
+
+    @Test
+    void 다른사람의커뮤니티게시글로_무관한회원을신고할수없다() {
+        BoardPost boardPost = mock(BoardPost.class);
+        when(boardPost.getAuthorId()).thenReturn(3L);
+        when(boardPosts.getActivePost(15L)).thenReturn(boardPost);
+
+        assertThatThrownBy(
+                        () ->
+                                service.validate(
+                                        1L,
+                                        new ReportCreateRequest(
+                                                2L,
+                                                ReportTargetType.BOARD_POST,
+                                                15L,
+                                                ReportReasonCode.INAPPROPRIATE,
+                                                null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.INVALID_INPUT);
+    }
+
+    @Test
+    void 삭제되었거나없는커뮤니티게시글은_신고할수없다() {
+        when(boardPosts.getActivePost(99L))
+                .thenThrow(new BusinessException(ErrorCode.BOARD_POST_NOT_FOUND));
+
+        assertThatThrownBy(
+                        () ->
+                                service.validate(
+                                        1L,
+                                        new ReportCreateRequest(
+                                                2L,
+                                                ReportTargetType.BOARD_POST,
+                                                99L,
+                                                ReportReasonCode.SPAM,
+                                                null)))
+                .isInstanceOf(BusinessException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.BOARD_POST_NOT_FOUND);
     }
 }

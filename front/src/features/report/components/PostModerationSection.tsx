@@ -8,10 +8,14 @@ export function PostModerationSection({
   postId,
   authorId,
   nickname,
+  targetType = 'POST',
+  buttonLabel = '모집글 신고',
 }: {
   postId: number
-  authorId: number
+  authorId: number | null
   nickname: string
+  targetType?: 'POST' | 'BOARD_POST'
+  buttonLabel?: string
 }) {
   const me = useLoginMember()
   const [target, setTarget] = useState<{
@@ -24,13 +28,15 @@ export function PostModerationSection({
   return (
     <section className="mt-8 border-t border-line pt-6">
       <div className="flex justify-end gap-4">
-        {me && me.memberId !== authorId && (
+        {me && authorId !== null && me.memberId !== authorId && (
           <Button
             size="sm"
             variant="text"
-            onClick={() => setTarget({ type: 'POST', id: postId, memberId: authorId, nickname })}
+            onClick={() =>
+              setTarget({ type: targetType, id: postId, memberId: authorId, nickname })
+            }
           >
-            모집글 신고
+            {buttonLabel}
           </Button>
         )}
       </div>

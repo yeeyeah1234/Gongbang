@@ -5,5 +5,6 @@ public enum ReportTargetType {
     MEMBER,
     COMMENT,
     MESSAGE,
-    POST
+    POST,
+    BOARD_POST
 }

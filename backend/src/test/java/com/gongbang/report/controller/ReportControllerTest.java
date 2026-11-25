@@ -123,4 +123,29 @@ class ReportControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error.code").value("INVALID_INPUT"));
     }
+
+    @Test
+    @DisplayName("커뮤니티 게시글(BOARD_POST)과 신규 사유(SPAM·INAPPROPRIATE) 요청을 정상 역직렬화한다")
+    void 커뮤니티게시글_신고_성공() throws Exception {
+        login();
+        given(reportService.createReport(eq(MEMBER_ID), any()))
+                .willReturn(new ReportCreateResponse(44L));
+
+        mockMvc.perform(
+                        post("/api/reports")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(
+                                        """
+                                        {
+                                          "reportedMemberId": 12,
+                                          "targetType": "BOARD_POST",
+                                          "targetId": 42,
+                                          "reasonCode": "INAPPROPRIATE",
+                                          "detail": "부적절한 게시물"
+                                        }
+                                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.reportId").value(44));
+    }
 }

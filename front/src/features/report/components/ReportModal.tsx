@@ -157,7 +157,7 @@ export function ReportModal({
               <div
                 role="listbox"
                 aria-label="신고사유 목록"
-                className="absolute top-0 left-0 z-20 w-full rounded-[8px] border border-line-strong bg-surface-sub shadow-pop"
+                className="absolute top-0 left-0 z-20 max-h-[60vh] w-full overflow-y-auto rounded-[8px] border border-line-strong bg-surface-sub shadow-pop"
               >
                 <button
                   type="button"
