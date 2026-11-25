@@ -69,6 +69,37 @@ def test_홈페이지가_없거나_http가_아니면_None():
         assert parse_detail_page(html)["homepage_url"] is None
 
 
+def _homepage(href):
+    html = f'<ul class="cd-info-list"><li><span class="tit">홈페이지</span> <a href="{href}">x</a></li></ul>'
+    return parse_detail_page(html)["homepage_url"]
+
+
+def test_백엔드_URL_정책이_거부할_홈페이지는_None():
+    # 한 건이라도 거부되면 배치 전체가 400이 되므로 보내지 않는다 (#120 UrlPolicy)
+    for href in [
+        "https://example.com/a b",
+        "https://example.com/?q={x}",
+        "https://example.com/a|b",
+        "https://my_site.com/x",
+        "https://",
+        "https://example.com/%zz",
+        "https://example.com:abc/",
+        "https://한글.kr/x",
+    ]:
+        assert _homepage(href) is None, href
+
+
+def test_백엔드_URL_정책이_받는_홈페이지는_그대로():
+    for href in [
+        "https://www.example.com/contest?id=1&page=2",
+        "HTTPS://Example.com",
+        "https://example.com/공모전",
+        "https://example.com/%ED%95%9C",
+        "http://1.2.3.4:8080/x#top",
+    ]:
+        assert _homepage(href) == href, href
+
+
 def test_카테고리_라벨_파싱():
     assert _parse_category_labels("분야 : 기획/아이디어, 광고/마케팅") == [
         "기획/아이디어",
