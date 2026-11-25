@@ -89,6 +89,7 @@ def test_백엔드_URL_정책이_거부할_홈페이지는_None():
         "http://256.1.1.1/x",
         "https://a@b@example.com/x",
         "https://example.com／path",
+        "http://１.２.３.４/x",
     ]:
         assert _homepage(href) is None, href
 

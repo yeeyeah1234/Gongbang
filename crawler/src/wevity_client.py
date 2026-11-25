@@ -151,7 +151,8 @@ _BAD_PERCENT_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
 _HOSTNAME_RE = re.compile(
     r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)*[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.?"
 )
-_IPV4_RE = re.compile(r"\d{1,3}(?:\.\d{1,3}){3}")
+# \d는 전각 숫자(１)도 잡으므로 ASCII 숫자만 쓴다 (Java URI는 전각 숫자 IPv4를 거부)
+_IPV4_RE = re.compile(r"[0-9]{1,3}(?:\.[0-9]{1,3}){3}")
 
 
 def _is_backend_acceptable_url(url):
