@@ -1,19 +1,21 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useEffect, useState, type ReactNode, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation } from 'react-router'
 import { isAxiosError } from 'axios'
+import { useIsWide } from '../../hooks/useIsWide'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import {
   readAdmin,
   commandAdmin,
   endpoints,
+  formatReportReason,
   type AdminItem,
   type AdminPage,
   type Kind,
   type Command,
   type Category,
-  type Job,
 } from '../../features/admin/operations'
 
 const titles: Record<Kind, string> = {
@@ -21,7 +23,7 @@ const titles: Record<Kind, string> = {
   members: '회원 관리',
   reports: '신고 처리',
   posts: '모집글·댓글 관리',
-  contests: '공모전·크롤링 관리',
+  contests: '공모전 관리',
 }
 const labels: Record<string, string> = {
   RECEIVED: '접수',
@@ -43,6 +45,7 @@ const labels: Record<string, string> = {
   MEMBER: '회원',
   MESSAGE: '메시지',
   POST: '모집글',
+  BOARD_POST: '커뮤니티 게시글',
 }
 const field =
   'min-w-0 w-full rounded-input border border-line-input bg-surface px-4 py-3 text-body focus:border-primary focus:outline-none'
@@ -52,7 +55,7 @@ const descriptions: Record<Kind, string> = {
   members: '회원 상태와 로그인 잠금을 확인하고 필요한 운영 조치를 적용합니다.',
   reports: '접수된 신고와 대상 내용을 확인한 뒤 처리 결과와 사유를 기록합니다.',
   posts: '신고된 모집글과 댓글을 확인하고 공개 여부를 관리합니다.',
-  contests: '공모전 정보와 수집 현황을 관리하고, 마감일 변경의 영향을 확인합니다.',
+  contests: '공모전 정보와 카테고리를 관리하고, 마감일 변경의 영향을 확인합니다.',
 }
 const listTitles: Record<Kind, string> = {
   notices: '운영 공지 목록',
@@ -92,6 +95,9 @@ export default function AdminOperationsPage({ kind }: { kind: Kind }) {
   return <Operations key={kind} kind={kind} preview={location.pathname.startsWith('/dev/')} />
 }
 function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
+  const isWide = useIsWide()
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [contestView, setContestView] = useState<'list' | 'categories' | 'edit'>('list')
   const client = useQueryClient()
   const [page, setPage] = useState(0)
   const [keyword, setKeyword] = useState('')
@@ -110,6 +116,7 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
     queryKey: ['admin', kind, page, search, status, type, reportedFirst],
     queryFn: () =>
       readAdmin<AdminPage>(endpoints[kind], { page, keyword: search, status, type, reportedFirst }),
+    enabled: kind !== 'contests' || contestView !== 'categories',
   })
   const mutation = useMutation({
     mutationFn: commandAdmin,
@@ -121,7 +128,8 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
     },
   })
   const selected =
-    query.data?.content.find((item) => item.id === selectedId) ?? query.data?.content[0]
+    query.data?.content.find((item) => item.id === selectedId) ??
+    (isWide && kind !== 'contests' ? query.data?.content[0] : undefined)
   function act(command: Command) {
     mutation.reset()
     setFeedback('')
@@ -150,10 +158,13 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
           {preview && <p className="mt-2 text-caption text-warning">미리보기 · 샘플 데이터</p>}
         </div>
         <div className="flex gap-3">
-          <Button onClick={() => query.refetch()}>새로고침</Button>
+          <Button onClick={() => client.invalidateQueries({ queryKey: ['admin'] })}>
+            새로고침
+          </Button>
           {kind === 'notices' && (
             <Button
               onClick={() => {
+                setDetailOpen(true)
                 setCreating(true)
                 setSelectedId(null)
               }}
@@ -163,17 +174,50 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
           )}
         </div>
       </header>
+      {kind === 'contests' && (
+        <nav aria-label="공모전 관리 화면" className="mb-4 grid grid-cols-1 gap-2 md:grid-cols-3">
+          {(
+            [
+              ['list', '공모전 목록'],
+              ['categories', '카테고리 관리'],
+              ['edit', '공모전 수정 · 영향 팀 확인'],
+            ] as const
+          ).map(([view, label]) => (
+            <Button
+              key={view}
+              variant={contestView === view ? 'secondary' : 'outline'}
+              aria-pressed={contestView === view}
+              onClick={() => {
+                setContestView(view)
+                setFeedback('')
+              }}
+            >
+              {label}
+            </Button>
+          ))}
+        </nav>
+      )}
       <div
         className="mb-4 flex flex-wrap items-center justify-between gap-2 border-b-4 border-text bg-surface-sub px-4 py-3 text-small"
         aria-live="polite"
       >
         <p className="font-bold">
-          {listTitles[kind]} ·{' '}
-          {query.isPending
-            ? '조회 중'
-            : query.isError
-              ? '조회 실패'
-              : `${query.data?.totalElements ?? 0}건`}
+          {kind === 'contests' && contestView !== 'list' ? (
+            contestView === 'categories' ? (
+              '카테고리 관리'
+            ) : (
+              '공모전 수정 · 영향 팀 확인'
+            )
+          ) : (
+            <>
+              {listTitles[kind]} ·{' '}
+              {query.isPending
+                ? '조회 중'
+                : query.isError
+                  ? '조회 실패'
+                  : `${query.data?.totalElements ?? 0}건`}
+            </>
+          )}
           {status ? ` · ${labels[status]}` : ''}
         </p>
         <p className="text-caption text-text-sub">
@@ -193,181 +237,207 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
           {feedback}
         </p>
       )}
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <div className="min-w-0 space-y-4">
-          <section className={panel} aria-label="목록">
-            <h2 className="mb-4 text-body font-bold">{listTitles[kind]}</h2>
-            {kind !== 'notices' && kind !== 'reports' && (
-              <form
-                className="mb-4 flex gap-2"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  setSearch(keyword)
-                  setPage(0)
-                  setSelectedId(null)
-                }}
-              >
-                <input
-                  aria-label="검색어"
-                  className={field}
-                  maxLength={100}
-                  value={keyword}
-                  onChange={(e) => setKeyword(e.target.value)}
-                  placeholder={kind === 'members' ? '이메일 또는 닉네임' : '제목 검색'}
-                />
-                <Button type="submit">검색</Button>
-              </form>
-            )}
-            {filters.length > 0 && (
-              <div className="mb-4 flex flex-wrap gap-2">
-                {['', ...filters].map((value) => (
-                  <Button
-                    key={value}
-                    size="sm"
-                    variant={status === value ? 'secondary' : 'outline'}
-                    aria-pressed={status === value}
-                    onClick={() => {
-                      setStatus(value)
-                      setPage(0)
-                      setSelectedId(null)
-                    }}
-                  >
-                    {labels[value] ?? '전체'}
-                  </Button>
-                ))}
-              </div>
-            )}
-            {kind === 'reports' && (
-              <div className="mb-4 flex flex-wrap gap-2" aria-label="신고 대상">
-                {['', 'MEMBER', 'COMMENT', 'MESSAGE', 'POST'].map((t) => (
-                  <Button
-                    key={t}
-                    size="sm"
-                    variant={type === t ? 'secondary' : 'outline'}
-                    aria-pressed={type === t}
-                    onClick={() => {
-                      setType(t)
-                      setPage(0)
-                      setSelectedId(null)
-                    }}
-                  >
-                    {labels[t] ?? '전체 대상'}
-                  </Button>
-                ))}
-              </div>
-            )}
-            {kind === 'posts' && (
-              <label className="mb-4 flex gap-2 text-small">
-                <input
-                  type="checkbox"
-                  checked={reportedFirst}
-                  onChange={(e) => {
-                    setReportedFirst(e.target.checked)
+      <div
+        className={`grid items-start gap-4 ${kind === 'contests' ? '' : 'xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]'}`}
+      >
+        {(kind === 'contests' ? contestView === 'list' : isWide || !detailOpen) && (
+          <div className="min-w-0 space-y-4">
+            <section className={panel} aria-label="목록">
+              <h2 className="mb-4 text-body font-bold">{listTitles[kind]}</h2>
+              {kind !== 'notices' && kind !== 'reports' && (
+                <form
+                  className="mb-4 flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    setSearch(keyword)
                     setPage(0)
-                  }}
-                />
-                신고된 글 우선 보기
-              </label>
-            )}
-            <p className="mb-3 text-small text-text-sub">총 {query.data?.totalElements ?? 0}건</p>
-            {query.isPending && <p role="status">불러오는 중입니다…</p>}
-            {query.isError && (
-              <div role="alert">
-                <p className="mb-3 text-danger">{errorText(query.error)}</p>
-                <Button onClick={() => query.refetch()}>다시 시도</Button>
-              </div>
-            )}
-            {query.data?.content.length === 0 && (
-              <p className="py-12 text-center text-text-sub">조회된 항목이 없습니다.</p>
-            )}
-            <div className="divide-y divide-divider">
-              {query.data?.content.map((item) => (
-                <button
-                  key={item.id}
-                  aria-pressed={selected?.id === item.id && !creating}
-                  className={`block w-full cursor-pointer border-l-2 px-3 py-4 text-left hover:bg-bg ${selected?.id === item.id && !creating ? 'border-text bg-surface-sub' : 'border-transparent'}`}
-                  onClick={() => {
-                    setSelectedId(item.id)
-                    setCreating(false)
-                    setFeedback('')
+                    setSelectedId(null)
                   }}
                 >
-                  <div className="flex justify-between gap-3">
-                    <span className="font-bold">
-                      {item.title ??
-                        item.nickname ??
-                        `${labels[item.targetType ?? ''] ?? '신고'} #${item.id}`}
-                    </span>
-                    {(item.deletedAt || item.status) && (
-                      <span className="h-fit shrink-0 rounded-full border border-line-strong px-2 py-1 text-caption text-text-sub">
-                        {item.deletedAt ? '숨김' : (labels[item.status ?? ''] ?? '')}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-2 line-clamp-2 text-small break-words text-text-sub">
-                    {item.email ?? item.reason ?? item.categoryName ?? item.content}
-                  </p>
-                  <p className="mt-2 text-caption text-text-sub">
-                    #{item.id} · <Stamp value={item.createdAt ?? item.endDate} />
-                    {item.reportCount ? ` · 접수 신고 ${item.reportCount}건` : ''}
-                  </p>
-                </button>
-              ))}
-            </div>
-            <div className="mt-6 flex items-center justify-center gap-4">
-              <Button
-                size="sm"
-                disabled={page === 0}
-                onClick={() => {
-                  setPage(page - 1)
-                  setSelectedId(null)
-                }}
-              >
-                이전
-              </Button>
-              <span className="text-small">
-                {page + 1} / {Math.max(query.data?.totalPages ?? 1, 1)}
-              </span>
-              <Button
-                size="sm"
-                disabled={!query.data || page + 1 >= query.data.totalPages}
-                onClick={() => {
-                  setPage(page + 1)
-                  setSelectedId(null)
-                }}
-              >
-                다음
-              </Button>
-            </div>
-          </section>
-          {kind === 'contests' && <CrawlerPanel act={act} />}
-        </div>
-        <section className="min-w-0 space-y-4" aria-label="상세 및 처리">
-          {kind === 'notices' && (creating || selected) ? (
-            <NoticeForm
-              key={creating ? 'new' : `${selected!.id}-${selected!.title}-${selected!.content}`}
-              item={creating ? undefined : selected}
-              act={act}
-            />
-          ) : selected ? (
-            <>
-              {kind === 'members' && <MemberDetail key={selected.id} item={selected} act={act} />}
-              {kind === 'reports' && <ReportDetail key={selected.id} item={selected} act={act} />}
-              {kind === 'posts' && <PostDetail item={selected} act={act} />}
-              {kind === 'contests' && (
-                <ContestForm
-                  key={`${selected.id}-${selected.endDate}-${selected.categoryId}`}
-                  item={selected}
-                  act={act}
-                />
+                  <input
+                    aria-label="검색어"
+                    className={field}
+                    maxLength={100}
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    placeholder={kind === 'members' ? '이메일 또는 닉네임' : '제목 검색'}
+                  />
+                  <Button type="submit">검색</Button>
+                </form>
               )}
-            </>
-          ) : (
-            <div className={panel}>
-              <p className="text-text-sub">목록에서 항목을 선택해 주세요.</p>
-            </div>
-          )}
-        </section>
+              {filters.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {['', ...filters].map((value) => (
+                    <Button
+                      key={value}
+                      size="sm"
+                      variant={status === value ? 'secondary' : 'outline'}
+                      aria-pressed={status === value}
+                      onClick={() => {
+                        setStatus(value)
+                        setPage(0)
+                        setSelectedId(null)
+                      }}
+                    >
+                      {labels[value] ?? '전체'}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {kind === 'reports' && (
+                <div className="mb-4 flex flex-wrap gap-2" aria-label="신고 대상">
+                  {['', 'MEMBER', 'COMMENT', 'MESSAGE', 'POST', 'BOARD_POST'].map((t) => (
+                    <Button
+                      key={t}
+                      size="sm"
+                      variant={type === t ? 'secondary' : 'outline'}
+                      aria-pressed={type === t}
+                      onClick={() => {
+                        setType(t)
+                        setPage(0)
+                        setSelectedId(null)
+                      }}
+                    >
+                      {labels[t] ?? '전체 대상'}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              {kind === 'posts' && (
+                <label className="mb-4 flex gap-2 text-small">
+                  <input
+                    type="checkbox"
+                    checked={reportedFirst}
+                    onChange={(e) => {
+                      setReportedFirst(e.target.checked)
+                      setPage(0)
+                    }}
+                  />
+                  신고된 글 우선 보기
+                </label>
+              )}
+              <p className="mb-3 text-small text-text-sub">총 {query.data?.totalElements ?? 0}건</p>
+              {query.isPending && <p role="status">불러오는 중입니다…</p>}
+              {query.isError && (
+                <div role="alert">
+                  <p className="mb-3 text-danger">{errorText(query.error)}</p>
+                  <Button onClick={() => query.refetch()}>다시 시도</Button>
+                </div>
+              )}
+              {query.data?.content.length === 0 && (
+                <p className="py-12 text-center text-text-sub">조회된 항목이 없습니다.</p>
+              )}
+              <div className="divide-y divide-divider">
+                {query.data?.content.map((item) => (
+                  <button
+                    key={item.id}
+                    aria-pressed={selected?.id === item.id && !creating}
+                    className={`block w-full cursor-pointer border-l-2 px-3 py-4 text-left hover:bg-bg ${selected?.id === item.id && !creating ? 'border-text bg-surface-sub' : 'border-transparent'}`}
+                    onClick={() => {
+                      setDetailOpen(true)
+                      if (kind === 'contests') setContestView('edit')
+                      setSelectedId(item.id)
+                      setCreating(false)
+                      setFeedback('')
+                    }}
+                  >
+                    <div className="flex justify-between gap-3">
+                      <span className="font-bold">
+                        {item.title ??
+                          item.nickname ??
+                          `${labels[item.targetType ?? ''] ?? '신고'} #${item.id}`}
+                      </span>
+                      {(item.deletedAt || item.status) && (
+                        <span className="h-fit shrink-0 rounded-full border border-line-strong px-2 py-1 text-caption text-text-sub">
+                          {item.deletedAt ? '숨김' : (labels[item.status ?? ''] ?? '')}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-small break-words text-text-sub">
+                      {item.email ??
+                        (item.reason ? formatReportReason(item.reason) : undefined) ??
+                        item.categoryName ??
+                        item.content}
+                    </p>
+                    <p className="mt-2 text-caption text-text-sub">
+                      #{item.id} · <Stamp value={item.createdAt ?? item.endDate} />
+                      {item.reportCount ? ` · 접수 신고 ${item.reportCount}건` : ''}
+                    </p>
+                  </button>
+                ))}
+              </div>
+              <div className="mt-6 flex items-center justify-center gap-4">
+                <Button
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => {
+                    setPage(page - 1)
+                    setSelectedId(null)
+                  }}
+                >
+                  이전
+                </Button>
+                <span className="text-small">
+                  {page + 1} / {Math.max(query.data?.totalPages ?? 1, 1)}
+                </span>
+                <Button
+                  size="sm"
+                  disabled={!query.data || page + 1 >= query.data.totalPages}
+                  onClick={() => {
+                    setPage(page + 1)
+                    setSelectedId(null)
+                  }}
+                >
+                  다음
+                </Button>
+              </div>
+            </section>
+          </div>
+        )}
+        {kind === 'contests' && contestView === 'categories' && <CategoryPanel act={act} />}
+        {(kind === 'contests' ? contestView === 'edit' : isWide || detailOpen) && (
+          <section className="min-w-0 space-y-4" aria-label="상세 및 처리">
+            {(!isWide || kind === 'contests') && (
+              <Button
+                onClick={() => {
+                  setDetailOpen(false)
+                  if (kind === 'contests') setContestView('list')
+                  setCreating(false)
+                }}
+              >
+                ← 목록으로
+              </Button>
+            )}
+            {kind === 'notices' && (creating || selected) ? (
+              <NoticeForm
+                key={creating ? 'new' : `${selected!.id}-${selected!.title}-${selected!.content}`}
+                item={creating ? undefined : selected}
+                act={act}
+              />
+            ) : selected ? (
+              <>
+                {kind === 'members' && <MemberDetail key={selected.id} item={selected} act={act} />}
+                {kind === 'reports' && <ReportDetail key={selected.id} item={selected} act={act} />}
+                {kind === 'posts' && <PostDetail item={selected} act={act} />}
+                {kind === 'contests' && (
+                  <ContestForm
+                    key={`${selected.id}-${selected.endDate}-${selected.categoryId}`}
+                    item={selected}
+                    act={act}
+                  />
+                )}
+              </>
+            ) : (
+              <div className={panel}>
+                <p className="text-text-sub">
+                  {kind === 'contests'
+                    ? '공모전 목록에서 수정할 공모전을 선택해 주세요.'
+                    : '목록에서 항목을 선택해 주세요.'}
+                </p>
+              </div>
+            )}
+          </section>
+        )}
       </div>
       <Modal
         open={confirmation !== null}
@@ -404,16 +474,22 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
 function NoticeForm({ item, act }: { item?: AdminItem; act: Act }) {
   const [title, setTitle] = useState(item?.title ?? '')
   const [content, setContent] = useState(item?.content ?? '')
+  const [policyChange, setPolicyChange] = useState(item?.policyChange ?? false)
+  const [sendEmail, setSendEmail] = useState(false)
   return (
     <form
       className={`${panel} space-y-5`}
       onSubmit={(e) => {
         e.preventDefault()
         act({
-          label: item ? '공지 수정' : '공지 등록 및 전체 회원 사이트 알림',
+          label: sendEmail
+            ? '정책 변경 공지 저장 및 전체 회원 이메일 발송 요청'
+            : item
+              ? '공지 수정'
+              : '공지 등록 및 전체 회원 사이트 알림',
           path: `service-notices${item ? `/${item.id}` : ''}`,
           method: item ? 'patch' : 'post',
-          body: { title, content },
+          body: { title, content, policyChange, sendEmail },
         })
       }}
     >
@@ -440,9 +516,36 @@ function NoticeForm({ item, act }: { item?: AdminItem; act: Act }) {
         />
       </Field>
       <p className="text-small text-text-sub">
-        {content.length} / 2,000 · 등록 시 전체 회원에게 사이트 알림을 보냅니다. 이메일은 발송하지
-        않습니다.
+        {content.length} / 2,000 · 등록 시 전체 회원에게 사이트 알림을 보냅니다.
       </p>
+      <label className="flex items-center gap-2 text-small">
+        <input
+          type="checkbox"
+          checked={policyChange}
+          disabled={!!item?.deletedAt || !!item?.emailQueuedAt}
+          onChange={(e) => {
+            setPolicyChange(e.target.checked)
+            if (!e.target.checked) setSendEmail(false)
+          }}
+        />
+        정책 변경 공지
+      </label>
+      {policyChange && !item?.emailQueuedAt && (
+        <label className="flex items-center gap-2 text-small">
+          <input
+            type="checkbox"
+            checked={sendEmail}
+            disabled={!!item?.deletedAt}
+            onChange={(e) => setSendEmail(e.target.checked)}
+          />
+          저장 시 전체 회원에게 이메일 발송 요청
+        </label>
+      )}
+      {item?.emailQueuedAt && (
+        <p className="text-small text-text-sub">
+          이메일 발송 요청됨 · {item.emailQueuedAt} (재발송하지 않음)
+        </p>
+      )}
       <div className="flex flex-wrap justify-end gap-3">
         {item && !item.deletedAt && (
           <Button
@@ -458,13 +561,15 @@ function NoticeForm({ item, act }: { item?: AdminItem; act: Act }) {
             소프트 삭제
           </Button>
         )}
-        <Button
-          variant="primary"
-          type="submit"
-          disabled={!!item?.deletedAt || !title.trim() || !content.trim()}
-        >
-          {item?.deletedAt ? '삭제된 공지' : item ? '수정 저장' : '공지 등록'}
-        </Button>
+        <MobileActionBar>
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={!!item?.deletedAt || !title.trim() || !content.trim()}
+          >
+            {item?.deletedAt ? '삭제된 공지' : item ? '수정 저장' : '공지 등록'}
+          </Button>
+        </MobileActionBar>
       </div>
     </form>
   )
@@ -547,6 +652,7 @@ const actionLabels: Record<string, string> = {
   REQUIRE_NICKNAME: '닉네임 변경 요구',
   HIDE_COMMENT: '댓글 숨김',
   HIDE_POST: '모집글 강제 숨김',
+  HIDE_BOARD_POST: '게시글 강제 숨김',
   DISMISS: '신고 기각',
 }
 function ActionForm({
@@ -617,9 +723,11 @@ function ActionForm({
       </Field>
       <p className="text-small text-text-sub">{reason.length} / 200</p>
       <div className="flex justify-end">
-        <Button type="submit" variant="primary" disabled={disabled || !reason.trim()}>
-          조치 적용
-        </Button>
+        <MobileActionBar>
+          <Button type="submit" variant="primary" disabled={disabled || !reason.trim()}>
+            조치 적용
+          </Button>
+        </MobileActionBar>
       </div>
     </form>
   )
@@ -628,14 +736,21 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
   const detail = useQuery({
     queryKey: ['admin', 'report-detail', item.id],
     queryFn: () =>
-      readAdmin<{ report: AdminItem; memberId: number; content: string }>(`reports/${item.id}`),
+      readAdmin<{
+        report: AdminItem
+        memberId: number
+        content: string
+        deletedAt?: string | null
+      }>(`reports/${item.id}`),
   })
   const actions = [
     ...(item.targetType === 'COMMENT'
       ? ['HIDE_COMMENT']
       : item.targetType === 'POST'
         ? ['HIDE_POST']
-        : []),
+        : item.targetType === 'BOARD_POST'
+          ? ['HIDE_BOARD_POST']
+          : []),
     'REQUIRE_NICKNAME',
     'WARN',
     'SUSPEND',
@@ -647,7 +762,7 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
         <h2 className="mb-4 text-subheading font-bold">
           신고 #{item.id} · {labels[item.status ?? '']}
         </h2>
-        <p className="break-words whitespace-pre-wrap">{item.reason}</p>
+        <p className="break-words whitespace-pre-wrap">{formatReportReason(item.reason)}</p>
         <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Info label="신고자">#{item.reporterId}</Info>
           <Info label="대상">
@@ -659,6 +774,11 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
           </Info>
         </dl>
         <h3 className="mt-6 font-bold">대상 내용</h3>
+        {detail.data?.deletedAt && (
+          <p role="status" className="mt-2 text-small text-text-sub">
+            이미 삭제된 글입니다. 삭제 시각: <Stamp value={detail.data.deletedAt} />
+          </p>
+        )}
         {detail.isPending ? (
           <p>불러오는 중…</p>
         ) : detail.isError ? (
@@ -676,7 +796,7 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
       </div>
       <ActionForm
         actions={actions}
-        disabled={item.status !== 'RECEIVED'}
+        disabled={item.status !== 'RECEIVED' || detail.isPending || detail.isError}
         onAction={(body) =>
           act({
             label: actionLabels[body.action],
@@ -838,22 +958,19 @@ function ContestForm({ item, act }: { item: AdminItem; act: Act }) {
         />
         영향받는 팀과 변경 내용을 확인했습니다.
       </label>
-      <Button
-        type="submit"
-        variant="primary"
-        disabled={!confirmed || !teams.isSuccess || !categories.isSuccess}
-      >
-        수정 저장
-      </Button>
+      <MobileActionBar>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={!confirmed || !teams.isSuccess || !categories.isSuccess}
+        >
+          수정 저장
+        </Button>
+      </MobileActionBar>
     </form>
   )
 }
-function CrawlerPanel({ act }: { act: Act }) {
-  const jobs = useQuery({
-    queryKey: ['admin', 'crawler-jobs'],
-    queryFn: () => readAdmin<Job[]>('crawler-jobs'),
-    refetchInterval: 15000,
-  })
+function CategoryPanel({ act }: { act: Act }) {
   const categories = useQuery({
     queryKey: ['admin', 'categories'],
     queryFn: () => readAdmin<Category[]>('categories'),
@@ -861,36 +978,16 @@ function CrawlerPanel({ act }: { act: Act }) {
   return (
     <>
       <div className={panel}>
-        <div className="flex justify-between gap-4">
-          <h2 className="text-subheading font-bold">수동 재수집</h2>
-          <Button
-            disabled={jobs.data?.some((j) => j.status === 'PENDING' || j.status === 'RUNNING')}
-            onClick={() =>
-              act({
-                label: '공모전 수동 재수집 요청',
-                targetLabel: '전체 공모전 수집 작업',
-                path: 'crawler-jobs',
-                method: 'post',
-              })
-            }
-          >
-            재수집 요청
-          </Button>
-        </div>
-        <p className="my-4 text-small text-text-sub">
-          요청 후 대기 → 실행 중 → 완료 순으로 표시됩니다. 대기가 계속되면 수집 작업의 실행 상태를
-          확인해 주세요.
-        </p>
-        {jobs.isError && <p className="text-danger">{errorText(jobs.error)}</p>}
-        {jobs.data?.map((j) => (
-          <p className="border-t border-divider py-3 text-small" key={j.id}>
-            #{j.id} · {labels[j.status]} ·{' '}
-            <Stamp value={j.finishedAt ?? j.startedAt ?? j.createdAt} />
-          </p>
-        ))}
-      </div>
-      <div className={panel}>
         <h2 className="mb-4 text-subheading font-bold">카테고리 관리</h2>
+        <p className="mb-4 text-small text-text-sub">카테고리 이름과 표시 순서를 수정합니다.</p>
+        {categories.isPending && <p role="status">카테고리를 불러오는 중입니다…</p>}
+        {categories.isError && (
+          <div role="alert">
+            <p className="mb-3 text-danger">{errorText(categories.error)}</p>
+            <Button onClick={() => categories.refetch()}>다시 시도</Button>
+          </div>
+        )}
+        {categories.isSuccess && categories.data.length === 0 && <p>등록된 카테고리가 없습니다.</p>}
         {categories.data?.map((c) => (
           <CategoryRow key={`${c.id}-${c.name}-${c.sortOrder}`} item={c} act={act} />
         ))}

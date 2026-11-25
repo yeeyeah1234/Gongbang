@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/admin")
 public class AdminContestController {
     private final AdminContestService contests;
-    private final AdminCrawlerService crawler;
 
     @GetMapping("/contests")
     public ApiResponse<?> list(
@@ -47,15 +46,5 @@ public class AdminContestController {
             @RequestBody AdminContestService.CategoryUpdate body) {
         contests.category(me.getMemberId(), id, body);
         return ApiResponse.success();
-    }
-
-    @GetMapping("/crawler-jobs")
-    public ApiResponse<?> jobs(@AuthenticationPrincipal LoginMember me) {
-        return ApiResponse.success(crawler.list(me.getMemberId()));
-    }
-
-    @PostMapping("/crawler-jobs")
-    public ApiResponse<?> run(@AuthenticationPrincipal LoginMember me) {
-        return ApiResponse.success(crawler.enqueue(me.getMemberId()));
     }
 }

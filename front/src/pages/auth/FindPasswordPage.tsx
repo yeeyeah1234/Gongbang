@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { getApiError } from '../../api/errors'
@@ -71,16 +72,18 @@ export default function FindPasswordPage() {
             errorText={mismatch ? '비밀번호가 일치하지 않아요' : (error ?? undefined)}
             successText={confirm && !mismatch ? '비밀번호가 일치해요' : undefined}
           />
-          <Button
-            variant="primary"
-            size="lg"
-            className="w-full"
-            loading={loading}
-            disabled={!isPasswordValid(password) || password !== confirm}
-            onClick={submit}
-          >
-            비밀번호 변경
-          </Button>
+          <MobileActionBar>
+            <Button
+              variant="primary"
+              size="lg"
+              className="w-full"
+              loading={loading}
+              disabled={!isPasswordValid(password) || password !== confirm}
+              onClick={submit}
+            >
+              비밀번호 변경
+            </Button>
+          </MobileActionBar>
         </div>
         <Toast message={toast.message} />
       </AuthCard>

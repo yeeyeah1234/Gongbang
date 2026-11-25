@@ -15,6 +15,7 @@ public class ReportTargetValidationService {
     private final CommentModerationService comments;
     private final AdminPostService posts;
     private final ChatReportService chat;
+    private final com.gongbang.board.service.BoardPostModerationService boardPosts;
 
     public void validate(Long actor, ReportCreateRequest body) {
         Long owner =
@@ -22,6 +23,7 @@ public class ReportTargetValidationService {
                     case MEMBER -> body.reportedMemberId();
                     case COMMENT -> comments.reportAuthor(body.targetId());
                     case POST -> posts.reportAuthor(body.targetId());
+                    case BOARD_POST -> boardPosts.reportAuthor(body.targetId());
                     case MESSAGE -> chat.read(actor, body.targetId(), false).authorId();
                 };
         if (owner == null || !owner.equals(body.reportedMemberId()))

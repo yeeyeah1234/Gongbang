@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { getApiError } from '../../api/errors'
@@ -57,16 +58,18 @@ export default function RestorePage() {
           onVerified={setToken}
         />
         {error && <p className="text-small text-danger">{error}</p>}
-        <Button
-          variant="primary"
-          size="lg"
-          className="w-full"
-          disabled={!token}
-          loading={loading}
-          onClick={restore}
-        >
-          계정 복원하기
-        </Button>
+        <MobileActionBar>
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
+            disabled={!token}
+            loading={loading}
+            onClick={restore}
+          >
+            계정 복원하기
+          </Button>
+        </MobileActionBar>
       </div>
     </AuthCard>
   )

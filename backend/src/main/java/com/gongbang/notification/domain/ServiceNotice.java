@@ -31,6 +31,20 @@ public class ServiceNotice {
     @Column(name = "content", nullable = false, length = 2000)
     private String content;
 
+    @Column(name = "policy_change", nullable = false)
+    private boolean policyChange;
+
+    @Column(name = "email_queued_at")
+    private LocalDateTime emailQueuedAt;
+
+    public void setPolicyChange(boolean value) {
+        this.policyChange = value;
+    }
+
+    public void markEmailQueued(LocalDateTime now) {
+        this.emailQueuedAt = now;
+    }
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 

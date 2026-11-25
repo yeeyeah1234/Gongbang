@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { getApiError } from '../../api/errors'
@@ -180,16 +181,18 @@ export default function LoginPage() {
           </div>
         )}
 
-        <Button
-          type="submit"
-          variant="primary"
-          size="lg"
-          className="w-full"
-          loading={loading}
-          disabled={extraRequired && extraToken === null}
-        >
-          {extraRequired ? '인증하고 로그인' : '로그인'}
-        </Button>
+        <MobileActionBar>
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full"
+            loading={loading}
+            disabled={extraRequired && extraToken === null}
+          >
+            {extraRequired ? '인증하고 로그인' : '로그인'}
+          </Button>
+        </MobileActionBar>
       </form>
 
       {extraRequired ? (

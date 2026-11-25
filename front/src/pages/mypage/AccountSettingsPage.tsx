@@ -1,3 +1,5 @@
+import { useIsWide } from '../../hooks/useIsWide'
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -169,7 +171,7 @@ function PasswordTab({ onToast }: { onToast: (m: string) => void }) {
           · 비밀번호를 바꾸면 이 기기를 제외한 다른 기기에서는 모두 로그아웃돼요.
         </p>
       </div>
-      <div className="flex justify-end gap-3">
+      <MobileActionBar>
         <Button
           variant="outline"
           onClick={() => {
@@ -184,13 +186,18 @@ function PasswordTab({ onToast }: { onToast: (m: string) => void }) {
         <Button variant="primary" disabled={!ready} loading={saving} onClick={submit}>
           비밀번호 변경
         </Button>
-      </div>
+      </MobileActionBar>
     </div>
   )
 }
 
 // MY-10 알림 수신 설정 (Figma 11-2). ④ 바꾸는 즉시 저장 + 「저장했어요」
 const SETTING_ROWS: { type: SettingType; title: string; description: string }[] = [
+  {
+    type: 'COMMUNITY_NEW',
+    title: '커뮤니티 새 글',
+    description: '수신을 켜면 새 게시글을 사이트 알림으로 알려드려요. 이메일은 보내지 않아요.',
+  },
   { type: 'TEAM_INVITE', title: '팀 초대', description: '새로운 팀 초대를 알려드려요.' },
   {
     type: 'APPLY_RESULT',
@@ -227,6 +234,7 @@ function NotificationSettingsTab({
   onToast: (m: string) => void
   offType: string | null
 }) {
+  const isWide = useIsWide()
   const queryClient = useQueryClient()
   const { data, isLoading } = useQuery({
     queryKey: ['notifications', 'settings'],
@@ -279,7 +287,7 @@ function NotificationSettingsTab({
 
   const allEmailOff = list.length > 0 && list.every((s) => !s.emailEnabled)
   const turnOffAllEmail = (off: boolean) => {
-    const changed = list.map((s) => ({ ...s, emailEnabled: !off }))
+    const changed = list.map((s) => ({ ...s, emailEnabled: s.type !== 'COMMUNITY_NEW' && !off }))
     void save(changed, changed)
   }
 
@@ -287,64 +295,108 @@ function NotificationSettingsTab({
 
   return (
     <div>
-      <div className="flex items-center justify-between rounded-input bg-surface-sub px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-input bg-surface-sub px-5 py-4">
         <div>
           <p className="text-body font-bold text-text">이메일 알림 모두 끄기</p>
           <p className="text-caption text-text-sub">사이트 알림은 기존 설정을 유지해요.</p>
         </div>
         <Toggle label="이메일 알림 모두 끄기" checked={allEmailOff} onChange={turnOffAllEmail} />
       </div>
-      <table className="mt-4 w-full border-collapse text-small">
-        <thead>
-          <tr className="bg-surface-sub text-text-sub">
-            <th className="px-5 py-3 text-left font-medium">알림 종류</th>
-            <th className="w-28 px-5 py-3 font-medium">사이트</th>
-            <th className="w-28 px-5 py-3 font-medium">이메일</th>
-          </tr>
-        </thead>
-        <tbody>
+      {!isWide ? (
+        <div className="mt-4 divide-y divide-divider">
           {SETTING_ROWS.map((row) => {
-            const s = list.find((x) => x.type === row.type)
+            const setting = list.find((s) => s.type === row.type)
             return (
-              <tr key={row.type} className="border-b border-divider">
-                <td className="px-5 py-3">
-                  <p className="font-bold text-text">{row.title}</p>
-                  <p className="text-caption text-text-sub">{row.description}</p>
-                </td>
-                <td className="px-5 py-3 text-center">
-                  <Toggle
-                    label={`${row.title} 사이트 알림`}
-                    checked={s?.siteEnabled ?? true}
-                    onChange={(v) => change(row.type, 'siteEnabled', v)}
-                  />
-                </td>
-                <td className="px-5 py-3 text-center">
-                  <Toggle
-                    label={`${row.title} 이메일 알림`}
-                    checked={s?.emailEnabled ?? true}
-                    onChange={(v) => change(row.type, 'emailEnabled', v)}
-                  />
-                </td>
-              </tr>
+              <section key={row.type} className="space-y-3 py-4">
+                <h3 className="text-body font-bold">{row.title}</h3>
+                <p className="text-small text-text-sub">{row.description}</p>
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex min-h-10 items-center gap-3">
+                    <span>사이트</span>
+                    <Toggle
+                      label={`${row.title} 사이트 알림`}
+                      checked={setting?.siteEnabled ?? row.type !== 'COMMUNITY_NEW'}
+                      onChange={(v) => change(row.type, 'siteEnabled', v)}
+                    />
+                  </div>
+                  <div className="flex min-h-10 items-center gap-3">
+                    <span>이메일</span>
+                    {row.type === 'COMMUNITY_NEW' ? (
+                      <span>발송 안 함</span>
+                    ) : (
+                      <Toggle
+                        label={`${row.title} 이메일 알림`}
+                        checked={setting?.emailEnabled ?? true}
+                        onChange={(v) => change(row.type, 'emailEnabled', v)}
+                      />
+                    )}
+                  </div>
+                </div>
+              </section>
             )
           })}
-          {/* ⑤ 끌 수 없는 것 */}
-          <tr>
-            <td className="px-5 py-3">
-              <p className="font-bold text-text">운영 공지 · 계정 보안 메일</p>
-              <p className="text-caption text-text-sub">
-                서비스 점검, 가입 완료·비밀번호 변경·로그인 반복 실패·탈퇴/복원 메일은 끌 수 없어요.
-              </p>
-            </td>
-            <td className="px-5 py-3 text-center">
-              <Toggle label="운영 공지 사이트 알림" checked disabled onChange={() => undefined} />
-            </td>
-            <td className="px-5 py-3 text-center">
-              <Toggle label="보안 메일" checked disabled onChange={() => undefined} />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+          <p className="py-4 text-small text-text-sub">
+            운영 공지 · 계정 보안 메일은 끌 수 없어요.
+          </p>
+        </div>
+      ) : (
+        <table className="mt-4 w-full border-collapse text-small">
+          <thead>
+            <tr className="bg-surface-sub text-text-sub">
+              <th className="px-5 py-3 text-left font-medium">알림 종류</th>
+              <th className="w-28 px-5 py-3 font-medium">사이트</th>
+              <th className="w-28 px-5 py-3 font-medium">이메일</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SETTING_ROWS.map((row) => {
+              const s = list.find((x) => x.type === row.type)
+              return (
+                <tr key={row.type} className="border-b border-divider">
+                  <td className="px-5 py-3">
+                    <p className="font-bold text-text">{row.title}</p>
+                    <p className="text-caption text-text-sub">{row.description}</p>
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <Toggle
+                      label={`${row.title} 사이트 알림`}
+                      checked={s?.siteEnabled ?? row.type !== 'COMMUNITY_NEW'}
+                      onChange={(v) => change(row.type, 'siteEnabled', v)}
+                    />
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    {row.type === 'COMMUNITY_NEW' ? (
+                      <span>발송 안 함</span>
+                    ) : (
+                      <Toggle
+                        label={`${row.title} 이메일 알림`}
+                        checked={s?.emailEnabled ?? true}
+                        onChange={(v) => change(row.type, 'emailEnabled', v)}
+                      />
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+            {/* ⑤ 끌 수 없는 것 */}
+            <tr>
+              <td className="px-5 py-3">
+                <p className="font-bold text-text">운영 공지 · 계정 보안 메일</p>
+                <p className="text-caption text-text-sub">
+                  운영 공지 이메일은 정책 변경 시에만 보내요. 정책 변경·인증 결과·계정 보안 메일은
+                  끌 수 없어요.
+                </p>
+              </td>
+              <td className="px-5 py-3 text-center">
+                <Toggle label="운영 공지 사이트 알림" checked disabled onChange={() => undefined} />
+              </td>
+              <td className="px-5 py-3 text-center">
+                <Toggle label="보안 메일" checked disabled onChange={() => undefined} />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      )}
       <p className="mt-3 text-caption text-text-sub">바꾸는 즉시 저장돼요.</p>
     </div>
   )
@@ -420,14 +472,14 @@ function WithdrawTab() {
         checked={agree}
         onChange={(e) => setAgree(e.target.checked)}
       />
-      <div className="flex justify-end gap-3">
+      <MobileActionBar>
         <Button variant="outline" onClick={() => navigate('/mypage/profile')}>
           취소
         </Button>
         <Button variant="danger" disabled={!ready} loading={saving} onClick={submit}>
           탈퇴 신청
         </Button>
-      </div>
+      </MobileActionBar>
 
       {/* Figma 20-2 팀장 탈퇴 불가 안내 */}
       <Modal

@@ -17,7 +17,12 @@ class ReportTargetValidationServiceTest {
     final AdminPostService posts = mock(AdminPostService.class);
     final ChatReportService chat = mock(ChatReportService.class);
     final ReportTargetValidationService service =
-            new ReportTargetValidationService(comments, posts, chat);
+            new ReportTargetValidationService(
+                    comments,
+                    posts,
+                    chat,
+                    org.mockito.Mockito.mock(
+                            com.gongbang.board.service.BoardPostModerationService.class));
 
     @Test
     void 다른사람의댓글로_무관한회원을신고할수없다() {

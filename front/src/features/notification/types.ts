@@ -26,6 +26,7 @@ export type SettingType =
   | 'COMMENT'
   | 'WORKSPACE'
   | 'BOOKMARK_DEADLINE'
+  | 'COMMUNITY_NEW'
 
 export interface NotificationSetting {
   type: SettingType

@@ -39,6 +39,8 @@ public class BoardPostCommandService {
     private final ContestLookupService contestLookupService;
     private final BoardPostQueryService boardPostQueryService;
     private final BoardPostImageService boardPostImageService;
+    private final com.gongbang.notification.service.CommunityNotificationService
+            communityNotifications;
 
     /** BRD-002 ①②: 로그인 회원이 쓴다. 공모전 이야기는 공모전 필수, 결과물 링크는 결과물 자랑에서만 둔다. */
     public BoardPostCreateResponse create(Long memberId, BoardPostRequest request) {
@@ -52,6 +54,7 @@ public class BoardPostCommandService {
                                 values.title(),
                                 values.content(),
                                 values.linkUrl()));
+        communityNotifications.postCreated(memberId, post.getId(), post.getTitle());
         return new BoardPostCreateResponse(post.getId());
     }
 

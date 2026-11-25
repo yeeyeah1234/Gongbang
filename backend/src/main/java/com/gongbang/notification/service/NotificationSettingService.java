@@ -30,7 +30,9 @@ public class NotificationSettingService {
             NotificationSetting s = saved.get(type);
             items.add(
                     new NotificationSettingItem(
-                            type, s == null || s.isSiteEnabled(), s == null || s.isEmailEnabled()));
+                            type,
+                            s == null ? type.defaultSiteEnabled() : s.isSiteEnabled(),
+                            type.supportsEmail() && (s == null || s.isEmailEnabled())));
         }
         return items;
     }

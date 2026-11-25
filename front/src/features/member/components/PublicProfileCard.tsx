@@ -18,9 +18,15 @@ export function PublicProfileCard({ memberId, footer }: PublicProfileCardProps) 
   const categories = useCategories()
 
   if (isLoading)
-    return <div className="h-60 w-[320px] animate-pulse rounded-popover bg-surface-sub" />
+    return (
+      <div className="h-60 w-[min(320px,calc(100vw-32px))] animate-pulse rounded-popover bg-surface-sub" />
+    )
   if (isError || !data)
-    return <p className="w-[320px] p-6 text-small text-text-sub">없거나 탈퇴한 회원이에요</p>
+    return (
+      <p className="w-[min(320px,calc(100vw-32px))] p-6 text-small text-text-sub">
+        없거나 탈퇴한 회원이에요
+      </p>
+    )
 
   const tags = [
     ...data.desiredRoles.map(roleLabel),
@@ -31,7 +37,7 @@ export function PublicProfileCard({ memberId, footer }: PublicProfileCardProps) 
   const verifiedAward = data.awards.find((a) => a.verified)
 
   return (
-    <div className="w-[320px] rounded-popover border border-line bg-surface p-5 shadow-pop">
+    <div className="w-[min(320px,calc(100vw-32px))] rounded-popover border border-line bg-surface p-5 shadow-pop">
       <div className="flex items-center gap-3">
         <ProfilePhoto url={data.profileImageUrl} name={data.nickname} size="md" />
         <div className="min-w-0">

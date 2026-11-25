@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '../../api/client'
@@ -122,7 +123,7 @@ export function ProofReview({ item }: { item: Verification }) {
           </label>
         </div>
       )}
-      <div className="mt-4 flex justify-end">
+      <MobileActionBar>
         <Button
           variant="primary"
           disabled={!checked || !url || !detail.data?.nameAvailable}
@@ -133,7 +134,7 @@ export function ProofReview({ item }: { item: Verification }) {
         >
           승인
         </Button>
-      </div>
+      </MobileActionBar>
       <Modal
         open={confirm}
         title="인증 요청을 승인할까요?"

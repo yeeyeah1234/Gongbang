@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { getApiError } from '../../api/errors'
@@ -173,14 +174,16 @@ export default function SignupPage() {
               {roles.length ? roles.map(roleLabel).join(', ') : '-'}
             </dd>
           </dl>
-          <Button
-            variant="primary"
-            size="lg"
-            className="mt-8 w-full"
-            onClick={() => navigate(redirectTo, { replace: true })}
-          >
-            {redirectTo === '/' ? '추천 공모전 보러 가기' : '보던 화면으로 돌아가기'}
-          </Button>
+          <MobileActionBar>
+            <Button
+              variant="primary"
+              size="lg"
+              className="mt-8 w-full"
+              onClick={() => navigate(redirectTo, { replace: true })}
+            >
+              {redirectTo === '/' ? '추천 공모전 보러 가기' : '보던 화면으로 돌아가기'}
+            </Button>
+          </MobileActionBar>
           <Button
             variant="outline"
             size="lg"
@@ -237,15 +240,17 @@ export default function SignupPage() {
               </li>
             ))}
           </ul>
-          <Button
-            variant="primary"
-            size="lg"
-            className="mt-8 w-full"
-            disabled={!requiredAgreed}
-            onClick={() => setStep(2)}
-          >
-            다음
-          </Button>
+          <MobileActionBar>
+            <Button
+              variant="primary"
+              size="lg"
+              className="mt-8 w-full"
+              disabled={!requiredAgreed}
+              onClick={() => setStep(2)}
+            >
+              다음
+            </Button>
+          </MobileActionBar>
         </div>
       )}
 
@@ -293,15 +298,17 @@ export default function SignupPage() {
             <Button variant="outline" size="lg" onClick={() => setStep(1)}>
               이전
             </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              className="flex-1"
-              disabled={!verificationToken}
-              onClick={() => setStep(3)}
-            >
-              다음
-            </Button>
+            <MobileActionBar>
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                disabled={!verificationToken}
+                onClick={() => setStep(3)}
+              >
+                다음
+              </Button>
+            </MobileActionBar>
           </div>
         </div>
       )}
@@ -365,15 +372,17 @@ export default function SignupPage() {
             <Button variant="outline" size="lg" onClick={() => setStep(2)}>
               이전
             </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              className="flex-1"
-              disabled={!step3Ready}
-              onClick={() => setStep(4)}
-            >
-              다음
-            </Button>
+            <MobileActionBar>
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                disabled={!step3Ready}
+                onClick={() => setStep(4)}
+              >
+                다음
+              </Button>
+            </MobileActionBar>
           </div>
         </div>
       )}
@@ -470,16 +479,18 @@ export default function SignupPage() {
             >
               나중에 입력
             </Button>
-            <Button
-              variant="primary"
-              size="lg"
-              className="flex-1"
-              disabled={interests.length === 0}
-              loading={submitting}
-              onClick={() => submit(false)}
-            >
-              가입 완료
-            </Button>
+            <MobileActionBar>
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                disabled={interests.length === 0}
+                loading={submitting}
+                onClick={() => submit(false)}
+              >
+                가입 완료
+              </Button>
+            </MobileActionBar>
           </div>
         </div>
       )}

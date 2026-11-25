@@ -17,6 +17,8 @@ class AdminReportServiceTest {
     final EntityManager em = mock(EntityManager.class);
     final CommentModerationService comments = mock(CommentModerationService.class);
     final AdminMemberManagementService members = mock(AdminMemberManagementService.class);
+    final com.gongbang.board.service.BoardPostModerationService boardPosts =
+            mock(com.gongbang.board.service.BoardPostModerationService.class);
     final AdminReportService service =
             new AdminReportService(
                     mock(AdminMemberService.class),
@@ -26,12 +28,37 @@ class AdminReportServiceTest {
                     comments,
                     mock(ReportRepository.class),
                     em,
-                    mock(ChatReportService.class));
+                    mock(ChatReportService.class),
+                    boardPosts);
 
     Report report() {
         var r = Report.create(1L, 2L, ReportTargetType.COMMENT, 9L, ReportReasonCode.ABUSE, "내용");
         when(em.find(Report.class, 8L, LockModeType.PESSIMISTIC_WRITE)).thenReturn(r);
         return r;
+    }
+
+    @Test
+    void 게시글숨김은_게시글서비스에_위임하고_중복처리를_거부한다() {
+        var r =
+                Report.create(
+                        1L, 2L, ReportTargetType.BOARD_POST, 9L, ReportReasonCode.ABUSE, "내용");
+        when(em.find(Report.class, 8L, LockModeType.PESSIMISTIC_WRITE)).thenReturn(r);
+        when(boardPosts.target(5L, 9L))
+                .thenReturn(
+                        new com.gongbang.board.service.BoardPostModerationService.Target(
+                                2L, "제목", "내용", null));
+        service.review(5L, 8L, new AdminReportService.Review("HIDE_BOARD_POST", "부적절한 내용", null));
+        verify(boardPosts).hide(5L, 9L);
+        assertThat(r.getStatus()).isEqualTo(ReportStatus.RESOLVED);
+        assertThatThrownBy(
+                        () ->
+                                service.review(
+                                        5L,
+                                        8L,
+                                        new AdminReportService.Review(
+                                                "HIDE_BOARD_POST", "재처리", null)))
+                .isInstanceOf(BusinessException.class);
+        verify(boardPosts, times(1)).hide(5L, 9L);
     }
 
     @Test

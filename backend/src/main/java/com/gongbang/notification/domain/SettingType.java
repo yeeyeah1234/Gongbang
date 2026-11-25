@@ -13,5 +13,14 @@ public enum SettingType {
     POST_DELETED,
     COMMENT,
     WORKSPACE,
-    BOOKMARK_DEADLINE
+    BOOKMARK_DEADLINE,
+    COMMUNITY_NEW;
+
+    public boolean defaultSiteEnabled() {
+        return this != COMMUNITY_NEW;
+    }
+
+    public boolean supportsEmail() {
+        return this != COMMUNITY_NEW;
+    }
 }

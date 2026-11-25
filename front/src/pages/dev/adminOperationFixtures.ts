@@ -1,4 +1,4 @@
-import type { AdminItem, Category, Job } from '../../features/admin/operations'
+import type { AdminItem, Category } from '../../features/admin/operations'
 
 // 이 모듈은 DEV 미리보기에서만 불러온다. 실제 API로 전달하지 않는다.
 export function operationFixtures() {
@@ -97,15 +97,6 @@ export function operationFixtures() {
     { id: 1, code: 'PLANNING', name: '기획·아이디어', sortOrder: 1 },
     { id: 2, code: 'IT', name: 'IT·소프트웨어', sortOrder: 2 },
   ]
-  const jobs: Job[] = [
-    {
-      id: 5,
-      status: 'SUCCEEDED',
-      createdAt: '2026-11-23T04:00:00',
-      startedAt: '2026-11-23T04:00:10',
-      finishedAt: '2026-11-23T04:02:10',
-    },
-  ]
   return (
     url: string,
     method: string,
@@ -124,17 +115,6 @@ export function operationFixtures() {
     if (resource === 'categories') {
       if (method === 'patch') Object.assign(categories.find((c) => c.id === id) ?? {}, body)
       return categories.map((c) => ({ ...c }))
-    }
-    if (resource === 'crawler-jobs') {
-      if (method === 'post')
-        jobs.unshift({
-          id: jobs.length + 6,
-          status: 'PENDING',
-          createdAt: new Date().toISOString(),
-          startedAt: null,
-          finishedAt: null,
-        })
-      return jobs.map((j) => ({ ...j }))
     }
     if (resource === 'contests' && action === 'teams')
       return Array.from({ length: 6 }, (_, i) => ({ id: i + 1, name: `샘플 팀 ${i + 1}` }))

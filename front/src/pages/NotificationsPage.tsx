@@ -36,10 +36,10 @@ export default function NotificationsPage() {
   }, [])
 
   return (
-    <main className="mx-auto w-full max-w-[960px] px-4 py-10">
-      <div className="flex items-center justify-between">
+    <main className="mx-auto w-full max-w-[960px] px-4 py-8 md:px-6 md:py-12">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-title font-bold text-text">알림</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"

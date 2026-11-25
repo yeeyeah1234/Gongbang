@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker } from 'react-router'
 import { getErrorMessage } from '../../api/errors'
@@ -491,7 +492,7 @@ function ProfileEditCard({
     <section className="rounded-card border border-line bg-surface p-6">
       <header className="flex items-center justify-between">
         <h2 className="text-body font-bold text-text">기본 프로필</h2>
-        <div className="flex gap-2">
+        <MobileActionBar>
           <Button
             variant="outline"
             size="sm"
@@ -508,7 +509,7 @@ function ProfileEditCard({
           >
             저장
           </Button>
-        </div>
+        </MobileActionBar>
       </header>
 
       <div className="mt-6 flex items-center gap-4">
