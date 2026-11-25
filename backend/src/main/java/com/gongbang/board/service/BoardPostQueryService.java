@@ -2,11 +2,13 @@ package com.gongbang.board.service;
 
 import com.gongbang.board.domain.BoardCategory;
 import com.gongbang.board.domain.BoardPost;
+import com.gongbang.board.domain.BoardPostSearchSort;
 import com.gongbang.board.dto.BoardPostDetailResponse;
 import com.gongbang.board.dto.BoardPostListItemResponse;
 import com.gongbang.board.dto.BoardPostListItemResponse.AuthorInfo;
 import com.gongbang.board.dto.BoardPostListItemResponse.ContestInfo;
 import com.gongbang.board.repository.BoardPostRepository;
+import com.gongbang.board.repository.BoardPostSearchRepository;
 import com.gongbang.comment.service.CommentCountService;
 import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
@@ -18,6 +20,7 @@ import com.gongbang.member.service.MemberService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,6 +65,7 @@ public class BoardPostQueryService {
     private final MemberService memberService;
     private final BoardPostImageService boardPostImageService;
     private final CommentCountService commentCountService;
+    private final BoardPostSearchRepository boardPostSearchRepository;
 
     /** 다른 도메인(댓글 BRD-005 등)용: 삭제되지 않은 커뮤니티 게시글. 없거나 삭제됐으면 404 BOARD_POST_NOT_FOUND. */
     public BoardPost getActivePost(Long boardPostId) {
@@ -81,6 +85,30 @@ public class BoardPostQueryService {
                 boardPostRepository.findActive(
                         category, contestId, PageRequest.of(page, size, toSort(sort)));
         return PageResponse.of(toItems(posts.getContent()), page, size, posts.getTotalElements());
+    }
+
+    /**
+     * 통합 검색(SRCH-05 ①, SRCH-02 ②)의 커뮤니티 게시글 부분 (최규선 SearchService가 부른다). 제목·내용에 검색어가 있거나 작성자가
+     * authorIds에 있는 글을 찾고, 삭제된 글(관리자 숨김 포함)은 뺀다. 항목은 BRD-001 목록 항목과 같다.
+     *
+     * <p>sort: accuracy(기본, 제목 같음 > 제목 시작 > 제목 포함 > 내용·작성자만 일치, 같으면 최신순) | latest | deadline(마감일이
+     * 없어 최신순). 검색어 길이(2자 이상) 검사는 부르는 쪽이 한다.
+     */
+    public PageResponse<BoardPostListItemResponse> searchPosts(
+            String keyword, Collection<Long> authorIds, String sort, int page, int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        String trimmed = keyword == null ? "" : keyword.strip();
+        if (trimmed.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        BoardPostSearchSort searchSort = BoardPostSearchSort.from(sort);
+        List<BoardPost> posts =
+                boardPostSearchRepository.search(
+                        trimmed, authorIds, searchSort, (long) page * size, size);
+        long total = boardPostSearchRepository.count(trimmed, authorIds);
+        return PageResponse.of(toItems(posts), page, size, total);
     }
 
     /** BRD-008 인기글: 최근 7일 안에 쓴 글 중 좋아요 1개 이상, 최대 3개. 없으면 빈 목록. */
