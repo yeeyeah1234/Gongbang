@@ -38,7 +38,7 @@ export default function BoardPreviewPage() {
 }
 
 export function BoardPreviewTab() {
-  return <WorkspaceBoardPage basePath={`${BASE_PATH}/${useParams().view}/board`} />
+  return <WorkspaceBoardPage basePath={`${BASE_PATH}/${useParams().view}/board`} offlinePreview />
 }
 
 // 미리보기에는 화이트보드 탭만 있어 첫 진입과 다른 탭은 화이트보드로 보낸다

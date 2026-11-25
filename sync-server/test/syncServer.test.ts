@@ -701,3 +701,327 @@ describe('team:{teamId} 워크스페이스 접속자 연결 (WS-03)', () => {
     assert.equal(doc.getText('content').toString(), '');
   });
 });
+
+describe('whiteboard:{whiteboardId} 화이트보드 동기화 (WB-10)', () => {
+  it('onAuthenticate: 200이면 /api/whiteboards/{id}/access를 호출하고 colorIndex를 포함한 context를 돌려준다', async () => {
+    let calledUrl = '';
+    let calledMethod = '';
+    let authHeader = '';
+    let syncKeyHeader: string | null = null;
+
+    const fakeFetch: FetchLike = async (input, init) => {
+      calledUrl = String(input);
+      calledMethod = init?.method ?? 'GET';
+      const headers = new Headers(init?.headers);
+      authHeader = headers.get('authorization') ?? '';
+      syncKeyHeader = headers.get('x-sync-key');
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            whiteboardId: 88,
+            teamId: 3,
+            memberId: 7,
+            nickname: '상현',
+            colorIndex: 4,
+          },
+          error: null,
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    const { hooks } = createSyncServer({
+      config: createTestConfig(),
+      fetchFn: fakeFetch,
+    });
+
+    const context = await hooks.onAuthenticate({
+      documentName: 'whiteboard:88',
+      token: TEST_TOKEN,
+    });
+
+    assert.equal(calledMethod, 'GET');
+    assert.equal(calledUrl, 'http://127.0.0.1:8090/api/whiteboards/88/access');
+    assert.equal(authHeader, `Bearer ${TEST_TOKEN}`);
+    assert.equal(syncKeyHeader, null);
+    assert.deepEqual(context, {
+      memberId: 7,
+      nickname: '상현',
+      teamId: 3,
+      colorIndex: 4,
+    });
+  });
+
+  for (const status of [401, 403, 404] as const) {
+    it(`onAuthenticate: Spring이 ${status}를 돌려주면 연결을 거절하고 키·토큰을 오류에 남기지 않는다`, async () => {
+      const fakeFetch: FetchLike = async () =>
+        new Response(
+          JSON.stringify({
+            success: false,
+            data: null,
+            error: { code: 'ERR', message: '거절' },
+          }),
+          { status, headers: { 'Content-Type': 'application/json' } },
+        );
+
+      const { hooks } = createSyncServer({
+        config: createTestConfig(),
+        fetchFn: fakeFetch,
+      });
+
+      await assert.rejects(
+        () => hooks.onAuthenticate({ documentName: 'whiteboard:88', token: TEST_TOKEN }),
+        (err: unknown) => {
+          assert.ok(err instanceof SpringAccessError);
+          assert.equal(err.status, status);
+          assert.ok(!err.message.includes(TEST_KEY));
+          assert.ok(!err.message.includes(TEST_TOKEN));
+          return true;
+        },
+      );
+    });
+  }
+
+  it('onLoadDocument: 200 바이트 응답이면 Y.applyUpdate로 보드 요소를 복원하고 204면 빈 보드로 연다', async () => {
+    const sourceDoc = new Y.Doc();
+    sourceDoc.getMap('elements').set('el-1', { id: 'el-1', type: 'rectangle', version: 1 });
+    const savedBytes = Y.encodeStateAsUpdate(sourceDoc);
+
+    let calledUrl = '';
+    let syncKeyHeader = '';
+    const fakeFetch: FetchLike = async (input, init) => {
+      calledUrl = String(input);
+      syncKeyHeader = new Headers(init?.headers).get('x-sync-key') ?? '';
+      return new Response(Buffer.from(savedBytes), {
+        status: 200,
+        headers: { 'Content-Type': 'application/octet-stream' },
+      });
+    };
+
+    const { hooks } = createSyncServer({
+      config: createTestConfig(),
+      fetchFn: fakeFetch,
+    });
+
+    const targetDoc = new Y.Doc() as unknown as Document;
+    await hooks.onLoadDocument({ documentName: 'whiteboard:88', document: targetDoc });
+
+    assert.equal(calledUrl, 'http://127.0.0.1:8090/internal/whiteboards/88/content');
+    assert.equal(syncKeyHeader, TEST_KEY);
+    assert.deepEqual(targetDoc.getMap('elements').get('el-1'), {
+      id: 'el-1',
+      type: 'rectangle',
+      version: 1,
+    });
+
+    const { hooks: emptyHooks } = createSyncServer({
+      config: createTestConfig(),
+      fetchFn: async () => new Response(null, { status: 204 }),
+    });
+    const emptyDoc = new Y.Doc() as unknown as Document;
+    await emptyHooks.onLoadDocument({ documentName: 'whiteboard:88', document: emptyDoc });
+    assert.equal(emptyDoc.getMap('elements').size, 0);
+  });
+
+  it('onLoadDocument: 500 오류면 연결을 거절한다', async () => {
+    const { logger } = createMemoryLogger();
+    const { hooks } = createSyncServer({
+      config: createTestConfig(),
+      fetchFn: async () => new Response('Server Error', { status: 500 }),
+      logger,
+    });
+
+    const targetDoc = new Y.Doc() as unknown as Document;
+    await assert.rejects(
+      () => hooks.onLoadDocument({ documentName: 'whiteboard:88', document: targetDoc }),
+      (err: unknown) => {
+        assert.ok(err instanceof SpringLoadError);
+        assert.equal(err.status, 500);
+        return true;
+      },
+    );
+  });
+
+  it('onChange · onStoreDocument: lastEditorId 쿼리로 저장하고 Yjs 상태를 바이트로 전송한다', async () => {
+    let calledUrl = '';
+    let calledMethod = '';
+    let contentType = '';
+    let syncKeyHeader = '';
+    let receivedBody: Uint8Array | null = null;
+
+    const fakeFetch: FetchLike = async (input, init) => {
+      calledUrl = String(input);
+      calledMethod = init?.method ?? '';
+      const headers = new Headers(init?.headers);
+      contentType = headers.get('content-type') ?? '';
+      syncKeyHeader = headers.get('x-sync-key') ?? '';
+      receivedBody =
+        init?.body instanceof Uint8Array
+          ? new Uint8Array(init.body)
+          : new Uint8Array(await new Response(init?.body).arrayBuffer());
+
+      return new Response(
+        JSON.stringify({ success: true, data: null, error: null }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    const { hooks } = createSyncServer({
+      config: createTestConfig(),
+      fetchFn: fakeFetch,
+    });
+
+    const doc = new Y.Doc() as unknown as Document;
+    doc.getMap('elements').set('el-2', { id: 'el-2', type: 'ellipse', version: 2 });
+
+    await hooks.onChange({
+      documentName: 'whiteboard:88',
+      context: { memberId: 7, nickname: '상현', teamId: 3, colorIndex: 4 },
+    });
+    await hooks.onChange({
+      documentName: 'whiteboard:88',
+      context: { memberId: 12, nickname: '규선', teamId: 3, colorIndex: 2 },
+    });
+
+    const closedDocuments: string[] = [];
+    await hooks.onStoreDocument({
+      documentName: 'whiteboard:88',
+      document: doc,
+      lastContext: { memberId: 7, nickname: '상현', teamId: 3, colorIndex: 4 },
+      instance: createFakeHocuspocusInstance(closedDocuments),
+    });
+
+    assert.equal(calledMethod, 'PUT');
+    assert.equal(
+      calledUrl,
+      'http://127.0.0.1:8090/internal/whiteboards/88/content?lastEditorId=12',
+    );
+    assert.equal(contentType, 'application/octet-stream');
+    assert.equal(syncKeyHeader, TEST_KEY);
+    assert.equal(closedDocuments.length, 0);
+
+    const capturedBody = receivedBody as Uint8Array | null;
+    assert.ok(capturedBody !== null);
+    const restored = new Y.Doc();
+    Y.applyUpdate(restored, capturedBody);
+    assert.deepEqual(restored.getMap('elements').get('el-2'), {
+      id: 'el-2',
+      type: 'ellipse',
+      version: 2,
+    });
+  });
+
+  it('onStoreDocument: 404(삭제됨)이면 연결을 모두 끊고 이후 재저장을 중단한다', async () => {
+    let putCount = 0;
+    const fakeFetch: FetchLike = async () => {
+      putCount += 1;
+      return new Response(
+        JSON.stringify({
+          success: false,
+          data: null,
+          error: { code: 'RESOURCE_NOT_FOUND', message: '없음' },
+        }),
+        { status: 404, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    const { logger } = createMemoryLogger();
+    const { hooks } = createSyncServer({
+      config: createTestConfig({ saveMaxAttempts: 3 }),
+      fetchFn: fakeFetch,
+      logger,
+    });
+
+    const doc = new Y.Doc() as unknown as Document;
+    const closedDocuments: string[] = [];
+    const fakeInstance = createFakeHocuspocusInstance(closedDocuments);
+
+    await hooks.onChange({
+      documentName: 'whiteboard:88',
+      context: { memberId: 7, nickname: '상현', teamId: 3, colorIndex: 4 },
+    });
+    await hooks.onStoreDocument({
+      documentName: 'whiteboard:88',
+      document: doc,
+      lastContext: { memberId: 7, nickname: '상현', teamId: 3, colorIndex: 4 },
+      instance: fakeInstance,
+    });
+
+    assert.equal(putCount, 1);
+    assert.deepEqual(closedDocuments, ['whiteboard:88']);
+
+    await hooks.onChange({
+      documentName: 'whiteboard:88',
+      context: { memberId: 7, nickname: '상현', teamId: 3, colorIndex: 4 },
+    });
+    await hooks.onStoreDocument({
+      documentName: 'whiteboard:88',
+      document: doc,
+      lastContext: { memberId: 7, nickname: '상현', teamId: 3, colorIndex: 4 },
+      instance: fakeInstance,
+    });
+
+    assert.equal(putCount, 1);
+  });
+
+  it('POST /internal/disconnect가 whiteboard:{id} 연결도 teamId·memberId 일치 시 4403으로 끊는다', async () => {
+    const { logger } = createMemoryLogger();
+    const { server } = createSyncServer({
+      config: createTestConfig({ port: 0 }),
+      logger,
+      quiet: true,
+    });
+
+    const closedEvents: Array<{ id: string; code?: number; reason?: string }> = [];
+    const makeFakeConnection = (
+      id: string,
+      context: SyncConnectionContext,
+    ): Connection<SyncConnectionContext> =>
+      ({
+        context,
+        close(event?: { code?: number; reason?: string }) {
+          closedEvents.push({ id, code: event?.code, reason: event?.reason });
+        },
+      }) as unknown as Connection<SyncConnectionContext>;
+
+    const targetBoardConn = makeFakeConnection('targetBoard', {
+      teamId: 3,
+      memberId: 7,
+      nickname: '상현',
+      colorIndex: 4,
+    });
+    const otherBoardConn = makeFakeConnection('otherBoard', {
+      teamId: 3,
+      memberId: 8,
+      nickname: '규선',
+      colorIndex: 2,
+    });
+    const fakeBoardDoc = {
+      getConnections: () => [targetBoardConn, otherBoardConn],
+    } as unknown as Document;
+
+    server.hocuspocus.documents.set('whiteboard:88', fakeBoardDoc);
+
+    await server.listen();
+    try {
+      const res = await fetch(`${server.httpURL}/internal/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Sync-Key': TEST_KEY,
+        },
+        body: JSON.stringify({ teamId: 3, memberId: 7 }),
+      });
+
+      assert.equal(res.status, 200);
+      assert.deepEqual(closedEvents, [
+        { id: 'targetBoard', code: 4403, reason: 'TEAM_MEMBER_REMOVED' },
+      ]);
+    } finally {
+      server.hocuspocus.documents.clear();
+      await server.destroy();
+    }
+  });
+});

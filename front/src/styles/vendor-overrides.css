@@ -1,5 +1,5 @@
 /*
- * 라이브러리별 섹션: FullCalendar (이후 Tiptap·Excalidraw 추가)
+ * 라이브러리별 섹션: FullCalendar · Tiptap · Excalidraw
  *
  * 외부 라이브러리 기본 CSS 중 꼭 바꿔야 하는 부분만 여기 모은다 (AGENTS.md 2-1).
  * 선택자는 라이브러리를 감싼 우리 클래스 아래로만 좁혀 다른 화면에 번지지 않게 한다.
@@ -338,4 +338,39 @@
     var(--gb-caret-color, var(--color-member-1)) 20%,
     transparent
   );
+}
+
+/* ───────── Excalidraw 화이트보드 (WB-02~10, features/workspace/board/components/BoardCanvas.tsx) ─────────
+ * 공식 prop(UIOptions·MainMenu)으로 제어할 수 없는 항목만 .gb-board 아래로 좁혀 최소한으로 조정한다.
+ * 하단 레이아웃(실행 취소·확대/축소·도움말) 위치는 Excalidraw 기본 배치를 그대로 유지한다. */
+
+.gb-board {
+  --gb-board-primary: var(--color-primary);
+  --gb-board-primary-hover: var(--color-primary-hover);
+  --gb-board-primary-soft: var(--color-primary-soft);
+}
+
+.gb-board .excalidraw {
+  --color-primary: var(--gb-board-primary);
+  --color-primary-darker: var(--gb-board-primary-hover);
+  --color-primary-darkest: var(--gb-board-primary-hover);
+  --color-primary-light: var(--gb-board-primary-soft);
+}
+
+/* 라이브러리 버튼: Excalidraw 0.18에 숨김용 공식 prop이 없어 최소 선택자로 감춘다 */
+.gb-board .sidebar-trigger__label-element:has(.default-sidebar-trigger),
+.gb-board .default-sidebar-trigger {
+  display: none;
+}
+
+/* 테스트 서버 Permissions-Policy에서 navigator.clipboard가 차단되므로
+ * Async Clipboard API에 의존하는 우클릭 메뉴 항목만 숨긴다 (키보드 Ctrl+C/V는 copy/paste 이벤트로 유지) */
+.gb-board .context-menu li[data-testid='copy'],
+.gb-board .context-menu li[data-testid='cut'],
+.gb-board .context-menu li[data-testid='paste'],
+.gb-board .context-menu li[data-testid='copyAsPng'],
+.gb-board .context-menu li[data-testid='copyAsSvg'],
+.gb-board .context-menu li[data-testid='copyText'],
+.gb-board .context-menu li[data-testid='copyElementLink'] {
+  display: none;
 }

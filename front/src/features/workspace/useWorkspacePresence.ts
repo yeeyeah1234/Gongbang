@@ -114,7 +114,7 @@ export function useWorkspacePresence({
             colorIndex,
             leader,
             tab,
-            docTitle: tab === 'docs' ? docTitle : null,
+            docTitle: tab === 'docs' || tab === 'board' ? docTitle : null,
           }
         : null,
     [memberId, nickname, colorIndex, leader, tab, docTitle],

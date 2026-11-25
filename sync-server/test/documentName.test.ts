@@ -32,6 +32,19 @@ describe('문서 이름 해석 (parseDocumentName)', () => {
     });
   });
 
+  it('whiteboard:{양의정수} 형식이면 type=whiteboard와 숫자 id를 돌려준다', () => {
+    assert.deepEqual(parseDocumentName('whiteboard:1'), {
+      type: 'whiteboard',
+      id: 1,
+      raw: 'whiteboard:1',
+    });
+    assert.deepEqual(parseDocumentName('whiteboard:99'), {
+      type: 'whiteboard',
+      id: 99,
+      raw: 'whiteboard:99',
+    });
+  });
+
   it('잘못된 형식이거나 지원하지 않는 접두사는 거절한다', () => {
     const invalidNames = [
       '',
@@ -48,6 +61,11 @@ describe('문서 이름 해석 (parseDocumentName)', () => {
       'team:-1',
       'team:01',
       'TEAM:3',
+      'whiteboard:',
+      'whiteboard:0',
+      'whiteboard:-1',
+      'whiteboard:01',
+      'WHITEBOARD:5',
       'board:10',
       'unknown:5',
       'doc:999999999999999999999',

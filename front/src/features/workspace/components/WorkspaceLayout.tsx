@@ -102,7 +102,9 @@ export function WorkspaceLayout({
     title: string | null
   }>({ teamId, title: null })
   const activeDocTitle =
-    activeTab === 'docs' && docTitleState.teamId === teamId ? docTitleState.title : null
+    (activeTab === 'docs' || activeTab === 'board') && docTitleState.teamId === teamId
+      ? docTitleState.title
+      : null
   const setActiveDocTitle = useCallback(
     (title: string | null) => {
       setDocTitleState((prev) =>

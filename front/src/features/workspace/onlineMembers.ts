@@ -59,7 +59,7 @@ export function extractOnlineMembers(
     }
 
     const tab = toTabKey(raw.tab)
-    const docTitle = tab === 'docs' ? toDocTitle(raw.docTitle) : null
+    const docTitle = tab === 'docs' || tab === 'board' ? toDocTitle(raw.docTitle) : null
     const updatedAt =
       typeof raw.updatedAt === 'number' && Number.isFinite(raw.updatedAt) ? raw.updatedAt : 0
 
@@ -137,7 +137,7 @@ export function formatPresenceLocation(
   const label = TAB_LABELS.get(tab)
   if (!label) return null
   const trimmedTitle = docTitle?.trim()
-  if (tab === 'docs' && trimmedTitle) {
+  if ((tab === 'docs' || tab === 'board') && trimmedTitle) {
     return `${label} > ${trimmedTitle}`
   }
   return label
