@@ -28,7 +28,6 @@ class BoardPostModerationServiceTest {
         assertThat(service.target(1L, 8L).content()).isEqualTo("내용");
         service.hide(1L, 8L);
         assertThat(post.getDeletedAt()).isEqualTo(deletedAt);
-        assertThatThrownBy(() -> service.reportAuthor(8L)).isInstanceOf(BusinessException.class);
     }
 
     @Test

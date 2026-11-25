@@ -162,4 +162,34 @@ class ReportServiceTest {
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.MEMBER_NOT_FOUND);
         verifyNoInteractions(reportRepository);
     }
+
+    @Test
+    @DisplayName("커뮤니티 게시글(BOARD_POST)을 광고·도배(SPAM) 사유로 신고하면 정상 저장된다")
+    void 커뮤니티게시글_신고_정상() {
+        given(memberService.findActiveMember(2L)).willReturn(Optional.of(activeTarget));
+        given(reportRepository.save(any(Report.class)))
+                .willAnswer(
+                        inv -> {
+                            Report report = inv.getArgument(0);
+                            ReflectionTestUtils.setField(report, "id", 103L);
+                            return report;
+                        });
+
+        ReportCreateResponse response =
+                reportService.createReport(
+                        1L,
+                        new ReportCreateRequest(
+                                2L,
+                                ReportTargetType.BOARD_POST,
+                                42L,
+                                ReportReasonCode.SPAM,
+                                "외부 광고 반복 게시"));
+
+        assertThat(response.reportId()).isEqualTo(103L);
+        ArgumentCaptor<Report> captor = ArgumentCaptor.forClass(Report.class);
+        verify(reportRepository).save(captor.capture());
+        assertThat(captor.getValue().getTargetType()).isEqualTo(ReportTargetType.BOARD_POST);
+        assertThat(captor.getValue().getTargetId()).isEqualTo(42L);
+        assertThat(captor.getValue().getReasonCode()).isEqualTo(ReportReasonCode.SPAM);
+    }
 }

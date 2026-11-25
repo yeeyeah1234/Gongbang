@@ -20,15 +20,6 @@ public class BoardPostModerationService {
     public record Target(Long authorId, String title, String content, LocalDateTime deletedAt) {}
 
     @Transactional(readOnly = true)
-    public Long reportAuthor(Long id) {
-        return repository
-                .findById(id)
-                .filter(p -> !p.isDeleted())
-                .orElseThrow(() -> new BusinessException(ErrorCode.BOARD_POST_NOT_FOUND))
-                .getAuthorId();
-    }
-
-    @Transactional(readOnly = true)
     public Target target(Long actor, Long id) {
         access.requireAdmin(actor);
         var post =

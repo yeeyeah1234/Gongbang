@@ -4,5 +4,7 @@ package com.gongbang.report.domain;
 public enum ReportReasonCode {
     ABUSE,
     HATE,
-    BAD_NICKNAME
+    BAD_NICKNAME,
+    SPAM,
+    INAPPROPRIATE
 }
