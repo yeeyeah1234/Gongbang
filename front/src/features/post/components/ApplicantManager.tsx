@@ -141,7 +141,9 @@ function ApplicantModal({
           id="applicant-tabpanel"
           role="tabpanel"
           aria-labelledby={`applicant-tab-${tab}`}
-          className="h-[400px] overflow-y-auto"
+          // 640px 이상은 모달 안 목록 칸 높이를 고정하고 따로 스크롤한다.
+          // 휴대폰은 모달이 전체 화면이고 Modal 본문이 스크롤을 맡으므로 높이를 두지 않는다 (#159, STYLE_GUIDE 8)
+          className="flex min-h-60 flex-col sm:h-[400px] sm:overflow-y-auto"
         >
           {list.isPending ? (
             <ul aria-busy="true">
@@ -152,13 +154,13 @@ function ApplicantModal({
               ))}
             </ul>
           ) : list.isError ? (
-            <div className="flex h-full flex-col items-center justify-center gap-4">
+            <div className="flex flex-1 flex-col items-center justify-center gap-4">
               <p className="text-body text-text-sub">{getErrorMessage(list.error)}</p>
               <Button onClick={() => list.refetch()}>다시 시도</Button>
             </div>
           ) : list.data.items.length === 0 ? (
             // ⑥ 지원자가 없을 때 (Figma 04-6)
-            <p className="flex h-full items-center justify-center text-body text-text-sub">
+            <p className="flex flex-1 items-center justify-center text-body text-text-sub">
               {tab === 'PENDING'
                 ? '아직 지원자가 없어요'
                 : `${TABS.find((t) => t.status === tab)?.label}한 지원자가 없어요`}
