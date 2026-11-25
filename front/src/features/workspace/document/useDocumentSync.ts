@@ -41,6 +41,10 @@ export interface SyncSessionHandle {
   ydoc: Y.Doc
   websocketProvider: HocuspocusProviderWebsocket | null
   provider: HocuspocusProvider | null
+  // WS-04: 이 문서에서 사용자가 직접 편집한 적이 있는지 세션 단위로 추적한다
+  getHasUserEdited: () => boolean
+  markUserEdited: () => void
+  subscribeUserEdited: (listener: () => void) => () => void
 }
 
 interface UseDocumentSyncConnectionOptions extends UseDocumentSyncOptions {
@@ -68,6 +72,23 @@ function createSyncSession(
   nextSessionInstanceId += 1
   const ydoc = new Y.Doc()
 
+  let hasUserEdited = false
+  const userEditedListeners = new Set<() => void>()
+  const userEditedTracker = {
+    getHasUserEdited: () => hasUserEdited,
+    markUserEdited: () => {
+      if (hasUserEdited) return
+      hasUserEdited = true
+      userEditedListeners.forEach((listener) => listener())
+    },
+    subscribeUserEdited: (listener: () => void) => {
+      userEditedListeners.add(listener)
+      return () => {
+        userEditedListeners.delete(listener)
+      }
+    },
+  }
+
   if (offlinePreview || !syncSocket) {
     return {
       instanceId,
@@ -76,6 +97,7 @@ function createSyncSession(
       ydoc,
       websocketProvider: null,
       provider: null,
+      ...userEditedTracker,
     }
   }
 
@@ -99,6 +121,7 @@ function createSyncSession(
     ydoc,
     websocketProvider: syncSocket,
     provider,
+    ...userEditedTracker,
   }
 }
 
@@ -210,8 +233,19 @@ export function useDocumentSyncConnection({
   }, [socket, offlinePreview])
   const wsStatus = useSyncExternalStore(subscribeWsStatus, getWsStatusSnapshot)
 
+  const subscribeUserEdited = useCallback(
+    (onStoreChange: () => void) => {
+      if (!session) return () => {}
+      return session.subscribeUserEdited(onStoreChange)
+    },
+    [session],
+  )
+  const getUserEditedSnapshot = useCallback(() => {
+    return session?.getHasUserEdited() ?? false
+  }, [session])
+  const hasUserEdited = useSyncExternalStore(subscribeUserEdited, getUserEditedSnapshot)
+
   const [isSynced, setIsSynced] = useState(offlinePreview)
-  const [hasInitialSync, setHasInitialSync] = useState(offlinePreview)
   const [unsyncedCount, setUnsyncedCount] = useState(0)
   const [browserOnline, setBrowserOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
@@ -308,7 +342,6 @@ export function useDocumentSyncConnection({
       if (stopped) return
       setIsSynced(state)
       if (state) {
-        setHasInitialSync(true)
         setDirtyWhileDisconnected(false)
         if (provider.unsyncedChanges === 0) {
           setSendFailed(false)
@@ -513,12 +546,12 @@ export function useDocumentSyncConnection({
   // "동기화 서버에 모든 변경 전송 완료(unsyncedChanges === 0 && isSynced)"를 「● 저장됨」으로 표시한다.
   let saveState: DocumentSaveState
   if (offlinePreview) {
-    saveState = 'saved'
+    saveState = hasUserEdited ? 'saved' : 'idle'
   } else if (isOffline) {
     saveState = 'offline'
   } else if (sendFailed) {
     saveState = 'failed'
-  } else if (!hasInitialSync) {
+  } else if (!hasUserEdited) {
     saveState = 'idle'
   } else if (wsStatus === WebSocketStatus.Connected && isSynced && unsyncedCount === 0) {
     saveState = 'saved'
