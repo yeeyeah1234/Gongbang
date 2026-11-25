@@ -15,6 +15,7 @@ import { ImageSlider } from '../../features/post/components/ImageSlider'
 import { ProfilePhoto } from '../../components/ui/ProfilePhoto'
 import { isHttpUrl } from '../../features/post/postForm'
 import { MemberActionPopover } from '../../features/report/components/MemberActionPopover'
+import { PostModerationSection } from '../../features/report/components/PostModerationSection'
 import { useTimedToast } from '../../hooks/useTimedToast'
 
 const PAGE_CLASS = 'mx-auto max-w-[1100px] px-4 py-8 md:px-6 md:py-12 lg:px-12'
@@ -148,6 +149,15 @@ export default function BoardDetailPage() {
         <div className="mt-10 flex justify-center">
           <LikeButton post={post} onError={toast.show} />
         </div>
+
+        {/* ⑦ 내용 아래 오른쪽 「게시글 신고」. 로그인한 회원 중 작성자가 아닌 사람에게만 보인다 (#148, NET-02) */}
+        <PostModerationSection
+          postId={post.boardPostId}
+          authorId={post.author.memberId}
+          nickname={post.author.nickname ?? '탈퇴한 사용자'}
+          targetType="BOARD_POST"
+          buttonLabel="게시글 신고"
+        />
 
         {/* ④ 댓글 영역 (BRD-005 · NET-01) */}
         <CommentSection
