@@ -3,6 +3,7 @@ import axios from 'axios'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getApiError, getErrorMessage } from '../api/errors'
+import { ArrowLeftIcon } from '../components/icons/Icons'
 import { Toast } from '../components/ui/Toast'
 import { BoardCanvasPane } from '../features/workspace/board/components/BoardCanvasPane'
 import { BoardEmptyState } from '../features/workspace/board/components/BoardEmptyState'
@@ -27,6 +28,7 @@ import type {
   WorkspaceSidebarLabels,
 } from '../features/workspace/sidebar/types'
 import { WorkspaceItemSidebar } from '../features/workspace/sidebar/WorkspaceItemSidebar'
+import { useIsWide } from '../hooks/useIsWide'
 import { useTimedToast } from '../hooks/useTimedToast'
 
 const BOARD_LIMIT_MESSAGE = '보드는 30개까지 만들 수 있어요'
@@ -80,6 +82,7 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useTimedToast()
+  const isWide = useIsWide()
 
   const listQuery = useBoardList(teamId)
   const boards = useBoardSidebarItems(listQuery.data)
@@ -129,10 +132,12 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
 
   const openFirstOrEmpty = (excludeId?: number) => {
     const nextBoard = (boards ?? []).find((item) => item.id !== excludeId)
-    if (nextBoard) {
+    if (!nextBoard) {
+      writeLastBoardId(teamId, null)
+    }
+    if (isWide && nextBoard) {
       navigate(`${basePath}/${nextBoard.id}`, { replace: true })
     } else {
-      writeLastBoardId(teamId, null)
       navigate(basePath, { replace: true })
     }
   }
@@ -170,14 +175,14 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
     })
   }, [realtime, selectedId])
 
-  // /board (ID 없음) 진입 시 마지막으로 연 보드 → 없으면 목록 첫 보드
+  // /board (ID 없음) 진입 시 1024px 이상에서만 마지막으로 연 보드 → 없으면 목록 첫 보드로 이동
   const noId = param === undefined
   useEffect(() => {
-    if (!noId || !boards || boards.length === 0) return
+    if (!isWide || !noId || !boards || boards.length === 0) return
     const lastId = readLastBoardId(teamId)
     const target = boards.find((item) => item.id === lastId) ?? boards[0]
     navigate(`${basePath}/${target.id}`, { replace: true })
-  }, [noId, boards, teamId, basePath, navigate])
+  }, [isWide, noId, boards, teamId, basePath, navigate])
 
   // URL에 ID가 있는데 목록에서 사라졌거나(타인 삭제·없는 ID) 잘못된 ID인 경우 처리
   useEffect(() => {
@@ -216,8 +221,8 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
           ...(prev ?? []).filter((item) => item.whiteboardId !== whiteboardId),
         ])
         writeLastBoardId(teamId, whiteboardId)
-        // WB-01 ② 새 항목은 이름 바꾸기 입력 상태
-        setRenamingId(whiteboardId)
+        // WB-01 ② PC에서는 새 항목을 이름 바꾸기 입력 상태로 두고, 1024px 미만은 바로 본문으로 진입
+        setRenamingId(isWide ? whiteboardId : null)
         navigate(`${basePath}/${whiteboardId}`)
       },
       onError: (error) => {
@@ -328,6 +333,9 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
   const empty = boards !== undefined && boards.length === 0
   const listFailed = listQuery.isError && !boards
   const modalOpen = deleteTarget !== null
+  // 1024px 미만에서는 안 보이는 쪽(목록 또는 본문)을 렌더링하지 않아 불필요한 동기화 연결을 막는다
+  const showList = isWide || noId
+  const showDetail = isWide || !noId
 
   return (
     <>
@@ -340,39 +348,59 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
             <NoticeError onRetry={() => listQuery.refetch()} />
           </section>
         ) : (
-          <section className="flex flex-1 flex-col rounded-card border border-line bg-surface lg:min-h-0 lg:flex-row lg:overflow-hidden">
-            <WorkspaceItemSidebar
-              items={boards}
-              isError={listQuery.isError}
-              basePath={basePath}
-              selectedId={selectedId}
-              renamingId={renamingId}
-              creating={createMutation.isPending}
-              renaming={renameMutation.isPending}
-              labels={BOARD_LABELS}
-              onRetry={() => listQuery.refetch()}
-              onCreate={handleCreate}
-              onStartRename={(id) => setRenamingId(id)}
-              onSubmitRename={handleSubmitRename}
-              onCancelRename={() => setRenamingId(null)}
-              onRequestDelete={(item) => setDeleteTarget(item)}
-            />
-            <div
-              key={selectedBoard?.id ?? 'loading'}
-              className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden"
-            >
-              {selectedBoard ? (
-                <BoardCanvasPane
-                  teamId={teamId}
-                  boardId={selectedBoard.id}
-                  offlinePreview={offlinePreview}
-                  onBoardGone={handleBoardGone}
-                  onForbidden={handleBoardForbidden}
-                />
-              ) : (
-                <NoticeSkeleton />
-              )}
-            </div>
+          // 1024px 미만: WorkspaceLayout 본문 여백(px-6 py-6)을 상쇄해 목록을 화면 끝까지 붙인다
+          <section className="-mx-6 -my-6 flex flex-1 flex-col bg-surface lg:mx-0 lg:my-0 lg:min-h-0 lg:flex-row lg:overflow-hidden lg:rounded-card lg:border lg:border-line">
+            {showList && (
+              <WorkspaceItemSidebar
+                items={boards}
+                isError={listQuery.isError}
+                basePath={basePath}
+                selectedId={selectedId}
+                renamingId={renamingId}
+                creating={createMutation.isPending}
+                renaming={renameMutation.isPending}
+                labels={BOARD_LABELS}
+                onRetry={() => listQuery.refetch()}
+                onCreate={handleCreate}
+                onStartRename={(id) => setRenamingId(id)}
+                onSubmitRename={handleSubmitRename}
+                onCancelRename={() => setRenamingId(null)}
+                onRequestDelete={(item) => setDeleteTarget(item)}
+              />
+            )}
+            {showDetail && (
+              <div
+                key={selectedBoard?.id ?? 'loading'}
+                className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface max-lg:fixed max-lg:inset-0 max-lg:z-30 max-lg:h-dvh max-lg:overflow-hidden lg:overflow-hidden"
+              >
+                {!isWide && (
+                  <div className="flex shrink-0 items-center gap-2 border-b border-divider px-2 py-2 lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => navigate(basePath)}
+                      aria-label="보드 목록으로"
+                      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-text transition-colors hover:bg-bg"
+                    >
+                      <ArrowLeftIcon className="h-5 w-5" />
+                    </button>
+                    <h2 className="min-w-0 truncate text-body font-bold text-text">
+                      {selectedBoard?.title ?? '화이트보드'}
+                    </h2>
+                  </div>
+                )}
+                {selectedBoard ? (
+                  <BoardCanvasPane
+                    teamId={teamId}
+                    boardId={selectedBoard.id}
+                    offlinePreview={offlinePreview}
+                    onBoardGone={handleBoardGone}
+                    onForbidden={handleBoardForbidden}
+                  />
+                ) : (
+                  <NoticeSkeleton />
+                )}
+              </div>
+            )}
           </section>
         )}
       </div>

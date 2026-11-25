@@ -21,11 +21,13 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.dto.MemberProfileSummary;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.ExternalContest;
+import com.gongbang.post.domain.PostSearchSort;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.MyPostItemResponse;
 import com.gongbang.post.dto.PostListItemResponse;
 import com.gongbang.post.repository.RecruitPostRepository;
+import com.gongbang.post.repository.RecruitPostSearchRepository;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -54,6 +56,7 @@ class PostQueryServiceTest {
     private static final LocalDate DEADLINE = LocalDate.of(2026, 12, 31);
 
     @Mock private RecruitPostRepository recruitPostRepository;
+    @Mock private RecruitPostSearchRepository recruitPostSearchRepository;
     @Mock private ContestLookupService contestLookupService;
     @Mock private MemberService memberService;
     @Mock private CommentCountService commentCountService;
@@ -67,7 +70,8 @@ class PostQueryServiceTest {
                         recruitPostRepository,
                         contestLookupService,
                         memberService,
-                        commentCountService);
+                        commentCountService,
+                        recruitPostSearchRepository);
         // 닉네임을 보지 않는 테스트용 기본값
         lenient()
                 .when(memberService.getProfileSummaries(anyCollection()))
@@ -245,5 +249,51 @@ class PostQueryServiceTest {
                         BusinessException.class, () -> postQueryService.getMyPosts(7L, page, size));
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
         verify(recruitPostRepository, never()).findByAuthorIdAndDeletedAtIsNull(any(), any());
+    }
+
+    @Test
+    @DisplayName("검색은 앞뒤 공백을 지운 검색어·작성자·정렬·오늘 날짜·시작 위치를 넘기고, PST-001 목록 항목으로 돌려준다 (SRCH-05 ①)")
+    void 검색_결과를_목록_항목으로_준다() {
+        RecruitPost post = contestPost(1L, 3L);
+        given(
+                        recruitPostSearchRepository.search(
+                                eq("AI 팀원"),
+                                eq(Set.of(7L)),
+                                eq(PostSearchSort.DEADLINE),
+                                any(LocalDate.class),
+                                eq(20L),
+                                eq(20)))
+                .willReturn(List.of(post));
+        given(recruitPostSearchRepository.count("AI 팀원", Set.of(7L))).willReturn(21L);
+        given(contestLookupService.findSummaries(Set.of(3L)))
+                .willReturn(Map.of(3L, new ContestSummary(3L, "AI 공모전", "IT", DEADLINE, null)));
+        given(contestLookupService.findCategoryNames(Set.of())).willReturn(Map.of());
+
+        PageResponse<PostListItemResponse> result =
+                postQueryService.searchPosts(" AI 팀원 ", Set.of(7L), "deadline", 1, 20);
+
+        assertThat(result.items()).extracting(PostListItemResponse::postId).containsExactly(1L);
+        assertThat(result.items().get(0).contest().title()).isEqualTo("AI 공모전");
+        assertThat(result.totalCount()).isEqualTo(21);
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("정렬을 비우면 정확도순, 모르는 정렬·빈 검색어·잘못된 페이지는 400 INVALID_INPUT (SRCH-02 ②)")
+    void 검색_입력_검사() {
+        assertThat(PostSearchSort.from(null)).isEqualTo(PostSearchSort.ACCURACY);
+        assertThat(PostSearchSort.from("latest")).isEqualTo(PostSearchSort.LATEST);
+        for (Runnable bad :
+                List.<Runnable>of(
+                        () -> postQueryService.searchPosts("AI", null, "views", 0, 20),
+                        () -> postQueryService.searchPosts("  ", null, null, 0, 20),
+                        () -> postQueryService.searchPosts(null, null, null, 0, 20),
+                        () -> postQueryService.searchPosts("AI", null, null, -1, 20),
+                        () -> postQueryService.searchPosts("AI", null, null, 0, 51))) {
+            assertThat(assertThrows(BusinessException.class, bad::run).getErrorCode())
+                    .isEqualTo(ErrorCode.INVALID_INPUT);
+        }
+        verify(recruitPostSearchRepository, never())
+                .search(any(), any(), any(), any(), anyLong(), any(Integer.class));
     }
 }

@@ -31,19 +31,22 @@ export function WorkspaceHeader({
   const title = contestTitle ? `${contestTitle} · ${teamName}` : teamName
 
   return (
-    <header className="h-24 shrink-0 border-b border-divider bg-surface">
-      <div className="mx-auto flex h-full max-w-[1680px] items-center justify-between gap-4 px-6 lg:px-12 xl:px-[120px]">
-        <div className="flex min-w-0 items-center gap-3">
+    <header className="h-16 shrink-0 border-b border-divider bg-surface sm:h-24">
+      <div className="mx-auto flex h-full max-w-[1680px] items-center justify-between gap-3 px-4 sm:gap-4 sm:px-6 lg:px-12 xl:px-[120px]">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={onBack}
             aria-label="워크스페이스 목록"
             title="워크스페이스 목록"
-            className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line-strong bg-surface text-text transition-colors hover:bg-bg"
+            className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line-strong bg-surface text-text transition-colors hover:bg-bg sm:h-10 sm:w-10"
           >
             <ArrowLeftIcon className="h-5 w-5" />
           </button>
-          <h1 className="truncate text-heading font-bold text-text" title={title}>
+          <h1
+            className="min-w-0 truncate text-body font-bold text-text sm:text-subheading lg:text-heading"
+            title={title}
+          >
             {title}
           </h1>
           {/* D-7부터 danger-soft, 그 전과 「종료」는 surface-sub */}

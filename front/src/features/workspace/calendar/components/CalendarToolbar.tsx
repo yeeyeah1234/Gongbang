@@ -25,7 +25,7 @@ export function CalendarToolbar({
 }: CalendarToolbarProps) {
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Button onClick={onToday}>오늘</Button>
         <button type="button" aria-label="이전 달" className={ARROW_CLASS} onClick={onPrev}>
           <ChevronDownIcon className="h-5 w-5 rotate-90" />
@@ -33,7 +33,7 @@ export function CalendarToolbar({
         <button type="button" aria-label="다음 달" className={ARROW_CLASS} onClick={onNext}>
           <ChevronDownIcon className="h-5 w-5 -rotate-90" />
         </button>
-        <h2 aria-live="polite" className="ml-2 text-title font-bold text-text">
+        <h2 aria-live="polite" className="text-heading font-bold text-text sm:ml-2 sm:text-title">
           {title}
         </h2>
         <Button variant="primary" className="ml-auto" onClick={onCreate}>

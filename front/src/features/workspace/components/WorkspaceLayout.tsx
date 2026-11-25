@@ -184,8 +184,8 @@ export function WorkspaceLayout({
     // 불러오는 동안 헤더·탭 자리만 잡아 둔다 (팀 정보는 아직 보여 주지 않음)
     return (
       <div className="flex min-h-screen flex-col bg-bg" aria-busy="true">
-        <div className="h-24 shrink-0 border-b border-divider bg-surface" />
-        <div className="h-[72px] shrink-0 border-b border-divider bg-surface" />
+        <div className="h-16 shrink-0 border-b border-divider bg-surface sm:h-24" />
+        <div className="h-14 shrink-0 border-b border-divider bg-surface sm:h-[72px]" />
       </div>
     )
   }
