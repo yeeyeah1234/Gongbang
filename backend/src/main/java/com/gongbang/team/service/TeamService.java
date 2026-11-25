@@ -27,11 +27,7 @@ public class TeamService {
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
 
-    /**
-     * 팀과 팀장 행(LEADER, 색 1)을 만들고 팀 ID를 돌려준다. 이름이 1~20자가 아니면 400 TEAM_NAME_INVALID.
-     *
-     * <p>TODO(확인 필요): 모집글 제목(최대 50자)이 20자를 넘을 때 어떤 이름을 넘길지 김수형 님과 협의 필요.
-     */
+    /** 팀과 팀장 행(LEADER, 색 1)을 만들고 팀 ID를 돌려준다. 이름이 1~20자가 아니면 400 TEAM_NAME_INVALID. */
     @Transactional
     public Long createTeam(Long postId, String name, Long leaderMemberId) {
         validateName(name);

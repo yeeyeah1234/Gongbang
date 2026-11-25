@@ -7,6 +7,10 @@ interface DocumentSaveStatusProps {
 
 // WS-04 저장 상태 표시 (작업 영역 오른쪽 아래)
 export function DocumentSaveStatus({ state, onRetry }: DocumentSaveStatusProps) {
+  if (state === 'idle') {
+    return null
+  }
+
   if (state === 'offline') {
     return (
       <div
