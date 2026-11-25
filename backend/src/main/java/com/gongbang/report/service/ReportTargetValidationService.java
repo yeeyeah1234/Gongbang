@@ -1,5 +1,6 @@
 package com.gongbang.report.service;
 
+import com.gongbang.board.service.BoardPostQueryService;
 import com.gongbang.chat.service.ChatReportService;
 import com.gongbang.comment.service.CommentModerationService;
 import com.gongbang.global.error.ErrorCode;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 public class ReportTargetValidationService {
     private final CommentModerationService comments;
     private final AdminPostService posts;
+    private final BoardPostQueryService boardPosts;
     private final ChatReportService chat;
 
     public void validate(Long actor, ReportCreateRequest body) {
@@ -22,6 +24,7 @@ public class ReportTargetValidationService {
                     case MEMBER -> body.reportedMemberId();
                     case COMMENT -> comments.reportAuthor(body.targetId());
                     case POST -> posts.reportAuthor(body.targetId());
+                    case BOARD_POST -> boardPosts.getActivePost(body.targetId()).getAuthorId();
                     case MESSAGE -> chat.read(actor, body.targetId(), false).authorId();
                 };
         if (owner == null || !owner.equals(body.reportedMemberId()))
