@@ -85,6 +85,10 @@ def test_백엔드_URL_정책이_거부할_홈페이지는_None():
         "https://example.com/%zz",
         "https://example.com:abc/",
         "https://한글.kr/x",
+        "http://999.999.999.999/x",
+        "http://256.1.1.1/x",
+        "https://a@b@example.com/x",
+        "https://example.com／path",
     ]:
         assert _homepage(href) is None, href
 
@@ -96,6 +100,8 @@ def test_백엔드_URL_정책이_받는_홈페이지는_그대로():
         "https://example.com/공모전",
         "https://example.com/%ED%95%9C",
         "http://1.2.3.4:8080/x#top",
+        "http://255.255.255.255/x",
+        "https://user@example.com:8080/x",
     ]:
         assert _homepage(href) == href, href
 

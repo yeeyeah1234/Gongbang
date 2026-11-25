@@ -159,15 +159,17 @@ def _is_backend_acceptable_url(url):
         return False
     if any(c in _URI_ILLEGAL_CHARS or c.isspace() or not c.isprintable() for c in url):
         return False
-    parts = urlsplit(url)
-    if parts.scheme.lower() not in ("http", "https"):
-        return False
     try:
+        parts = urlsplit(url)  # 전각 문자 등으로 netloc이 깨지면 ValueError
         parts.port  # 포트가 숫자가 아니면 ValueError
     except ValueError:
         return False
-    host = parts.netloc.rpartition("@")[2].rsplit(":", 1)[0] if parts.netloc else ""
-    return bool(host) and bool(_HOSTNAME_RE.fullmatch(host) or _IPV4_RE.fullmatch(host))
+    if parts.scheme.lower() not in ("http", "https") or parts.netloc.count("@") > 1:
+        return False
+    host = parts.netloc.rpartition("@")[2].rsplit(":", 1)[0]
+    if _IPV4_RE.fullmatch(host):
+        return all(int(octet) <= 255 for octet in host.split("."))
+    return bool(_HOSTNAME_RE.fullmatch(host))
 
 
 def _parse_category_labels(text):
