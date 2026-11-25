@@ -38,6 +38,7 @@ import { memberColorIndex } from '../onlineMembers'
 import { usePinnedCollapsed } from '../pinnedCollapse'
 import { WORKSPACE_TABS, type WorkspaceOnlineMember, type WorkspaceTabKey } from '../types'
 import { useWorkspacePresence } from '../useWorkspacePresence'
+import { useWorkspaceSyncSocket } from '../useWorkspaceSyncSocket'
 import { PinnedNoticeBanner } from './PinnedNoticeBanner'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { WorkspaceNoAccess } from './WorkspaceNoAccess'
@@ -133,9 +134,16 @@ export function WorkspaceLayout({
     void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
   }, [queryClient, teamId])
 
+  const syncEnabled = ready && !forbidden && loginMember !== null
+  const syncSocket = useWorkspaceSyncSocket({
+    teamId,
+    enabled: syncEnabled,
+  })
+
   const presenceMembers = useWorkspacePresence({
     teamId,
-    enabled: ready && !forbidden && loginMember !== null,
+    enabled: syncEnabled,
+    syncSocket,
     memberId: summary?.myMemberId ?? null,
     nickname: loginMember?.nickname ?? null,
     colorIndex: ready ? myColorIndex : null,
@@ -185,6 +193,7 @@ export function WorkspaceLayout({
     summary,
     refreshNoticeIndicators,
     realtime,
+    syncSocket,
     onlineMembers: resolvedOnlineMembers,
     myColorIndex,
     setActiveDocTitle,

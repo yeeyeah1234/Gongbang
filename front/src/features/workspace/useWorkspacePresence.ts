@@ -1,15 +1,20 @@
-import { HocuspocusProvider, HocuspocusProviderWebsocket } from '@hocuspocus/provider'
+import { HocuspocusProvider, type HocuspocusProviderWebsocket } from '@hocuspocus/provider'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as Y from 'yjs'
 import { refreshAccessToken } from '../../api/client'
 import type { MemberColorIndex } from '../../components/ui/Avatar'
 import { useAuthStore } from '../auth/store'
-import { buildSyncTeamName, resolveSyncServerUrl } from './document/syncUrl'
+import { buildSyncTeamName } from './document/syncUrl'
 import { extractOnlineMembers } from './onlineMembers'
 import type { WorkspaceOnlineMember, WorkspaceTabKey } from './types'
+import {
+  CLOSE_CODE_TEAM_MEMBER_REMOVED,
+  connectSyncSocket,
+  isSyncSocketOpen,
+  stopSyncSocket,
+  suppressSyncSocketReconnect,
+} from './useWorkspaceSyncSocket'
 
-// WS-06: sync-server POST /internal/disconnect 팀원 강퇴·나가기 종료 코드
-const CLOSE_CODE_TEAM_MEMBER_REMOVED = 4403
 const EMPTY_MEMBERS: WorkspaceOnlineMember[] = []
 
 interface PresenceLocalState {
@@ -24,6 +29,7 @@ interface PresenceLocalState {
 interface UseWorkspacePresenceOptions {
   teamId: number
   enabled: boolean
+  syncSocket: HocuspocusProviderWebsocket | null
   memberId: number | null
   nickname: string | null
   colorIndex: MemberColorIndex | null
@@ -81,6 +87,7 @@ function isSameMemberList(a: WorkspaceOnlineMember[], b: WorkspaceOnlineMember[]
 export function useWorkspacePresence({
   teamId,
   enabled,
+  syncSocket,
   memberId,
   nickname,
   colorIndex,
@@ -122,21 +129,15 @@ export function useWorkspacePresence({
     onForbiddenRef.current = onForbidden
   }, [onForbidden])
 
-  // 팀당 1개의 Hocuspocus 연결 생성·정리 (팀 변경·워크스페이스 이탈 시 즉시 정리)
+  // 팀당 1개의 공유 Hocuspocus 소켓에 team:{teamId} provider만 붙이고 정리한다
   useEffect(() => {
-    if (!enabled || !Number.isSafeInteger(teamId) || teamId <= 0) {
+    if (!enabled || !syncSocket || !Number.isSafeInteger(teamId) || teamId <= 0) {
       return
     }
 
     const ydoc = new Y.Doc()
-    // preserveTrailingSlash: true로 배포 기본값(/sync/) 끝 슬래시가 잘려 301이 나지 않게 유지한다.
-    const websocketProvider = new HocuspocusProviderWebsocket({
-      url: resolveSyncServerUrl(),
-      autoConnect: false,
-      preserveTrailingSlash: true,
-    })
     const provider = new HocuspocusProvider({
-      websocketProvider,
+      websocketProvider: syncSocket,
       name: buildSyncTeamName(teamId),
       document: ydoc,
       token: async () => {
@@ -163,7 +164,13 @@ export function useWorkspacePresence({
     const stopPermanently = () => {
       stopped = true
       clearMembers()
-      websocketProvider.disconnect()
+      if (provider.awareness && provider.awareness.getLocalState() !== null) {
+        provider.awareness.setLocalState(null)
+      }
+      if (provider.isAttached) {
+        provider.detach()
+      }
+      stopSyncSocket(syncSocket)
     }
 
     const pushLocalState = (force = false) => {
@@ -227,12 +234,22 @@ export function useWorkspacePresence({
             return
           }
 
+          // 토큰 재발급 대기 중 onClose가 1초 뒤 미갱신 토큰으로 재연결하지 않도록 먼저 멈춘다
+          if (provider.isAttached) {
+            provider.detach()
+          }
+          suppressSyncSocketReconnect(syncSocket)
+
           if (!refreshedOnce) {
             refreshedOnce = true
             const newToken = await refreshAccessToken()
             if (newToken && !stopped) {
-              websocketProvider.disconnect()
-              void websocketProvider.connect()
+              if (!provider.isAttached) {
+                provider.attach()
+              }
+              if (!isSyncSocketOpen(syncSocket)) {
+                connectSyncSocket(syncSocket)
+              }
               return
             }
           }
@@ -258,7 +275,7 @@ export function useWorkspacePresence({
     if (!provider.isAttached) {
       provider.attach()
     }
-    void websocketProvider.connect()
+    connectSyncSocket(syncSocket)
 
     return () => {
       stopped = true
@@ -267,18 +284,18 @@ export function useWorkspacePresence({
       provider.off('close', handleClose)
       provider.off('authenticationFailed', handleAuthFailed)
       provider.awareness?.off('change', syncOnlineMembers)
-      // 팀 전환·이탈 시 다른 팀원 화면에서 내 아바타가 즉시 사라지게 정리한다
-      provider.awareness?.setLocalState(null)
-      websocketProvider.disconnect()
+      // 팀 전환·이탈 시 다른 팀원 화면에서 내 아바타가 즉시 사라지게 정리한다 (공유 소켓 정리는 useWorkspaceSyncSocket이 담당)
+      if (provider.awareness && provider.awareness.getLocalState() !== null) {
+        provider.awareness.setLocalState(null)
+      }
       provider.destroy()
-      websocketProvider.destroy()
       ydoc.destroy()
       if (providerRef.current === provider) {
         providerRef.current = null
       }
       lastSentStateRef.current = null
     }
-  }, [teamId, enabled])
+  }, [teamId, enabled, syncSocket])
 
   // 탭·열린 문서·팀원 색/역할이 실제로 바뀔 때만 awareness 갱신 (입력할 때마다 갱신하지 않는다)
   useEffect(() => {
