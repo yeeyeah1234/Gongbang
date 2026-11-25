@@ -8,12 +8,17 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.dto.MemberProfileSummary;
 import com.gongbang.member.service.MemberService;
+import com.gongbang.post.domain.PostSearchSort;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.MyPostItemResponse;
 import com.gongbang.post.dto.PostListItemResponse;
 import com.gongbang.post.dto.PostListItemResponse.AuthorInfo;
 import com.gongbang.post.dto.PostListItemResponse.ContestInfo;
 import com.gongbang.post.repository.RecruitPostRepository;
+import com.gongbang.post.repository.RecruitPostSearchRepository;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,10 +44,13 @@ public class PostQueryService {
     // PST-001 ①: 최신 등록순. 같은 시각이면 나중에 들어온 글이 먼저.
     static final Sort LATEST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
 
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+
     private final RecruitPostRepository recruitPostRepository;
     private final ContestLookupService contestLookupService;
     private final MemberService memberService;
     private final CommentCountService commentCountService;
+    private final RecruitPostSearchRepository recruitPostSearchRepository;
 
     /** 다른 도메인(지원자 목록 REC-003 등)용: 삭제되지 않은 모집글. 없거나 삭제됐으면 404 POST_NOT_FOUND. 잠그지 않는다. */
     public RecruitPost getActivePost(Long postId) {
@@ -59,33 +67,61 @@ public class PostQueryService {
         }
         Page<RecruitPost> posts =
                 recruitPostRepository.findByDeletedAtIsNull(PageRequest.of(page, size, LATEST));
+        return PageResponse.of(toItems(posts.getContent()), page, size, posts.getTotalElements());
+    }
 
+    /**
+     * 통합 검색(SRCH-05 ①, SRCH-02 ②)의 모집글 부분 (최규선 SearchService가 부른다). 제목·본문에 검색어가 있거나 작성자가 authorIds에
+     * 있는 글을 찾고, 삭제된 글(관리자 숨김 포함)은 뺀다. 모집완료·모집마감 글도 PST-001 목록처럼 넣는다. 항목은 PST-001 목록 항목과 같다.
+     *
+     * <p>sort: accuracy(기본, 제목 같음 > 제목 시작 > 제목 포함 > 본문·작성자만 일치, 같으면 최신순) | latest | deadline(지원할 수
+     * 있는 글을 모집 종료일 빠른 순으로 앞에, 끝난 글은 뒤에 최신순). 검색어 길이(2자 이상) 검사는 부르는 쪽이 한다.
+     */
+    public PageResponse<PostListItemResponse> searchPosts(
+            String keyword, Collection<Long> authorIds, String sort, int page, int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        String trimmed = keyword == null ? "" : keyword.strip();
+        if (trimmed.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        }
+        PostSearchSort searchSort = PostSearchSort.from(sort);
+        List<RecruitPost> posts =
+                recruitPostSearchRepository.search(
+                        trimmed,
+                        authorIds,
+                        searchSort,
+                        LocalDate.now(KST),
+                        (long) page * size,
+                        size);
+        long total = recruitPostSearchRepository.count(trimmed, authorIds);
+        return PageResponse.of(toItems(posts), page, size, total);
+    }
+
+    /** PST-001 목록 항목: 공모전 정보와 작성자 닉네임을 한 번에 읽어 붙인다. */
+    private List<PostListItemResponse> toItems(List<RecruitPost> posts) {
         Map<Long, ContestSummary> contests =
-                contestLookupService.findSummaries(
-                        collect(posts.getContent(), RecruitPost::getContestId));
+                contestLookupService.findSummaries(collect(posts, RecruitPost::getContestId));
         Map<Long, String> categoryNames =
                 contestLookupService.findCategoryNames(
                         collect(
-                                posts.getContent(),
+                                posts,
                                 post ->
                                         post.getExternalContest() == null
                                                 ? null
                                                 : post.getExternalContest().getCategoryId()));
-
-        Map<Long, String> nicknames = nicknames(posts.getContent());
-
-        List<PostListItemResponse> items =
-                posts.getContent().stream()
-                        .map(
-                                post ->
-                                        PostListItemResponse.of(
-                                                post,
-                                                contestInfo(post, contests, categoryNames),
-                                                new AuthorInfo(
-                                                        post.getAuthorId(),
-                                                        nicknames.get(post.getAuthorId()))))
-                        .toList();
-        return PageResponse.of(items, page, size, posts.getTotalElements());
+        Map<Long, String> nicknames = nicknames(posts);
+        return posts.stream()
+                .map(
+                        post ->
+                                PostListItemResponse.of(
+                                        post,
+                                        contestInfo(post, contests, categoryNames),
+                                        new AuthorInfo(
+                                                post.getAuthorId(),
+                                                nicknames.get(post.getAuthorId()))))
+                .toList();
     }
 
     /**
