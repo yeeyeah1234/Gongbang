@@ -11,8 +11,10 @@ import static org.mockito.Mockito.verify;
 
 import com.gongbang.board.domain.BoardCategory;
 import com.gongbang.board.domain.BoardPost;
+import com.gongbang.board.domain.BoardPostSearchSort;
 import com.gongbang.board.dto.BoardPostDetailResponse;
 import com.gongbang.board.repository.BoardPostRepository;
+import com.gongbang.board.repository.BoardPostSearchRepository;
 import com.gongbang.comment.service.CommentCountService;
 import com.gongbang.contest.dto.ContestSummary;
 import com.gongbang.contest.service.ContestLookupService;
@@ -25,6 +27,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,6 +53,7 @@ class BoardPostQueryServiceTest {
     @Mock private MemberService memberService;
     @Mock private BoardPostImageService boardPostImageService;
     @Mock private CommentCountService commentCountService;
+    @Mock private BoardPostSearchRepository boardPostSearchRepository;
 
     private BoardPostQueryService service;
 
@@ -61,7 +65,8 @@ class BoardPostQueryServiceTest {
                         contestLookupService,
                         memberService,
                         boardPostImageService,
-                        commentCountService);
+                        commentCountService,
+                        boardPostSearchRepository);
     }
 
     private static BoardPost post(Long contestId) {
@@ -209,5 +214,58 @@ class BoardPostQueryServiceTest {
                                         BusinessException.class)
                                 .getErrorCode())
                 .isEqualTo(ErrorCode.BOARD_POST_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("검색은 앞뒤 공백을 지운 검색어·작성자·정렬·시작 위치를 넘기고, BRD-001 목록 항목으로 돌려준다 (SRCH-05 ①)")
+    void 검색_결과를_목록_항목으로_준다() {
+        given(
+                        boardPostSearchRepository.search(
+                                eq("후기"),
+                                eq(Set.of(AUTHOR_ID)),
+                                eq(BoardPostSearchSort.DEADLINE),
+                                eq(20L),
+                                eq(20)))
+                .willReturn(List.of(post(3L)));
+        given(boardPostSearchRepository.count("후기", Set.of(AUTHOR_ID))).willReturn(21L);
+        given(contestLookupService.findSummaries(any()))
+                .willReturn(
+                        Map.of(
+                                3L,
+                                new ContestSummary(
+                                        3L, "공모전", "IT", LocalDate.of(2026, 12, 1), null)));
+        given(memberService.getProfileSummaries(any()))
+                .willReturn(
+                        Map.of(
+                                AUTHOR_ID,
+                                new MemberProfileSummary(AUTHOR_ID, "작성자", null, List.of())));
+
+        var result = service.searchPosts(" 후기 ", Set.of(AUTHOR_ID), "deadline", 1, 20);
+
+        assertThat(result.items()).hasSize(1);
+        assertThat(result.items().get(0).contest().title()).isEqualTo("공모전");
+        assertThat(result.items().get(0).author().nickname()).isEqualTo("작성자");
+        assertThat(result.totalCount()).isEqualTo(21);
+        assertThat(result.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("정렬을 비우면 정확도순, 모르는 정렬·빈 검색어·잘못된 페이지는 400 INVALID_INPUT (SRCH-02 ②)")
+    void 검색_입력_검사() {
+        assertThat(BoardPostSearchSort.from(null)).isEqualTo(BoardPostSearchSort.ACCURACY);
+        assertThat(BoardPostSearchSort.from("deadline")).isEqualTo(BoardPostSearchSort.DEADLINE);
+        for (Runnable bad :
+                List.<Runnable>of(
+                        () -> service.searchPosts("후기", null, "popular", 0, 20),
+                        () -> service.searchPosts("  ", null, null, 0, 20),
+                        () -> service.searchPosts(null, null, null, 0, 20),
+                        () -> service.searchPosts("후기", null, null, -1, 20),
+                        () -> service.searchPosts("후기", null, null, 0, 51))) {
+            BusinessException e = catchThrowableOfType(bad::run, BusinessException.class);
+            assertThat(e).isNotNull();
+            assertThat(e.getErrorCode()).isEqualTo(ErrorCode.INVALID_INPUT);
+        }
+        verify(boardPostSearchRepository, never())
+                .search(any(), any(), any(), anyLong(), any(Integer.class));
     }
 }
