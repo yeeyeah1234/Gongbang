@@ -1,6 +1,6 @@
 import re
 import time
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 import requests
 from bs4 import BeautifulSoup
@@ -139,9 +139,38 @@ def _parse_homepage_url(li):
     # MAIN-02 ④ [바로가기]: 주최 측 원래 공모전 페이지. http(s) 주소만 받는다 (AGENTS.md 9장, javascript: 등 차단)
     link = li.select_one("a[href]")
     href = link["href"].strip() if link else li.get_text(" ", strip=True).replace("홈페이지", "", 1).strip()
-    if href.startswith(("http://", "https://")) and len(href) <= 500:
+    if len(href) <= 500 and _is_backend_acceptable_url(href):
         return href
     return None
+
+
+# 백엔드 공통 UrlPolicy(#120)는 java.net.URI로 해석하고 호스트를 요구한다.
+# 거부되는 주소가 한 건이라도 있으면 배치 전체가 400이므로, 그런 주소는 보내지 않는다.
+_URI_ILLEGAL_CHARS = set(' "<>\\^`{|}[]')
+_BAD_PERCENT_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
+_HOSTNAME_RE = re.compile(
+    r"(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)*[A-Za-z](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.?"
+)
+# \d는 전각 숫자(１)도 잡으므로 ASCII 숫자만 쓴다 (Java URI는 전각 숫자 IPv4를 거부)
+_IPV4_RE = re.compile(r"[0-9]{1,3}(?:\.[0-9]{1,3}){3}")
+
+
+def _is_backend_acceptable_url(url):
+    if url.count("#") > 1 or _BAD_PERCENT_RE.search(url):
+        return False
+    if any(c in _URI_ILLEGAL_CHARS or c.isspace() or not c.isprintable() for c in url):
+        return False
+    try:
+        parts = urlsplit(url)  # 전각 문자 등으로 netloc이 깨지면 ValueError
+        parts.port  # 포트가 숫자가 아니면 ValueError
+    except ValueError:
+        return False
+    if parts.scheme.lower() not in ("http", "https") or parts.netloc.count("@") > 1:
+        return False
+    host = parts.netloc.rpartition("@")[2].rsplit(":", 1)[0]
+    if _IPV4_RE.fullmatch(host):
+        return all(int(octet) <= 255 for octet in host.split("."))
+    return bool(_HOSTNAME_RE.fullmatch(host))
 
 
 def _parse_category_labels(text):

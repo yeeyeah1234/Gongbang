@@ -9,6 +9,7 @@ import com.gongbang.contest.repository.CategoryRepository;
 import com.gongbang.contest.repository.ContestRepository;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.global.validation.UrlPolicy;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,7 +30,10 @@ public class ContestBatchService {
         int updated = 0;
         int deadlineChanged = 0;
 
-        for (ContestBatchItem item : items) {
+        for (ContestBatchItem raw : items) {
+            // #120 공통 URL 정책: 대소문자 무관 http(s) + 호스트 필수, 빈 값은 null. 어기면 INVALID_INPUT
+            ContestBatchItem item =
+                    raw.withHomepageUrl(UrlPolicy.validateOrNull(raw.homepageUrl()));
             Category category =
                     categoryRepository
                             .findByCode(item.categoryCode())
