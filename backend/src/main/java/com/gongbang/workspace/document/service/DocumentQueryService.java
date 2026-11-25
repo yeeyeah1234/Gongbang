@@ -21,9 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class DocumentQueryService {
 
-    /** 회원 행이 없을 때의 표시 이름. MemberService의 탈퇴 표시와 같다. */
-    static final String WITHDRAWN_NAME = "탈퇴한 사용자";
-
     private final DocumentRepository documentRepository;
     private final TeamMemberService teamMemberService;
     private final MemberService memberService;
@@ -45,12 +42,10 @@ public class DocumentQueryService {
                         summary ->
                                 DocumentListItemResponse.of(
                                         summary,
-                                        nickname(editors.get(summary.updatedBy())),
+                                        // 탈퇴·삭제된 회원도 MemberService가 「탈퇴한 사용자」로 채워 준다 (#120에서 각자 넣던
+                                        // 문자열을 뺌)
+                                        editors.get(summary.updatedBy()).nickname(),
                                         leader || Objects.equals(summary.createdBy(), memberId)))
                 .toList();
-    }
-
-    private static String nickname(MemberProfileSummary profile) {
-        return profile == null || profile.nickname() == null ? WITHDRAWN_NAME : profile.nickname();
     }
 }

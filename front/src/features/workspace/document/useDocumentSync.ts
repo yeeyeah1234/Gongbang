@@ -19,7 +19,7 @@ import {
 import { fetchDocuments } from './api'
 import { buildSyncDocumentName } from './syncUrl'
 
-export type DocumentSaveState = 'saving' | 'saved' | 'offline' | 'failed'
+export type DocumentSaveState = 'idle' | 'saving' | 'saved' | 'offline' | 'failed'
 
 // WS-04: 재연결 후에도 30초 동안 보내지 못하면 저장 실패로 전환
 const SEND_FAIL_TIMEOUT_MS = 30_000
@@ -211,6 +211,7 @@ export function useDocumentSyncConnection({
   const wsStatus = useSyncExternalStore(subscribeWsStatus, getWsStatusSnapshot)
 
   const [isSynced, setIsSynced] = useState(offlinePreview)
+  const [hasInitialSync, setHasInitialSync] = useState(offlinePreview)
   const [unsyncedCount, setUnsyncedCount] = useState(0)
   const [browserOnline, setBrowserOnline] = useState(() =>
     typeof navigator === 'undefined' ? true : navigator.onLine,
@@ -307,6 +308,7 @@ export function useDocumentSyncConnection({
       if (stopped) return
       setIsSynced(state)
       if (state) {
+        setHasInitialSync(true)
         setDirtyWhileDisconnected(false)
         if (provider.unsyncedChanges === 0) {
           setSendFailed(false)
@@ -516,6 +518,8 @@ export function useDocumentSyncConnection({
     saveState = 'offline'
   } else if (sendFailed) {
     saveState = 'failed'
+  } else if (!hasInitialSync) {
+    saveState = 'idle'
   } else if (wsStatus === WebSocketStatus.Connected && isSynced && unsyncedCount === 0) {
     saveState = 'saved'
   } else {

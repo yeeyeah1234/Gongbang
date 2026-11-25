@@ -80,7 +80,12 @@ class DocumentQueryServiceTest {
         when(documentRepository.findSummaries(TEAM_ID))
                 .thenReturn(List.of(new DocumentSummary(1L, "남의 문서", OTHER_ID, OTHER_ID, AT)));
         when(teamMemberService.isLeader(TEAM_ID, ME)).thenReturn(true);
-        when(memberService.getProfileSummaries(Set.of(OTHER_ID))).thenReturn(Map.of());
+        // MemberService는 탈퇴·삭제된 회원도 「탈퇴한 사용자」로 채워 준다
+        when(memberService.getProfileSummaries(Set.of(OTHER_ID)))
+                .thenReturn(
+                        Map.of(
+                                OTHER_ID,
+                                new MemberProfileSummary(OTHER_ID, "탈퇴한 사용자", null, List.of())));
 
         List<DocumentListItemResponse> result = documentQueryService.getDocuments(ME, TEAM_ID);
 
@@ -88,7 +93,6 @@ class DocumentQueryServiceTest {
                 .singleElement()
                 .extracting(DocumentListItemResponse::canDelete)
                 .isEqualTo(true);
-        // 회원 정보를 못 찾으면 「탈퇴한 사용자」
         assertThat(result.get(0).updatedByNickname()).isEqualTo("탈퇴한 사용자");
     }
 
