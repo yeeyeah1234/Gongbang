@@ -1,8 +1,10 @@
 import { Collaboration } from '@tiptap/extension-collaboration'
 import { TaskItem, TaskList } from '@tiptap/extension-list'
+import type { Transaction } from '@tiptap/pm/state'
 import type { EditorProps } from '@tiptap/pm/view'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import { StarterKit } from '@tiptap/starter-kit'
+import { ySyncPluginKey } from '@tiptap/y-tiptap'
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import type { Awareness } from 'y-protocols/awareness'
 import { useLoginMember } from '../../../auth/store'
@@ -97,6 +99,20 @@ function createCaretIdleTracker(): CaretIdleTracker {
 
 function isEditorAlive(editor: Editor | null): editor is Editor {
   return editor !== null && !editor.isDestroyed
+}
+
+/**
+ * WS-04: 저장 상태 표시를 시작할 "사용자의 직접 편집" 트랜잭션인지 한 곳에서 판별한다.
+ * - 초기화 구간(!isInitialized) 및 파괴된 에디터: 마운트/뷰 생성 중 내부 트랜잭션 제외
+ * - !docChanged: 포커스·커서 이동·선택 변경·원격 awareness 커서 갱신 등 본문 변경 없는 트랜잭션 제외
+ * - ySyncPluginKey meta 존재: 초기 바인딩(_forceRerender), 서버 SyncStep2·원격 팀원 편집 반영,
+ *   스냅샷 렌더 등 y-sync 플러그인이 발생시킨 비사용자 트랜잭션 제외
+ */
+function isUserEditTransaction(editor: Editor, transaction: Transaction): boolean {
+  if (!editor.isInitialized || editor.isDestroyed) return false
+  if (!transaction.docChanged) return false
+  if (transaction.getMeta(ySyncPluginKey) !== undefined) return false
+  return true
 }
 
 function isSameAwarenessUser(a: AwarenessUser, b: AwarenessUser): boolean {
@@ -298,6 +314,28 @@ function DocumentEditorContent({
   useEffect(() => {
     editorRef.current = editor
   }, [editor])
+
+  // WS-04: 이 문서에서 사용자가 처음 직접 편집할 때만 저장 상태 표시를 활성화한다
+  useEffect(() => {
+    if (!isEditorAlive(editor) || session.getHasUserEdited()) return
+
+    const handleTransaction = ({
+      editor: currentEditor,
+      transaction,
+    }: {
+      editor: Editor
+      transaction: Transaction
+    }) => {
+      if (!isUserEditTransaction(currentEditor, transaction)) return
+      session.markUserEdited()
+      editor.off('transaction', handleTransaction)
+    }
+
+    editor.on('transaction', handleTransaction)
+    return () => {
+      editor.off('transaction', handleTransaction)
+    }
+  }, [editor, session])
 
   // IME 조합 구간에는 에디터 DOM(이름표 숨김)과 awareness user 갱신을 보류했다가 종료 후 1회 반영한다
   useEffect(() => {
