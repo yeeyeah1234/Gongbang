@@ -1,4 +1,4 @@
-import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs'
+import { Client, ReconnectionTimeMode, type IMessage, type StompSubscription } from '@stomp/stompjs'
 import { refreshAccessToken } from '../../api/client'
 import { useAuthStore } from '../auth/store'
 
@@ -28,6 +28,8 @@ export function createStompClient(options: {
   const client = new Client({
     brokerURL: resolveStompBrokerUrl(),
     reconnectDelay: 3000,
+    reconnectTimeMode: ReconnectionTimeMode.EXPONENTIAL,
+    maxReconnectDelay: 30000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
     beforeConnect: async () => {
@@ -35,7 +37,13 @@ export function createStompClient(options: {
       if (!token) {
         token = await refreshAccessToken()
       }
-      client.connectHeaders = token ? { Authorization: `Bearer ${token}` } : {}
+      if (!token) {
+        client.connectHeaders = {}
+        options.onAuthError?.()
+        await client.deactivate()
+        return
+      }
+      client.connectHeaders = { Authorization: `Bearer ${token}` }
     },
     onConnect: () => {
       refreshedOnce = false
@@ -51,6 +59,7 @@ export function createStompClient(options: {
         if (refreshed) return
       }
       options.onAuthError?.()
+      void client.deactivate()
     },
   })
 
