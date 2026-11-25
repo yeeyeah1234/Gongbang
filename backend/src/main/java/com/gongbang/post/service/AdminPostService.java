@@ -116,8 +116,9 @@ public class AdminPostService {
                         .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
         if (p.getDeletedAt() != null) return;
         p.forceHide(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
-        var receivers = applications.findAllApplicantIds(id);
-        applications.closePendingApplications(id, LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+        var receivers =
+                applications.closePendingApplications(
+                        id, LocalDateTime.now(ZoneId.of("Asia/Seoul")));
         // 알림과 이메일 대기열은 변경과 함께 커밋된다. 실제 메일은 기존 outbox 작업이 전송한다.
         for (Long receiver : receivers)
             notifications.send(

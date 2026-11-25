@@ -11,6 +11,7 @@ import com.gongbang.contest.service.ContestLookupService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.validation.UrlPolicy;
+import com.gongbang.notification.service.CommunityNotificationService;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
@@ -39,8 +40,7 @@ public class BoardPostCommandService {
     private final ContestLookupService contestLookupService;
     private final BoardPostQueryService boardPostQueryService;
     private final BoardPostImageService boardPostImageService;
-    private final com.gongbang.notification.service.CommunityNotificationService
-            communityNotifications;
+    private final CommunityNotificationService communityNotifications;
 
     /** BRD-002 ①②: 로그인 회원이 쓴다. 공모전 이야기는 공모전 필수, 결과물 링크는 결과물 자랑에서만 둔다. */
     public BoardPostCreateResponse create(Long memberId, BoardPostRequest request) {

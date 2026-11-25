@@ -27,17 +27,18 @@ class AdminPostServiceTest {
                     mock(EntityManager.class));
 
     @Test
-    void 강제숨김은_모집을종료하고_모든지원자에게한번만알린다() {
+    void 강제숨김은_모집을종료하고_닫힌대기지원자에게만_한번알린다() {
         var post = org.springframework.beans.BeanUtils.instantiateClass(RecruitPost.class);
         ReflectionTestUtils.setField(post, "id", 8L);
         ReflectionTestUtils.setField(post, "title", "모집글");
         when(repository.findByIdForUpdate(8L)).thenReturn(Optional.of(post));
-        when(applications.findAllApplicantIds(8L)).thenReturn(List.of(2L, 3L, 4L));
+        when(applications.closePendingApplications(eq(8L), any())).thenReturn(List.of(2L, 3L));
         service.hide(1L, 8L);
         assertThat(post.getDeletedAt()).isNotNull();
         assertThat(post.getStatus()).isEqualTo(PostStatus.CLOSED);
         verify(applications).closePendingApplications(eq(8L), any());
-        for (long id : List.of(2L, 3L, 4L))
+        verify(applications, never()).findAllApplicantIds(anyLong());
+        for (long id : List.of(2L, 3L))
             verify(notifications)
                     .send(
                             eq(id),
@@ -48,7 +49,7 @@ class AdminPostServiceTest {
                             anyString(),
                             eq("/notifications"));
         service.hide(1L, 8L);
-        verify(notifications, times(3))
+        verify(notifications, times(2))
                 .send(anyLong(), any(), any(), anyString(), anyLong(), anyString(), anyString());
     }
 }
