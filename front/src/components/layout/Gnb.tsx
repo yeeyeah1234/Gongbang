@@ -16,7 +16,7 @@ const MIN_KEYWORD_LENGTH = 2
 // activePrefixes: 이 경로들에 있으면 메뉴를 선택된 것으로 보여 준다 (공모전 상세도 「공모전」)
 const MENUS = [
   { label: '공모전', to: '/', activePrefixes: ['/contests/'] },
-  // TODO(확인 필요): 커뮤니티(팀원 모집 게시판, PST-001 김수형) 화면 경로가 정해지면 맞춘다
+  // 커뮤니티: 팀원 모집글(/posts, PST-001)과 커뮤니티 게시판(/board, BRD-001)
   { label: '커뮤니티', to: '/posts', activePrefixes: ['/posts/', '/board'] },
   // 비로그인도 보인다. 비로그인이 누르면 「로그인이 필요한 서비스입니다」 팝업 → [로그인]으로 로그인 화면 (GNB-01 ④)
   // 경로 /workspaces는 이상현과 확정 (11/13, WS-08)
@@ -28,7 +28,7 @@ const MENUS = [
   },
 ]
 
-// TODO(확인 필요): 로그인 화면 경로는 인증 담당(정진우)과 맞춘다 (api/client.ts의 401 처리와 같은 /login)
+// 로그인 화면 경로 (AUTH-01, api/client.ts의 401 처리와 같은 /login)
 const LOGIN_PATH = '/login'
 
 function SearchIcon() {
@@ -222,8 +222,7 @@ export function Gnb() {
             >
               <SearchIcon />
             </button>
-            {/* GNB-02 ①: 비로그인은 [로그인] 버튼
-              TODO(확인 필요): GNB-02 ③④ 닉네임 드롭다운·GNB-03 로그아웃은 인증 모듈(정진우, AUTH-01·11)과 함께 만든다 */}
+            {/* GNB-02 ①: 비로그인은 [로그인] 버튼. 로그인하면 닉네임 드롭다운·로그아웃(GNB-02 ③④, GNB-03)은 UserMenu */}
             {!isLoggedIn && (
               <Button
                 variant="outline"
@@ -290,9 +289,7 @@ export function Gnb() {
           <Button
             onClick={() => {
               setLoginModalOpen(false)
-              // TODO(확인 필요): 로그인 후 워크스페이스(/workspaces)로 돌아오게 한다 (이상현 제안).
-              // 돌아갈 주소를 넘기는 방식은 로그인 화면(정진우, AUTH-01)이 정해지면 맞춘다
-              // → 11/16 정진우: /login?redirect=/workspaces 로 넘긴다
+              // 로그인 후 워크스페이스로 돌아온다: /login?redirect=/workspaces (11/16 정진우·이상현)
               navigate(loginPathWithRedirect('/workspaces') || LOGIN_PATH)
             }}
           >
