@@ -45,6 +45,9 @@ class BoardPostCommandServiceTest {
     @Mock private BoardPostQueryService boardPostQueryService;
     @Mock private BoardPostImageService boardPostImageService;
 
+    @Mock
+    private com.gongbang.notification.service.CommunityNotificationService communityNotifications;
+
     private BoardPostCommandService service;
 
     @BeforeEach
@@ -54,7 +57,8 @@ class BoardPostCommandServiceTest {
                         boardPostRepository,
                         contestLookupService,
                         boardPostQueryService,
-                        boardPostImageService);
+                        boardPostImageService,
+                        communityNotifications);
     }
 
     private static BoardPostRequest request(
@@ -104,6 +108,7 @@ class BoardPostCommandServiceTest {
         assertThat(post.getAuthorId()).isEqualTo(AUTHOR_ID);
         assertThat(post.getContestId()).isEqualTo(CONTEST_ID);
         assertThat(post.getTitle()).isEqualTo("제목");
+        verify(communityNotifications).postCreated(AUTHOR_ID, post.getId(), "제목");
         assertThat(post.getContent()).isEqualTo("내용");
     }
 

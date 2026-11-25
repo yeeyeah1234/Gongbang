@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 import { getApiError } from '../../api/errors'
@@ -213,16 +214,18 @@ export default function SocialSignupPage() {
           </div>
         </fieldset>
 
-        <Button
-          variant="primary"
-          size="lg"
-          className="w-full"
-          disabled={!ready}
-          loading={submitting}
-          onClick={submit}
-        >
-          가입 완료
-        </Button>
+        <MobileActionBar>
+          <Button
+            variant="primary"
+            size="lg"
+            className="w-full"
+            disabled={!ready}
+            loading={submitting}
+            onClick={submit}
+          >
+            가입 완료
+          </Button>
+        </MobileActionBar>
       </div>
 
       <TermsModal

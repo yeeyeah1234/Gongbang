@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { getErrorMessage } from '../../api/errors'
+import { useIsWide } from '../../hooks/useIsWide'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { useLoginMember } from '../../features/auth/store'
@@ -38,6 +39,8 @@ export default function AdminVerificationPage() {
 }
 
 export function VerificationWorkspace() {
+  const isWide = useIsWide()
+  const [detailOpen, setDetailOpen] = useState(false)
   const [status, setStatus] = useState<ReviewStatus>('PENDING')
   const [page, setPage] = useState(0)
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -66,7 +69,8 @@ export function VerificationWorkspace() {
     retry: false,
   })
   const selected =
-    query.data?.content.find((item) => item.id === selectedId) ?? query.data?.content[0]
+    query.data?.content.find((item) => item.id === selectedId) ??
+    (isWide ? query.data?.content[0] : undefined)
   const mutation = useMutation({
     mutationFn: ({ id, reason }: { id: number; reason: string }) =>
       reviewVerification(id, 'REJECTED', reason),
@@ -79,6 +83,7 @@ export function VerificationWorkspace() {
     },
   })
   const select = (item: Verification) => {
+    setDetailOpen(true)
     setSelectedId(item.id)
     setReason('')
     mutation.reset()
@@ -135,182 +140,196 @@ export function VerificationWorkspace() {
         ) : (
           <>
             <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-              <section
-                aria-label="인증 요청 목록"
-                className="overflow-hidden border border-line-strong bg-surface"
-              >
-                <div className="flex items-center justify-between border-b border-divider p-4">
-                  <h2 className="text-subheading font-bold">{labels[status]} 요청</h2>
-                  <span className="text-small text-text-sub">총 {query.data.totalElements}건</span>
-                </div>
-                <div
-                  className="flex flex-wrap gap-2 border-b border-divider p-4"
-                  aria-label="심사 상태 필터"
+              {(isWide || !detailOpen) && (
+                <section
+                  aria-label="인증 요청 목록"
+                  className="overflow-hidden border border-line-strong bg-surface"
                 >
-                  {(Object.keys(labels) as ReviewStatus[]).map((value) => (
+                  <div className="flex items-center justify-between border-b border-divider p-4">
+                    <h2 className="text-subheading font-bold">{labels[status]} 요청</h2>
+                    <span className="text-small text-text-sub">
+                      총 {query.data.totalElements}건
+                    </span>
+                  </div>
+                  <div
+                    className="flex flex-wrap gap-2 border-b border-divider p-4"
+                    aria-label="심사 상태 필터"
+                  >
+                    {(Object.keys(labels) as ReviewStatus[]).map((value) => (
+                      <Button
+                        size="sm"
+                        key={value}
+                        variant={status === value ? 'primary' : 'outline'}
+                        aria-pressed={status === value}
+                        onClick={() => {
+                          setStatus(value)
+                          setPage(0)
+                          setSelectedId(null)
+                          setMessage('')
+                        }}
+                      >
+                        {labels[value]}
+                      </Button>
+                    ))}
+                  </div>
+                  {query.data.content.length === 0 ? (
+                    <div className="px-6 py-16 text-center">
+                      <h3 className="text-body font-bold">{labels[status]} 요청이 없습니다</h3>
+                      <p className="mt-2 text-small text-text-sub">
+                        다른 상태를 선택하거나 새로고침해 주세요.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="divide-y divide-divider">
+                      {query.data.content.map((item) => (
+                        <li key={item.id}>
+                          <button
+                            onClick={() => select(item)}
+                            aria-pressed={selected?.id === item.id}
+                            className={`w-full cursor-pointer border-l-2 p-4 text-left transition-colors hover:bg-bg focus-visible:outline-2 focus-visible:outline-primary ${selected?.id === item.id ? 'border-text bg-surface-sub' : 'border-transparent'}`}
+                          >
+                            <div className="mb-2 flex items-center justify-between gap-4">
+                              <span className="text-small font-medium text-primary">
+                                {item.targetType === 'CERTIFICATE' ? '자격증' : '수상 경력'}
+                              </span>
+                              <span className="text-small text-text-sub">#{item.id}</span>
+                            </div>
+                            <h3 className="text-body font-bold break-words">{item.title}</h3>
+                            <p className="mt-2 text-small text-text-sub">
+                              {item.nickname} · {date(item.requestedAt)}
+                            </p>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex items-center justify-between border-t border-divider p-4">
                     <Button
                       size="sm"
-                      key={value}
-                      variant={status === value ? 'primary' : 'outline'}
-                      aria-pressed={status === value}
+                      disabled={page === 0}
                       onClick={() => {
-                        setStatus(value)
-                        setPage(0)
+                        setPage(page - 1)
                         setSelectedId(null)
-                        setMessage('')
                       }}
                     >
-                      {labels[value]}
+                      이전
                     </Button>
-                  ))}
-                </div>
-                {query.data.content.length === 0 ? (
-                  <div className="px-6 py-16 text-center">
-                    <h3 className="text-body font-bold">{labels[status]} 요청이 없습니다</h3>
-                    <p className="mt-2 text-small text-text-sub">
-                      다른 상태를 선택하거나 새로고침해 주세요.
-                    </p>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-divider">
-                    {query.data.content.map((item) => (
-                      <li key={item.id}>
-                        <button
-                          onClick={() => select(item)}
-                          aria-pressed={selected?.id === item.id}
-                          className={`w-full cursor-pointer border-l-2 p-4 text-left transition-colors hover:bg-bg focus-visible:outline-2 focus-visible:outline-primary ${selected?.id === item.id ? 'border-text bg-surface-sub' : 'border-transparent'}`}
-                        >
-                          <div className="mb-2 flex items-center justify-between gap-4">
-                            <span className="text-small font-medium text-primary">
-                              {item.targetType === 'CERTIFICATE' ? '자격증' : '수상 경력'}
-                            </span>
-                            <span className="text-small text-text-sub">#{item.id}</span>
-                          </div>
-                          <h3 className="text-body font-bold break-words">{item.title}</h3>
-                          <p className="mt-2 text-small text-text-sub">
-                            {item.nickname} · {date(item.requestedAt)}
-                          </p>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="flex items-center justify-between border-t border-divider p-4">
-                  <Button
-                    size="sm"
-                    disabled={page === 0}
-                    onClick={() => {
-                      setPage(page - 1)
-                      setSelectedId(null)
-                    }}
-                  >
-                    이전
-                  </Button>
-                  <span className="text-small text-text-sub">
-                    {page + 1} / {Math.max(1, query.data.totalPages)}
-                  </span>
-                  <Button
-                    size="sm"
-                    disabled={page + 1 >= query.data.totalPages}
-                    onClick={() => {
-                      setPage(page + 1)
-                      setSelectedId(null)
-                    }}
-                  >
-                    다음
-                  </Button>
-                </div>
-                <div className="border-t border-divider p-4">
-                  <h2 className="mb-4 text-subheading font-bold">최근 심사 처리 이력</h2>
-                  {history.isPending && <p className="text-small">불러오는 중…</p>}
-                  {history.isError && (
-                    <p className="text-small text-danger">처리 이력을 불러오지 못했습니다.</p>
-                  )}
-                  {history.data?.map((item) => (
-                    <button
-                      key={item.id}
-                      className="block w-full border-b border-divider py-3 text-left text-small hover:text-primary"
+                    <span className="text-small text-text-sub">
+                      {page + 1} / {Math.max(1, query.data.totalPages)}
+                    </span>
+                    <Button
+                      size="sm"
+                      disabled={page + 1 >= query.data.totalPages}
                       onClick={() => {
-                        setStatus(item.status)
-                        setSelectedId(item.id)
-                        setPage(0)
+                        setPage(page + 1)
+                        setSelectedId(null)
                       }}
                     >
-                      {item.title} · {labels[item.status]}
-                      <span className="mt-1 block text-caption text-text-sub">
-                        {date(item.reviewedAt)} · 심사자 #{item.reviewerId}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-              <section
-                aria-label="인증 요청 상세"
-                className="self-start border border-line-strong bg-surface p-4"
-              >
-                {selected ? (
-                  <>
-                    <div className="mb-6 flex items-center justify-between">
-                      <h2 className="text-subheading font-bold">심사 상세 정보 · 증빙 파일 확인</h2>
-                      <span className="rounded-full bg-surface-sub px-3 py-1 text-small">
-                        {labels[selected.status]}
-                      </span>
-                    </div>
-                    <h3 className="text-subheading font-bold break-words">{selected.title}</h3>
-                    <p className="mt-2 text-body break-words text-text-sub">
-                      {selected.description}
-                    </p>
-                    <dl className="my-6 grid grid-cols-2 gap-4 border-y border-divider py-6 text-small">
-                      <dt className="text-text-sub">요청 회원</dt>
-                      <dd>
-                        {selected.nickname} (#{selected.memberId})
-                      </dd>
-                      <dt className="text-text-sub">접수 시각</dt>
-                      <dd>{date(selected.requestedAt)}</dd>
-                      <dt className="text-text-sub">증빙 파일</dt>
-                      <dd>파일 #{selected.proofFileId}</dd>
-                      {selected.reviewedAt && (
-                        <>
-                          <dt className="text-text-sub">처리 시각</dt>
-                          <dd>{date(selected.reviewedAt)}</dd>
-                          <dt className="text-text-sub">심사자</dt>
-                          <dd>회원 #{selected.reviewerId}</dd>
-                        </>
-                      )}
-                    </dl>
-                    {selected.status === 'PENDING' ? (
-                      <>
-                        <ProofReview key={selected.id} item={selected} />
-                        <div className="mt-8 flex justify-end gap-3">
-                          <Button
-                            variant="danger"
-                            onClick={() => {
-                              mutation.reset()
-                              setReason('')
-                              setRejecting(true)
-                            }}
-                          >
-                            반려
-                          </Button>
-                        </div>
-                      </>
-                    ) : selected.rejectReason ? (
-                      <div className="rounded-input bg-bg p-4">
-                        <h3 className="text-body font-bold">반려 사유</h3>
-                        <p className="mt-2 text-body break-words whitespace-pre-wrap">
-                          {selected.rejectReason}
-                        </p>
-                      </div>
-                    ) : (
-                      <p className="text-body text-success">승인된 인증 요청입니다.</p>
+                      다음
+                    </Button>
+                  </div>
+                  <div className="border-t border-divider p-4">
+                    <h2 className="mb-4 text-subheading font-bold">최근 심사 처리 이력</h2>
+                    {history.isPending && <p className="text-small">불러오는 중…</p>}
+                    {history.isError && (
+                      <p className="text-small text-danger">처리 이력을 불러오지 못했습니다.</p>
                     )}
-                  </>
-                ) : (
-                  <p className="py-16 text-center text-body text-text-sub">
-                    목록에서 인증 요청을 선택해 주세요.
-                  </p>
-                )}
-              </section>
+                    {history.data?.map((item) => (
+                      <button
+                        key={item.id}
+                        className="block w-full border-b border-divider py-3 text-left text-small hover:text-primary"
+                        onClick={() => {
+                          setStatus(item.status)
+                          setDetailOpen(true)
+                          setSelectedId(item.id)
+                          setPage(0)
+                        }}
+                      >
+                        {item.title} · {labels[item.status]}
+                        <span className="mt-1 block text-caption text-text-sub">
+                          {date(item.reviewedAt)} · 심사자 #{item.reviewerId}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+              {(isWide || detailOpen) && (
+                <section
+                  aria-label="인증 요청 상세"
+                  className="self-start border border-line-strong bg-surface p-4"
+                >
+                  {!isWide && (
+                    <Button className="mb-4" onClick={() => setDetailOpen(false)}>
+                      ← 목록으로
+                    </Button>
+                  )}
+                  {selected ? (
+                    <>
+                      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                        <h2 className="text-subheading font-bold">
+                          심사 상세 정보 · 증빙 파일 확인
+                        </h2>
+                        <span className="rounded-full bg-surface-sub px-3 py-1 text-small">
+                          {labels[selected.status]}
+                        </span>
+                      </div>
+                      <h3 className="text-subheading font-bold break-words">{selected.title}</h3>
+                      <p className="mt-2 text-body break-words text-text-sub">
+                        {selected.description}
+                      </p>
+                      <dl className="my-6 grid grid-cols-2 gap-4 border-y border-divider py-6 text-small">
+                        <dt className="text-text-sub">요청 회원</dt>
+                        <dd>
+                          {selected.nickname} (#{selected.memberId})
+                        </dd>
+                        <dt className="text-text-sub">접수 시각</dt>
+                        <dd>{date(selected.requestedAt)}</dd>
+                        <dt className="text-text-sub">증빙 파일</dt>
+                        <dd>파일 #{selected.proofFileId}</dd>
+                        {selected.reviewedAt && (
+                          <>
+                            <dt className="text-text-sub">처리 시각</dt>
+                            <dd>{date(selected.reviewedAt)}</dd>
+                            <dt className="text-text-sub">심사자</dt>
+                            <dd>회원 #{selected.reviewerId}</dd>
+                          </>
+                        )}
+                      </dl>
+                      {selected.status === 'PENDING' ? (
+                        <>
+                          <ProofReview key={selected.id} item={selected} />
+                          <div className="mt-8 flex justify-end gap-3">
+                            <Button
+                              variant="danger"
+                              onClick={() => {
+                                mutation.reset()
+                                setReason('')
+                                setRejecting(true)
+                              }}
+                            >
+                              반려
+                            </Button>
+                          </div>
+                        </>
+                      ) : selected.rejectReason ? (
+                        <div className="rounded-input bg-bg p-4">
+                          <h3 className="text-body font-bold">반려 사유</h3>
+                          <p className="mt-2 text-body break-words whitespace-pre-wrap">
+                            {selected.rejectReason}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-body text-success">승인된 인증 요청입니다.</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="py-16 text-center text-body text-text-sub">
+                      목록에서 인증 요청을 선택해 주세요.
+                    </p>
+                  )}
+                </section>
+              )}
             </div>
           </>
         )}

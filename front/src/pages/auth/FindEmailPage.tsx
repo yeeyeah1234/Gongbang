@@ -1,3 +1,4 @@
+import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { getApiError } from '../../api/errors'
@@ -42,9 +43,11 @@ export default function FindEmailPage() {
           errorText={error ?? undefined}
         />
         {!result && (
-          <Button type="submit" variant="primary" size="lg" className="w-full" loading={loading}>
-            이메일 찾기
-          </Button>
+          <MobileActionBar>
+            <Button type="submit" variant="primary" size="lg" className="w-full" loading={loading}>
+              이메일 찾기
+            </Button>
+          </MobileActionBar>
         )}
       </form>
 
@@ -65,9 +68,11 @@ export default function FindEmailPage() {
               </Button>
             </Link>
             <Link to="/login" className="flex-1">
-              <Button variant="primary" size="lg" className="w-full">
-                로그인
-              </Button>
+              <MobileActionBar>
+                <Button variant="primary" size="lg" className="w-full">
+                  로그인
+                </Button>
+              </MobileActionBar>
             </Link>
           </div>
         </div>

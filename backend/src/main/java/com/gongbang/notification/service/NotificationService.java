@@ -64,8 +64,12 @@ public class NotificationService {
             Optional<NotificationSetting> setting =
                     settingRepository.findById(
                             new NotificationSetting.Key(receiverId, settingType));
-            siteEnabled = setting.map(NotificationSetting::isSiteEnabled).orElse(true);
-            emailEnabled = setting.map(NotificationSetting::isEmailEnabled).orElse(true);
+            siteEnabled =
+                    setting.map(NotificationSetting::isSiteEnabled)
+                            .orElse(settingType.defaultSiteEnabled());
+            emailEnabled =
+                    settingType.supportsEmail()
+                            && setting.map(NotificationSetting::isEmailEnabled).orElse(true);
         }
 
         Notification notification = null;

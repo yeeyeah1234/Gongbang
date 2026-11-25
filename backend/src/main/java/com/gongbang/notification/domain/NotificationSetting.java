@@ -39,11 +39,13 @@ public class NotificationSetting {
     public NotificationSetting(Long memberId, SettingType settingType) {
         this.memberId = memberId;
         this.settingType = settingType;
+        this.siteEnabled = settingType.defaultSiteEnabled();
+        this.emailEnabled = settingType.supportsEmail();
     }
 
     public void change(boolean siteEnabled, boolean emailEnabled) {
         this.siteEnabled = siteEnabled;
-        this.emailEnabled = emailEnabled;
+        this.emailEnabled = settingType.supportsEmail() && emailEnabled;
     }
 
     @Getter

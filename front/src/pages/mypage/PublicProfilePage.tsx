@@ -24,7 +24,7 @@ export default function PublicProfilePage() {
 
   if (isLoading)
     return (
-      <main className="mx-auto max-w-[960px] px-4 py-10">
+      <main className="mx-auto max-w-[960px] px-4 py-8 md:px-6 md:py-12">
         <div className="h-64 animate-pulse rounded-card bg-surface-sub" />
       </main>
     )
@@ -50,16 +50,16 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <main className="mx-auto flex max-w-[960px] flex-col gap-6 px-4 py-10">
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-line bg-surface p-8">
-        <div className="flex items-center gap-6">
+    <main className="mx-auto flex max-w-[960px] flex-col gap-6 px-4 py-8 md:px-6 md:py-12">
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-card border border-line bg-surface p-4 sm:p-8">
+        <div className="flex min-w-0 flex-wrap items-center gap-4 sm:gap-6">
           <ProfilePhoto url={data.profileImageUrl} name={data.nickname} />
           <div>
-            <h1 className="text-title font-bold text-text">{data.nickname}</h1>
-            <p className="text-small text-text-sub">
+            <h1 className="text-title font-bold break-words text-text">{data.nickname}</h1>
+            <p className="text-small break-words text-text-sub">
               {[data.school, data.major].filter(Boolean).join(' · ')}
             </p>
-            {data.bio && <p className="mt-2 text-body text-text">{data.bio}</p>}
+            {data.bio && <p className="mt-2 text-body break-words text-text">{data.bio}</p>}
           </div>
         </div>
         {!isSelf && (
@@ -109,7 +109,7 @@ export default function PublicProfilePage() {
         <div className="flex flex-col gap-4 rounded-card border border-line bg-surface p-6">
           <h2 className="text-body font-bold text-text">경력</h2>
           {data.careers.length === 0 ? (
-            <p className="text-small text-text-sub">-</p>
+            <p className="text-small break-words text-text-sub">-</p>
           ) : (
             data.careers.map((c, i) => (
               <p key={i} className="text-small text-text">
@@ -135,7 +135,7 @@ export default function PublicProfilePage() {
           )}
           <h2 className="mt-2 text-body font-bold text-text">자격증</h2>
           {data.certificates.length === 0 ? (
-            <p className="text-small text-text-sub">-</p>
+            <p className="text-small break-words text-text-sub">-</p>
           ) : (
             data.certificates.map((c, i) => (
               <p key={i} className="flex items-center gap-2 text-small text-text">
@@ -150,7 +150,7 @@ export default function PublicProfilePage() {
           )}
           <h2 className="mt-2 text-body font-bold text-text">수상 경력</h2>
           {data.awards.length === 0 ? (
-            <p className="text-small text-text-sub">-</p>
+            <p className="text-small break-words text-text-sub">-</p>
           ) : (
             data.awards.map((a, i) => (
               <p key={i} className="flex items-center gap-2 text-small text-text">

@@ -27,6 +27,7 @@ public class AdminReportService {
     private final ReportRepository repository;
     private final EntityManager em;
     private final com.gongbang.chat.service.ChatReportService chat;
+    private final com.gongbang.board.service.BoardPostModerationService boardPosts;
 
     public record Item(
             Long id,
@@ -58,7 +59,11 @@ public class AdminReportService {
 
     public record Review(String action, String reason, LocalDateTime until) {}
 
-    public record Detail(Item report, Long memberId, String content) {}
+    public record Detail(Item report, Long memberId, String content, LocalDateTime deletedAt) {
+        public Detail(Item report, Long memberId, String content) {
+            this(report, memberId, content, null);
+        }
+    }
 
     @Transactional(readOnly = true)
     public Page<Item> list(Long actor, String status, String type, int page) {
@@ -103,7 +108,12 @@ public class AdminReportService {
         }
         if (r.getTargetType() == ReportTargetType.POST) {
             var p = posts.target(actor, r.getTargetId());
-            return new Detail(Item.of(r), p.authorId(), p.content());
+            return new Detail(Item.of(r), p.authorId(), p.content(), p.deletedAt());
+        }
+        if (r.getTargetType() == ReportTargetType.BOARD_POST) {
+            var p = boardPosts.target(actor, r.getTargetId());
+            return new Detail(
+                    Item.of(r), p.authorId(), p.title() + "\n\n" + p.content(), p.deletedAt());
         }
         if (r.getTargetType() == ReportTargetType.MESSAGE) {
             var message = chat.read(actor, r.getTargetId(), true);
@@ -140,6 +150,11 @@ public class AdminReportService {
                     if (r.getTargetType() != ReportTargetType.POST)
                         throw new BusinessException(ErrorCode.INVALID_INPUT);
                     posts.hide(actor, r.getTargetId());
+                }
+                case "HIDE_BOARD_POST" -> {
+                    if (r.getTargetType() != ReportTargetType.BOARD_POST)
+                        throw new BusinessException(ErrorCode.INVALID_INPUT);
+                    boardPosts.hide(actor, r.getTargetId());
                 }
                 case "WARN", "SUSPEND", "REQUIRE_NICKNAME" ->
                         members.act(

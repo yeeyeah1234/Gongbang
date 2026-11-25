@@ -4,6 +4,8 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.*;
 import com.gongbang.member.repository.MemberRepository;
+import com.gongbang.notification.domain.NotificationType;
+import com.gongbang.notification.service.NotificationService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AdminMemberService {
     private final MemberRepository repository;
+    private final NotificationService notificationService;
 
     public record Item(Long memberId, String nickname, String email, MemberRole role) {
         static Item from(Member m) {
@@ -76,6 +79,19 @@ public class AdminMemberService {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         if (target.getRole() != MemberRole.ADMIN) {
             target.grantAdmin();
+            // 권한 변경 결과를 시스템 알림으로 보내 부여한 관리자도 수신한다.
+            for (Member admin :
+                    repository.findByRoleAndStatus(MemberRole.ADMIN, MemberStatus.ACTIVE)) {
+                if (memberId.equals(admin.getId()) || admin.isSuspended()) continue;
+                notificationService.send(
+                        admin.getId(),
+                        NotificationType.ADMIN_GRANTED,
+                        null,
+                        "MEMBER",
+                        memberId,
+                        "@" + target.getNickname() + " 님이 관리자가 되었습니다!",
+                        "/admin/members");
+            }
             log.info("Admin role granted: actorId={}, memberId={}", actorId, memberId);
         }
         return Item.from(target);

@@ -86,7 +86,7 @@ export default function MyBookmarksPage() {
       title="북마크"
       description="관심 있는 공모전을 모아 보고, 마감 전에 도전해 보세요."
     >
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-body font-bold text-text">
           저장한 공모전 {data?.totalCount ?? 0}개
         </span>
@@ -175,9 +175,9 @@ export default function MyBookmarksPage() {
                     <BookmarkIcon filled />
                   </button>
                 </div>
-                <p className="mt-16 text-caption text-text-sub">{c.categoryName}</p>
+                <p className="mt-4 text-caption text-text-sub sm:mt-16">{c.categoryName}</p>
                 <h3 className="mt-1 line-clamp-2 text-body font-bold text-text">{c.title}</h3>
-                <p className="mt-1 text-caption text-text-sub">주최/주관: {c.host}</p>
+                <p className="mt-1 text-caption break-words text-text-sub">주최/주관: {c.host}</p>
                 <p className="mt-4 border-t border-divider pt-3 text-caption text-text-sub">
                   마감 {formatDate(c.deadline)}
                 </p>
@@ -196,7 +196,7 @@ export default function MyBookmarksPage() {
       )}
 
       {removed !== null && toast.message && (
-        <div className="fixed top-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded-popover bg-text px-5 py-3.5 text-body text-surface shadow-pop">
+        <div className="fixed top-6 left-1/2 z-50 flex w-[calc(100%-32px)] max-w-lg -translate-x-1/2 flex-wrap items-center gap-4 rounded-popover bg-text px-5 py-3.5 text-body text-surface shadow-pop">
           북마크에서 해제했어요
           <button
             type="button"

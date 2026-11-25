@@ -17,13 +17,16 @@ public enum NotificationType {
     NOTICE_NEW(SettingType.WORKSPACE, SendMode.IMMEDIATE, Category.WORKSPACE),
     TEAM_DEADLINE(SettingType.WORKSPACE, SendMode.IMMEDIATE, Category.DEADLINE),
     BOOKMARK_DEADLINE(SettingType.BOOKMARK_DEADLINE, SendMode.DAILY_9AM, Category.DEADLINE),
-    // TODO(확인 필요): 인증 결과 메일(MY-08 ⑦)은 끌 수 있는지 협의. 지금은 항상 보낸다
+    // MY-08 ⑦: 인증 결과는 사이트 알림과 이메일로 전달한다.
     VERIFY_RESULT(null, SendMode.IMMEDIATE, Category.NOTICE),
-    // NOTI-07: 끌 수 없음. 이메일 발송 여부는 협의 중이라 메일 없음
+    // 일반 운영 공지는 사이트만, 정책 변경 메일은 관리자 선택으로 별도 등록한다.
     SERVICE_NOTICE(null, null, Category.NOTICE),
     WELCOME(null, null, Category.NOTICE),
     NICKNAME_CHANGE_REQUIRED(null, null, Category.NOTICE),
-    ACCOUNT_SANCTION(null, null, Category.NOTICE);
+    ACCOUNT_SANCTION(null, null, Category.NOTICE),
+    ADMIN_GRANTED(null, null, Category.NOTICE),
+    POLICY_NOTICE(null, SendMode.IMMEDIATE, Category.NOTICE),
+    BOARD_POST_NEW(SettingType.COMMUNITY_NEW, null, Category.NOTICE);
 
     /** NOTI-01 ② 종류 필터: 댓글, 팀 빌딩(지원·초대), 워크스페이스, 마감 임박, 공지 */
     public enum Category {

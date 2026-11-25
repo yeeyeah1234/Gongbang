@@ -22,13 +22,16 @@ public class ServiceNoticeService {
     private final ServiceNoticeRepository repository;
     private final NotificationService notificationService;
     private final MemberService memberService;
+    private final EmailOutboxService emailOutboxService;
 
     public record AdminNotice(
             Long id,
             String title,
             String content,
             LocalDateTime createdAt,
-            LocalDateTime deletedAt) {}
+            LocalDateTime deletedAt,
+            boolean policyChange,
+            LocalDateTime emailQueuedAt) {}
 
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<AdminNotice> list(LoginMember admin, int page) {
@@ -47,7 +50,9 @@ public class ServiceNoticeService {
                                         n.getTitle(),
                                         n.getContent(),
                                         n.getCreatedAt(),
-                                        n.getDeletedAt()));
+                                        n.getDeletedAt(),
+                                        n.isPolicyChange(),
+                                        n.getEmailQueuedAt()));
     }
 
     @Transactional(readOnly = true)
@@ -59,12 +64,14 @@ public class ServiceNoticeService {
     @Transactional
     public Long create(LoginMember admin, ServiceNoticeRequest request) {
         checkAdmin(admin);
+        validateEmailRequest(request);
         ServiceNotice notice =
                 repository.save(
                         new ServiceNotice(
                                 admin.getMemberId(),
                                 request.title().trim(),
                                 request.content().trim()));
+        notice.setPolicyChange(request.policyChange());
         String message = notice.getTitle();
         for (Long memberId : memberService.findActiveMemberIds()) {
             notificationService.send(
@@ -76,15 +83,49 @@ public class ServiceNoticeService {
                     message,
                     "/service-notices/" + notice.getId());
         }
+        queuePolicyEmail(notice, request);
         return notice.getId();
     }
 
     @Transactional
     public Long update(LoginMember admin, Long id, ServiceNoticeRequest request) {
         checkAdmin(admin);
+        validateEmailRequest(request);
         ServiceNotice notice = findForUpdate(id);
+        if (notice.getEmailQueuedAt() != null && !request.policyChange()) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT, "이메일을 요청한 정책 변경 공지는 일반 공지로 변경할 수 없습니다");
+        }
         notice.update(request.title().trim(), request.content().trim());
+        notice.setPolicyChange(request.policyChange());
+        queuePolicyEmail(notice, request);
         return notice.getId();
+    }
+
+    private void validateEmailRequest(ServiceNoticeRequest request) {
+        if (request.sendEmail() && !request.policyChange()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "정책 변경 공지만 이메일을 발송할 수 있습니다");
+        }
+    }
+
+    private void queuePolicyEmail(ServiceNotice notice, ServiceNoticeRequest request) {
+        if (!request.sendEmail() || notice.getEmailQueuedAt() != null) return;
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
+        for (Long id : memberService.findActiveMemberIds()) {
+            memberService
+                    .findActiveMember(id)
+                    .filter(m -> m.getEmail() != null)
+                    .ifPresent(
+                            m ->
+                                    emailOutboxService.enqueueNotification(
+                                            m,
+                                            NotificationType.POLICY_NOTICE,
+                                            null,
+                                            notice.getTitle(),
+                                            "/service-notices/" + notice.getId(),
+                                            now));
+        }
+        notice.markEmailQueued(now);
     }
 
     @Transactional

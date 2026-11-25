@@ -1,5 +1,19 @@
 import { apiClient } from '../../api/client'
 import type { ApiResponse } from '../../api/types'
+
+export function formatReportReason(reason?: string) {
+  if (!reason) return ''
+  const separator = reason.indexOf(':')
+  const code = (separator < 0 ? reason : reason.slice(0, separator)).trim()
+  const labels: Record<string, string> = {
+    ABUSE: '욕설 / 비방 / 모욕',
+    HATE: '차별 / 혐오 표현',
+    BAD_NICKNAME: '부적절한 닉네임',
+    SPAM: '광고 / 도배',
+    INAPPROPRIATE: '부적절한 내용',
+  }
+  return (labels[code] ?? code) + (separator < 0 ? '' : reason.slice(separator))
+}
 export type Kind = 'notices' | 'members' | 'reports' | 'posts' | 'contests'
 export const endpoints: Record<Kind, string> = {
   notices: 'service-notices',
@@ -12,6 +26,8 @@ export interface AdminItem {
   id: number
   title?: string
   content?: string
+  policyChange?: boolean
+  emailQueuedAt?: string | null
   nickname?: string | null
   email?: string | null
   status?: string
@@ -52,13 +68,6 @@ export interface Category {
   code: string
   name: string
   sortOrder: number
-}
-export interface Job {
-  id: number
-  status: string
-  createdAt: string | null
-  startedAt: string | null
-  finishedAt: string | null
 }
 export interface Command {
   targetLabel?: string

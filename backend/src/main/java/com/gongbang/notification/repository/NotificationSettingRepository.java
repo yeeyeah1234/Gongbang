@@ -8,4 +8,7 @@ public interface NotificationSettingRepository
         extends JpaRepository<NotificationSetting, NotificationSetting.Key> {
 
     List<NotificationSetting> findByMemberId(Long memberId);
+
+    List<NotificationSetting> findBySettingTypeAndSiteEnabledTrue(
+            com.gongbang.notification.domain.SettingType settingType);
 }

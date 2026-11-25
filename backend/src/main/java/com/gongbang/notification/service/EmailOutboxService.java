@@ -137,10 +137,12 @@ public class EmailOutboxService {
                         + "\n\n[알림 수신 설정] "
                         + frontBaseUrl
                         + "/mypage/settings?tab=notification"
-                        + "\n[이 종류 메일 끄기] "
-                        + frontBaseUrl
-                        + "/mypage/settings?tab=notification&off="
-                        + (type.getSettingType() == null ? "" : type.getSettingType().name());
+                        + (type.getSettingType() == null
+                                ? "\n이 메일은 필수 안내로 수신을 끌 수 없습니다."
+                                : "\n[이 종류 메일 끄기] "
+                                        + frontBaseUrl
+                                        + "/mypage/settings?tab=notification&off="
+                                        + type.getSettingType().name());
         outboxRepository.save(
                 new EmailOutbox(
                         receiver.getId(),

@@ -1,6 +1,7 @@
 package com.gongbang.member.repository;
 
 import com.gongbang.member.domain.Member;
+import com.gongbang.member.domain.MemberRole;
 import com.gongbang.member.domain.MemberStatus;
 import java.time.LocalDateTime;
 import java.util.Collection;
@@ -13,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByEmail(String email);
+
+    List<Member> findByRoleAndStatus(MemberRole role, MemberStatus status);
 
     @Query(
             "select m from Member m where m.status = com.gongbang.member.domain.MemberStatus.ACTIVE and (lower(m.email) like lower(concat('%', :keyword, '%')) or lower(m.nickname) like lower(concat('%', :keyword, '%')))")

@@ -6,12 +6,16 @@ import static org.mockito.Mockito.*;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.*;
 import com.gongbang.member.repository.MemberRepository;
+import com.gongbang.notification.domain.NotificationType;
+import com.gongbang.notification.service.NotificationService;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class AdminMemberServiceTest {
     final MemberRepository repository = mock(MemberRepository.class);
-    final AdminMemberService service = new AdminMemberService(repository);
+    final NotificationService notifications = mock(NotificationService.class);
+    final AdminMemberService service = new AdminMemberService(repository, notifications);
 
     Member actor(MemberRole role) {
         Member m = mock(Member.class);
@@ -27,6 +31,7 @@ class AdminMemberServiceTest {
         assertThatThrownBy(() -> service.grant(1L, 2L)).isInstanceOf(BusinessException.class);
         assertThatThrownBy(() -> service.list(1L, "", 0)).isInstanceOf(BusinessException.class);
         verify(repository, never()).findForRoleUpdate(any());
+        verifyNoInteractions(notifications);
     }
 
     @Test
@@ -50,6 +55,42 @@ class AdminMemberServiceTest {
     }
 
     @Test
+    void 신규관리자를_제외한_활성관리자에게_부여자포함_사이트알림을보낸다() {
+        Member grantingAdmin = actor(MemberRole.ADMIN);
+        when(grantingAdmin.getId()).thenReturn(1L);
+        Member target = mock(Member.class);
+        when(target.getId()).thenReturn(2L);
+        when(target.getNickname()).thenReturn("새관리자");
+        when(target.isActive()).thenReturn(true);
+        when(target.getRole()).thenReturn(MemberRole.USER);
+        when(repository.findForRoleUpdate(2L)).thenReturn(Optional.of(target));
+        Member other = mock(Member.class);
+        when(other.getId()).thenReturn(3L);
+        Member suspended = mock(Member.class);
+        when(suspended.getId()).thenReturn(4L);
+        when(suspended.isSuspended()).thenReturn(true);
+        when(repository.findByRoleAndStatus(MemberRole.ADMIN, MemberStatus.ACTIVE))
+                .thenReturn(List.of(grantingAdmin, target, other, suspended));
+
+        service.grant(1L, 2L);
+
+        for (Long receiver : List.of(1L, 3L)) {
+            verify(notifications)
+                    .send(
+                            receiver,
+                            NotificationType.ADMIN_GRANTED,
+                            null,
+                            "MEMBER",
+                            2L,
+                            "@새관리자 님이 관리자가 되었습니다!",
+                            "/admin/members");
+        }
+        verifyNoMoreInteractions(notifications);
+        assertThat(NotificationType.ADMIN_GRANTED.getSettingType()).isNull();
+        assertThat(NotificationType.ADMIN_GRANTED.getSendMode()).isNull();
+    }
+
+    @Test
     void 이미관리자면_중복부여하지않는다() {
         actor(MemberRole.ADMIN);
         Member target = mock(Member.class);
@@ -58,6 +99,7 @@ class AdminMemberServiceTest {
         when(repository.findForRoleUpdate(2L)).thenReturn(Optional.of(target));
         service.grant(1L, 2L);
         verify(target, never()).grantAdmin();
+        verifyNoInteractions(notifications);
     }
 
     @Test
