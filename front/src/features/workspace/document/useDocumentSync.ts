@@ -1,27 +1,33 @@
 import {
   HocuspocusProvider,
-  HocuspocusProviderWebsocket,
   WebSocketStatus,
+  type HocuspocusProviderWebsocket,
 } from '@hocuspocus/provider'
 import axios from 'axios'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import * as Y from 'yjs'
 import { refreshAccessToken } from '../../../api/client'
 import { getApiError } from '../../../api/errors'
 import { useAuthStore } from '../../auth/store'
+import {
+  CLOSE_CODE_TEAM_MEMBER_REMOVED,
+  connectSyncSocket,
+  isSyncSocketOpen,
+  isSyncSocketStopped,
+  stopSyncSocket,
+} from '../useWorkspaceSyncSocket'
 import { fetchDocuments } from './api'
-import { buildSyncDocumentName, resolveSyncServerUrl } from './syncUrl'
+import { buildSyncDocumentName } from './syncUrl'
 
 export type DocumentSaveState = 'saving' | 'saved' | 'offline' | 'failed'
 
 // WS-04: 재연결 후에도 30초 동안 보내지 못하면 저장 실패로 전환
 const SEND_FAIL_TIMEOUT_MS = 30_000
-// WS-06: sync-server POST /internal/disconnect 팀원 강퇴·나가기 종료 코드
-const CLOSE_CODE_TEAM_MEMBER_REMOVED = 4403
 
 interface UseDocumentSyncOptions {
   teamId: number
   documentId: number
+  syncSocket?: HocuspocusProviderWebsocket | null
   /** 개발 미리보기(/dev/document-preview)에서는 sync-server 없이 로컬 Y.Doc만 쓴다 */
   offlinePreview?: boolean
   onDocumentGone: (documentId: number) => void
@@ -30,13 +36,15 @@ interface UseDocumentSyncOptions {
 
 export interface SyncSessionHandle {
   instanceId: number
+  documentId: number
+  offlinePreview: boolean
   ydoc: Y.Doc
   websocketProvider: HocuspocusProviderWebsocket | null
   provider: HocuspocusProvider | null
 }
 
 interface UseDocumentSyncConnectionOptions extends UseDocumentSyncOptions {
-  session: SyncSessionHandle
+  session: SyncSessionHandle | null
 }
 
 export interface DocumentSyncStatusResult {
@@ -46,30 +54,35 @@ export interface DocumentSyncStatusResult {
 }
 
 export interface DocumentSyncResult extends DocumentSyncStatusResult {
-  session: SyncSessionHandle
+  session: SyncSessionHandle | null
 }
 
 let nextSessionInstanceId = 1
 
-function createSyncSession(documentId: number, offlinePreview: boolean): SyncSessionHandle {
+function createSyncSession(
+  documentId: number,
+  syncSocket: HocuspocusProviderWebsocket | null,
+  offlinePreview: boolean,
+): SyncSessionHandle {
   const instanceId = nextSessionInstanceId
   nextSessionInstanceId += 1
   const ydoc = new Y.Doc()
 
-  if (offlinePreview) {
-    return { instanceId, ydoc, websocketProvider: null, provider: null }
+  if (offlinePreview || !syncSocket) {
+    return {
+      instanceId,
+      documentId,
+      offlinePreview,
+      ydoc,
+      websocketProvider: null,
+      provider: null,
+    }
   }
 
-  // autoConnect: false로 만들어 React StrictMode의 마운트·클린업·재마운트에서도
-  // useEffect 안에서 안전하게 connect()/disconnect() 생명주기를 제어한다.
-  // preserveTrailingSlash: true로 배포 기본값(/sync/) 끝 슬래시가 잘려 301이 나지 않게 유지한다.
-  const websocketProvider = new HocuspocusProviderWebsocket({
-    url: resolveSyncServerUrl(),
-    autoConnect: false,
-    preserveTrailingSlash: true,
-  })
+  // 워크스페이스(팀) 단위 공유 HocuspocusProviderWebsocket에 doc:{documentId} provider만 붙인다.
+  // websocketProvider를 외부에서 넘기므로 provider.destroy()는 공유 소켓을 닫지 않고 이 문서만 정리한다.
   const provider = new HocuspocusProvider({
-    websocketProvider,
+    websocketProvider: syncSocket,
     name: buildSyncDocumentName(documentId),
     document: ydoc,
     token: async () => {
@@ -79,20 +92,87 @@ function createSyncSession(documentId: number, offlinePreview: boolean): SyncSes
     },
   })
 
-  return { instanceId, ydoc, websocketProvider, provider }
+  return {
+    instanceId,
+    documentId,
+    offlinePreview,
+    ydoc,
+    websocketProvider: syncSocket,
+    provider,
+  }
+}
+
+interface SyncSessionStore {
+  subscribe: (listener: () => void) => () => void
+  getSnapshot: () => SyncSessionHandle | null
+  set: (next: SyncSessionHandle | null) => void
+}
+
+function createSyncSessionStore(): SyncSessionStore {
+  let snapshot: SyncSessionHandle | null = null
+  const listeners = new Set<() => void>()
+
+  return {
+    subscribe: (listener) => {
+      listeners.add(listener)
+      return () => {
+        listeners.delete(listener)
+      }
+    },
+    getSnapshot: () => snapshot,
+    set: (next) => {
+      if (snapshot === next) return
+      snapshot = next
+      listeners.forEach((listener) => listener())
+    },
+  }
 }
 
 /**
- * 문서별 Y.Doc + Hocuspocus 세션을 1회 생성해 고정한다.
- * 저장 상태 변경으로 에디터 본체가 리렌더링되지 않도록 상태 구독은 useDocumentSyncConnection에 분리한다.
+ * 문서별 Y.Doc + HocuspocusProvider 세션을 useEffect에서 생성·정리한다.
+ * - StrictMode 이중 렌더·문서 전환·문서 탭 이탈 시 provider.destroy() + ydoc.destroy()가 반드시 실행된다.
+ * - 공유 syncSocket은 건드리지 않으므로 문서 전환 시 /sync/ 소켓은 그대로 유지된다.
+ * - 저장 상태 변경으로 에디터 본체가 리렌더링되지 않도록 상태 구독은 useDocumentSyncConnection에 분리한다.
  */
 export function useDocumentSyncSession(
   documentId: number,
+  syncSocket: HocuspocusProviderWebsocket | null,
   offlinePreview = false,
-): SyncSessionHandle {
-  // 부모(WorkspaceDocumentPage)가 key={selectedDoc.id}로 문서를 전환하므로 문서마다 새 세션이 생성된다
-  const [session] = useState<SyncSessionHandle>(() => createSyncSession(documentId, offlinePreview))
-  return session
+): SyncSessionHandle | null {
+  const [store] = useState(createSyncSessionStore)
+  const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot)
+
+  useEffect(() => {
+    if (!offlinePreview && !syncSocket) {
+      store.set(null)
+      return
+    }
+
+    const session = createSyncSession(documentId, syncSocket, offlinePreview)
+    store.set(session)
+
+    return () => {
+      store.set(null)
+      if (session.provider) {
+        if (session.provider.awareness && session.provider.awareness.getLocalState() !== null) {
+          session.provider.awareness.setLocalState(null)
+        }
+        session.provider.destroy()
+      }
+      session.ydoc.destroy()
+    }
+  }, [store, documentId, syncSocket, offlinePreview])
+
+  const expectedSocket = offlinePreview ? null : syncSocket
+  if (
+    !snapshot ||
+    snapshot.documentId !== documentId ||
+    snapshot.offlinePreview !== offlinePreview ||
+    snapshot.websocketProvider !== expectedSocket
+  ) {
+    return null
+  }
+  return snapshot
 }
 
 export function useDocumentSyncConnection({
@@ -112,9 +192,24 @@ export function useDocumentSyncConnection({
     onForbiddenRef.current = onForbidden
   }, [onDocumentGone, onForbidden])
 
-  const [wsStatus, setWsStatus] = useState<WebSocketStatus>(() =>
-    offlinePreview ? WebSocketStatus.Connected : WebSocketStatus.Connecting,
+  // 공유 소켓이 이미 Connected인 상태로 문서를 열어도 즉시 실제 상태를 반영한다
+  const socket = session?.websocketProvider ?? null
+  const subscribeWsStatus = useCallback(
+    (onStoreChange: () => void) => {
+      if (offlinePreview || !socket) return () => {}
+      socket.on('status', onStoreChange)
+      return () => {
+        socket.off('status', onStoreChange)
+      }
+    },
+    [socket, offlinePreview],
   )
+  const getWsStatusSnapshot = useCallback(() => {
+    if (offlinePreview) return WebSocketStatus.Connected
+    return socket?.status ?? WebSocketStatus.Connecting
+  }, [socket, offlinePreview])
+  const wsStatus = useSyncExternalStore(subscribeWsStatus, getWsStatusSnapshot)
+
   const [isSynced, setIsSynced] = useState(offlinePreview)
   const [unsyncedCount, setUnsyncedCount] = useState(0)
   const [browserOnline, setBrowserOnline] = useState(() =>
@@ -139,21 +234,50 @@ export function useDocumentSyncConnection({
     }
   }, [offlinePreview])
 
-  // WebSocket 연결 및 Hocuspocus 이벤트 구독
+  // 공유 WebSocket에 문서 provider 연결 및 Hocuspocus 이벤트 구독
   useEffect(() => {
+    if (!session) return
     const { ydoc, websocketProvider, provider } = session
     if (!websocketProvider || !provider) return
 
-    let connected = false
+    let connected = websocketProvider.status === WebSocketStatus.Connected
     let stopped = false
     let refreshedOnce = false
+    let retriedAuthOnce = false
     let authHandling = false
     stoppedRef.current = false
 
-    const stopPermanently = () => {
+    // 이 문서 provider만 영구 중단한다 (404 문서 삭제 등에서는 team:{teamId} 공유 소켓을 유지)
+    const stopDocOnlyPermanently = () => {
       stopped = true
       stoppedRef.current = true
-      websocketProvider.disconnect()
+      if (provider.awareness && provider.awareness.getLocalState() !== null) {
+        provider.awareness.setLocalState(null)
+      }
+      if (provider.isAttached) {
+        provider.detach()
+      }
+    }
+
+    // 팀원 권한 상실·인증 복구 불가 시 문서와 공유 소켓 모두 영구 중단한다
+    const stopAllPermanently = () => {
+      stopDocOnlyPermanently()
+      stopSyncSocket(websocketProvider)
+    }
+
+    const reauthenticateDoc = () => {
+      if (stopped || isSyncSocketStopped(websocketProvider)) return
+      if (isSyncSocketOpen(websocketProvider)) {
+        if (provider.isAttached) {
+          provider.detach()
+        }
+        provider.attach()
+        return
+      }
+      if (!provider.isAttached) {
+        provider.attach()
+      }
+      connectSyncSocket(websocketProvider)
     }
 
     // 오프라인 중 입력 여부를 기억해 둔다 (startSync가 unsyncedChanges를 0으로 초기화하기 전 보호)
@@ -168,7 +292,6 @@ export function useDocumentSyncConnection({
       if (stopped) return
       console.info(`[doc-sync] doc:${documentId} status=${status}`)
       connected = status === WebSocketStatus.Connected
-      setWsStatus(status)
       if (status === WebSocketStatus.Disconnected) {
         setIsSynced(false)
         setSendFailed(false)
@@ -177,6 +300,7 @@ export function useDocumentSyncConnection({
 
     const handleAuthenticated = () => {
       refreshedOnce = false
+      retriedAuthOnce = false
     }
 
     const handleSynced = ({ state }: { state: boolean }) => {
@@ -204,7 +328,7 @@ export function useDocumentSyncConnection({
         `[doc-sync] doc:${documentId} close code=${event?.code ?? 'unknown'} reason=${event?.reason || '-'}`,
       )
       if (event?.code === CLOSE_CODE_TEAM_MEMBER_REMOVED) {
-        stopPermanently()
+        stopAllPermanently()
         onForbiddenRef.current()
       }
     }
@@ -215,6 +339,10 @@ export function useDocumentSyncConnection({
         `[doc-sync] doc:${documentId} authenticationFailed reason=${reason || 'unknown'}`,
       )
       authHandling = true
+      // 비동기 판별·토큰 갱신 중 자동 재연결로 같은 문서 인증이 반복되지 않게 먼저 분리한다
+      if (provider.isAttached) {
+        provider.detach()
+      }
 
       void (async () => {
         try {
@@ -224,13 +352,13 @@ export function useDocumentSyncConnection({
           const isExplicit404 = upperReason.includes('HTTP 404') || upperReason.includes('404')
 
           if (isExplicit404) {
-            stopPermanently()
+            stopDocOnlyPermanently()
             onDocumentGoneRef.current(documentId)
             return
           }
 
           if (isExplicit403) {
-            stopPermanently()
+            stopAllPermanently()
             onForbiddenRef.current()
             return
           }
@@ -239,11 +367,18 @@ export function useDocumentSyncConnection({
           if (!refreshedOnce) {
             refreshedOnce = true
             const newToken = await refreshAccessToken()
-            if (newToken && !stopped && isExplicit401) {
-              websocketProvider.disconnect()
-              void websocketProvider.connect()
+            if (stopped) return
+            if (newToken && isExplicit401) {
+              reauthenticateDoc()
               return
             }
+            if (!newToken && isExplicit401) {
+              stopAllPermanently()
+              return
+            }
+          } else if (isExplicit401) {
+            stopAllPermanently()
+            return
           }
 
           // 거절 사유에 상태 코드가 없는 경우(Hocuspocus 마스킹 등) REST 목록 조회로 403 vs 문서 삭제 판별
@@ -251,27 +386,30 @@ export function useDocumentSyncConnection({
             const list = await fetchDocuments(teamId)
             if (stopped) return
             if (!list.some((item) => item.id === documentId)) {
-              stopPermanently()
+              stopDocOnlyPermanently()
               onDocumentGoneRef.current(documentId)
               return
             }
-            if (useAuthStore.getState().accessToken) {
-              websocketProvider.disconnect()
-              void websocketProvider.connect()
+            if (useAuthStore.getState().accessToken && !retriedAuthOnce) {
+              retriedAuthOnce = true
+              reauthenticateDoc()
               return
             }
-            stopPermanently()
-            onDocumentGoneRef.current(documentId)
+            stopDocOnlyPermanently()
           } catch (error) {
             if (stopped) return
             const { code } = getApiError(error)
             const status = axios.isAxiosError(error) ? error.response?.status : undefined
             if (code === 'NOT_TEAM_MEMBER' || status === 403) {
-              stopPermanently()
+              stopAllPermanently()
               onForbiddenRef.current()
               return
             }
-            stopPermanently()
+            if (status === 401) {
+              stopAllPermanently()
+              return
+            }
+            stopDocOnlyPermanently()
             onDocumentGoneRef.current(documentId)
           }
         } finally {
@@ -294,10 +432,12 @@ export function useDocumentSyncConnection({
       )
     }
 
-    if (!provider.isAttached) {
-      provider.attach()
+    if (!isSyncSocketStopped(websocketProvider)) {
+      if (!provider.isAttached) {
+        provider.attach()
+      }
+      connectSyncSocket(websocketProvider)
     }
-    void websocketProvider.connect()
 
     return () => {
       stopped = true
@@ -310,9 +450,13 @@ export function useDocumentSyncConnection({
       provider.off('close', handleClose)
       provider.off('authenticationFailed', handleAuthFailed)
       savedLocalUserRef.current = provider.awareness?.getLocalState()?.user ?? null
-      // 문서 전환·탭 이탈 시 원격 화면에서 내 커서가 바로 사라지게 정리한다
-      provider.awareness?.setLocalState(null)
-      websocketProvider.disconnect()
+      // 문서 전환·탭 이탈 시 원격 화면에서 내 커서가 바로 사라지게 정리하고, 공유 소켓은 유지한다
+      if (provider.awareness && provider.awareness.getLocalState() !== null) {
+        provider.awareness.setLocalState(null)
+      }
+      if (provider.isAttached) {
+        provider.detach()
+      }
     }
   }, [session, teamId, documentId])
 
@@ -346,14 +490,20 @@ export function useDocumentSyncConnection({
   }, [hasUnsyncedChanges])
 
   const retrySync = () => {
+    if (!session) return
     const { websocketProvider, provider } = session
     if (!websocketProvider || !provider || stoppedRef.current) return
+    if (isSyncSocketStopped(websocketProvider)) return
     setSendFailed(false)
     setRetrySeq((seq) => seq + 1)
     if (websocketProvider.status === WebSocketStatus.Connected) {
-      provider.forceSync()
+      if (!provider.isAttached) {
+        provider.attach()
+      } else {
+        provider.forceSync()
+      }
     } else {
-      void websocketProvider.connect()
+      connectSyncSocket(websocketProvider)
     }
   }
 
@@ -380,7 +530,11 @@ export function useDocumentSyncConnection({
 }
 
 export function useDocumentSync(options: UseDocumentSyncOptions): DocumentSyncResult {
-  const session = useDocumentSyncSession(options.documentId, options.offlinePreview)
+  const session = useDocumentSyncSession(
+    options.documentId,
+    options.syncSocket ?? null,
+    options.offlinePreview,
+  )
   const status = useDocumentSyncConnection({ ...options, session })
   return {
     session,

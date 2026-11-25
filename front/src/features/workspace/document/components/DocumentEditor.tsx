@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEven
 import type { Awareness } from 'y-protocols/awareness'
 import { useLoginMember } from '../../../auth/store'
 import { useWorkspace } from '../../context'
+import { NoticeSkeleton } from '../../notice/components/NoticeStates'
 import { isValidMemberColorIndex, resolveCursorColor } from '../cursorColor'
 import { ImeSafeCollaborationCaret } from '../imeSafeCollaborationCaret'
 import { ListMaxDepth } from '../listDepthExtension'
@@ -149,15 +150,35 @@ function DocumentSyncStatusOverlay({
   )
 }
 
+interface DocumentEditorContentProps extends DocumentEditorProps {
+  session: SyncSessionHandle
+}
+
 // DOC-05~10 Tiptap + Yjs 동시 편집 에디터 (DocumentEditorPane이 React.lazy로 불러온다)
-export default function DocumentEditor({
+export default function DocumentEditor(props: DocumentEditorProps) {
+  const { syncSocket } = useWorkspace()
+  const session = useDocumentSyncSession(
+    props.documentId,
+    syncSocket ?? null,
+    props.offlinePreview ?? false,
+  )
+
+  if (!session) {
+    return <NoticeSkeleton />
+  }
+
+  return <DocumentEditorContent key={session.instanceId} {...props} session={session} />
+}
+
+function DocumentEditorContent({
+  session,
   teamId,
   documentId,
   title,
   offlinePreview = false,
   onDocumentGone,
   onForbidden,
-}: DocumentEditorProps) {
+}: DocumentEditorContentProps) {
   const { summary, myColorIndex: teamColorIndex } = useWorkspace()
   const loginMember = useLoginMember()
   const editorContainerRef = useRef<HTMLDivElement | null>(null)
@@ -166,8 +187,6 @@ export default function DocumentEditor({
   const hasPendingLabelSyncRef = useRef(false)
   const pendingUserRef = useRef<AwarenessUser | null>(null)
   const [caretIdleTracker] = useState(createCaretIdleTracker)
-
-  const session = useDocumentSyncSession(documentId, offlinePreview)
 
   const nickname = loginMember?.nickname ?? '팀원'
   const cursorColor = resolveCursorColor({
