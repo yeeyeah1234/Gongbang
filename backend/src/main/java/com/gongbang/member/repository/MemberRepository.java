@@ -29,6 +29,11 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByNickname(String nickname);
 
+    @Query(
+            "select m.id from Member m where m.status = com.gongbang.member.domain.MemberStatus.ACTIVE and locate(lower(:keyword), lower(m.nickname)) > 0 order by case when lower(m.nickname) = lower(:keyword) then 0 else 1 end, m.id")
+    List<Long> findActiveIdsByNicknameContaining(
+            @Param("keyword") String keyword, org.springframework.data.domain.Pageable pageable);
+
     Optional<Member> findByKakaoId(String kakaoId);
 
     Optional<Member> findByGoogleId(String googleId);
