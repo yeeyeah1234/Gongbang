@@ -29,7 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** REC-006 수동 모집 완료 (PostCommandService.complete). */
+/** REC-006 수동 모집 완료 (PostCommandService.complete)와 WS-08 팀 삭제 때 모집글 닫기 (closeForTeamDeletion). */
 @ExtendWith(MockitoExtension.class)
 class PostCompleteServiceTest {
 
@@ -155,5 +155,55 @@ class PostCompleteServiceTest {
         post.delete(NOW.minusHours(1));
 
         assertThat(errorOf(AUTHOR_ID)).isEqualTo(ErrorCode.POST_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("팀 삭제: 모집중인 글을 모집완료로 바꾸고 대기 지원 자동 거절·알림, 대기 초대 취소 (WS-08, REC-006 ④)")
+    void 팀_삭제면_모집중인_글을_닫는다() {
+        RecruitPost post = givenPost();
+        given(applicationCloseService.autoRejectPendingApplications(POST_ID, NOW))
+                .willReturn(List.of(21L));
+
+        postCommandService.closeForTeamDeletion(POST_ID, NOW);
+
+        assertThat(post.getStatus()).isEqualTo(PostStatus.COMPLETED);
+        assertThat(post.getCompletedAt()).isEqualTo(NOW);
+        verify(recruitNotifier).rejected(post, 21L, null);
+        verify(invitationCancelService).cancelPendingByPostId(POST_ID, NOW);
+    }
+
+    @Test
+    @DisplayName("팀 삭제: 이미 모집완료된 글이면 아무것도 하지 않는다 (WS-08)")
+    void 팀_삭제_이미_모집완료면_그대로() {
+        RecruitPost post = givenPost();
+        LocalDateTime before = NOW.minusDays(1);
+        post.complete(before);
+
+        postCommandService.closeForTeamDeletion(POST_ID, NOW);
+
+        assertThat(post.getCompletedAt()).isEqualTo(before);
+        verifyNoInteractions(applicationCloseService, recruitNotifier, invitationCancelService);
+    }
+
+    @Test
+    @DisplayName("팀 삭제: 삭제된 글이면 아무것도 하지 않는다 (WS-08)")
+    void 팀_삭제_삭제된_글이면_그대로() {
+        RecruitPost post = givenPost();
+        post.delete(NOW.minusHours(1));
+
+        postCommandService.closeForTeamDeletion(POST_ID, NOW);
+
+        assertThat(post.getStatus()).isEqualTo(PostStatus.RECRUITING);
+        verifyNoInteractions(applicationCloseService, recruitNotifier, invitationCancelService);
+    }
+
+    @Test
+    @DisplayName("팀 삭제: 팀의 모집글 행이 없으면 데이터 오류로 본다")
+    void 팀_삭제_모집글이_없으면_오류() {
+        given(recruitPostRepository.findByIdForUpdate(POST_ID)).willReturn(Optional.empty());
+
+        assertThrows(
+                IllegalStateException.class,
+                () -> postCommandService.closeForTeamDeletion(POST_ID, NOW));
     }
 }

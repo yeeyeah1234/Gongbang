@@ -266,6 +266,31 @@ public class PostCommandService {
         if (!post.isRecruiting()) {
             throw new BusinessException(ErrorCode.POST_COMPLETED);
         }
+        return new PostCompleteResponse(closeRecruiting(post, now));
+    }
+
+    /**
+     * 팀 도메인용 (WS-08 팀 삭제): 팀을 지우기 전에 연결된 모집글을 수동 모집완료(REC-006)와 같이 닫는다. 모집완료로 바꾸고 남은 대기 지원은 자동
+     * 거절·알림, 대기 중인 팀 초대는 취소한다. 작성자 확인은 하지 않는다(팀장 확인은 팀 쪽에서 한다).
+     *
+     * <p>부르는 쪽 트랜잭션 안에서 부르고, 잠금 순서가 recruit_post → team이므로 팀 행을 잠그기 전에 제일 먼저 부른다. 이미 모집완료됐거나 삭제된
+     * 글이면 아무것도 하지 않는다. 모집글이 없는 팀(postId null)은 부르는 쪽에서 부르지 않는다.
+     */
+    public void closeForTeamDeletion(Long postId, LocalDateTime now) {
+        RecruitPost post =
+                recruitPostRepository
+                        .findByIdForUpdate(postId)
+                        .orElseThrow(
+                                () -> new IllegalStateException("팀의 모집글이 없습니다: postId=" + postId));
+        if (post.getDeletedAt() != null || !post.isRecruiting()) {
+            return;
+        }
+        closeRecruiting(post, now);
+    }
+
+    /** REC-006 ①~④: 잠근 모집중 글을 모집완료로 바꾸고 대기 지원 자동 거절·알림, 대기 초대 취소. 거절한 지원 수를 돌려준다. */
+    private int closeRecruiting(RecruitPost post, LocalDateTime now) {
+        Long postId = post.getId();
         post.complete(now);
         List<Long> rejectedApplicantIds =
                 applicationCloseService.autoRejectPendingApplications(postId, now);
@@ -273,7 +298,7 @@ public class PostCommandService {
                 applicantId -> recruitNotifier.rejected(post, applicantId, null));
         // 모집완료 글로는 초대할 수 없으므로(INT-005 ④) 대기 중인 팀 초대도 취소한다 (team_invitation.status CANCELED)
         invitationCancelService.cancelPendingByPostId(postId, now);
-        return new PostCompleteResponse(rejectedApplicantIds.size());
+        return rejectedApplicantIds.size();
     }
 
     /**
