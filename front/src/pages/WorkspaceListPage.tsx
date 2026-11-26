@@ -1,9 +1,12 @@
-import { useEffect } from 'react'
-import { Link } from 'react-router'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router'
+import { getApiError, getErrorMessage } from '../api/errors'
 import { Button } from '../components/ui/Button'
 import { Toast } from '../components/ui/Toast'
+import { LeaveTeamModal } from '../features/workspace/components/LeaveTeamModal'
 import { TeamCard } from '../features/workspace/components/TeamCard'
-import { useMyTeams } from '../features/workspace/hooks'
+import { useLeaveTeam, useMyTeams, workspaceKeys } from '../features/workspace/hooks'
 import type { MyTeam } from '../features/workspace/types'
 import { useTimedToast } from '../hooks/useTimedToast'
 
@@ -13,10 +16,12 @@ function TeamSection({
   title,
   teams,
   onToast,
+  onRequestLeave,
 }: {
   title: string
   teams: MyTeam[]
   onToast: (message: string) => void
+  onRequestLeave: (team: MyTeam) => void
 }) {
   return (
     <section aria-label={title}>
@@ -26,7 +31,12 @@ function TeamSection({
       </h2>
       <div className={`mt-4 ${GRID}`}>
         {teams.map((team) => (
-          <TeamCard key={team.teamId} team={team} onToast={onToast} />
+          <TeamCard
+            key={team.teamId}
+            team={team}
+            onToast={onToast}
+            onRequestLeave={onRequestLeave}
+          />
         ))}
       </div>
     </section>
@@ -35,8 +45,15 @@ function TeamSection({
 
 // WS-08 워크스페이스 팀 목록 (/workspaces). 로그인 확인은 라우터의 RequireLogin이 한다 (①)
 export default function WorkspaceListPage() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const toast = useTimedToast()
   const { data, isLoading, isError } = useMyTeams()
+  const leaveTeam = useLeaveTeam()
+  const [leaveDialog, setLeaveDialog] = useState<{
+    team: MyTeam
+    leaderBlocked: boolean
+  } | null>(null)
 
   useEffect(() => {
     document.title = '워크스페이스 | 공방'
@@ -46,6 +63,37 @@ export default function WorkspaceListPage() {
   // ② 서버가 진행 중 → 종료, 각각 최근 활동순으로 보낸다
   const ongoing = teams.filter((team) => !team.isEnded)
   const ended = teams.filter((team) => team.isEnded)
+
+  const handleRequestLeave = (team: MyTeam) => {
+    // WS-09 ③ 팀장은 서버 요청 없이 바로 위임 안내 모달을 띄운다
+    setLeaveDialog({ team, leaderBlocked: team.isLeader })
+  }
+
+  const handleConfirmLeave = (team: MyTeam) => {
+    if (leaveTeam.isPending) return
+    leaveTeam.mutate(team.teamId, {
+      onSuccess: () => {
+        setLeaveDialog(null)
+        toast.show('팀에서 나왔어요')
+      },
+      onError: (error) => {
+        const { code } = getApiError(error)
+        if (code === 'LEADER_CANNOT_LEAVE') {
+          // 그사이 팀장을 위임받은 경우 안내 모달로 전환하고 목록을 갱신한다
+          void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+          setLeaveDialog({ team, leaderBlocked: true })
+          return
+        }
+        if (code === 'NOT_TEAM_MEMBER') {
+          setLeaveDialog(null)
+          void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+          toast.show(getErrorMessage(error))
+          return
+        }
+        toast.show(getErrorMessage(error))
+      },
+    })
+  }
 
   return (
     <div className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 lg:px-12 xl:px-[120px]">
@@ -74,11 +122,35 @@ export default function WorkspaceListPage() {
         <div className="mt-8 flex flex-col gap-12">
           {/* TODO(확인 필요): 한쪽 칸이 0개일 때 칸을 보일지 문서에 없어 팀이 있는 칸만 보인다 */}
           {ongoing.length > 0 && (
-            <TeamSection title="진행 중" teams={ongoing} onToast={toast.show} />
+            <TeamSection
+              title="진행 중"
+              teams={ongoing}
+              onToast={toast.show}
+              onRequestLeave={handleRequestLeave}
+            />
           )}
-          {ended.length > 0 && <TeamSection title="종료" teams={ended} onToast={toast.show} />}
+          {ended.length > 0 && (
+            <TeamSection
+              title="종료"
+              teams={ended}
+              onToast={toast.show}
+              onRequestLeave={handleRequestLeave}
+            />
+          )}
         </div>
       )}
+
+      <LeaveTeamModal
+        team={leaveDialog?.team ?? null}
+        leaderBlocked={leaveDialog?.leaderBlocked ?? false}
+        isPending={leaveTeam.isPending}
+        onClose={() => setLeaveDialog(null)}
+        onConfirmLeave={handleConfirmLeave}
+        onGoChat={(teamId) => {
+          setLeaveDialog(null)
+          navigate(`/workspaces/${teamId}/chat`)
+        }}
+      />
 
       <Toast message={toast.message} />
     </div>

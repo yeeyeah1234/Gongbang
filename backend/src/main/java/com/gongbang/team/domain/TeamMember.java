@@ -81,6 +81,12 @@ public class TeamMember {
         this.leaveType = LeaveType.KICKED;
     }
 
+    /** WS-09 팀 나가기 처리한다. */
+    public void leave(LocalDateTime leftAt) {
+        this.leftAt = leftAt != null ? leftAt : LocalDateTime.now();
+        this.leaveType = LeaveType.LEFT;
+    }
+
     /** 팀원 역할을 변경한다 (팀장 위임 등). */
     public void changeRole(TeamRole newRole) {
         this.role = newRole;

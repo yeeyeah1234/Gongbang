@@ -35,3 +35,8 @@ export async function renameTeam(teamId: number, name: string) {
     })
   ).data.data
 }
+
+// WS-09 팀 나가기 (DELETE /api/teams/{teamId}/members/me). 팀장이면 409 LEADER_CANNOT_LEAVE
+export async function leaveTeam(teamId: number) {
+  await apiClient.delete<ApiResponse<null>>(`/api/teams/${teamId}/members/me`)
+}

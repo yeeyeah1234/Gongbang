@@ -5,6 +5,7 @@ import {
   fetchNoticeUnreadCount,
   fetchPinnedNotice,
   fetchWorkspaceSummary,
+  leaveTeam,
   renameTeam,
 } from './api'
 
@@ -72,6 +73,18 @@ export function useRenameTeam() {
     onSuccess: (_data, { teamId }) => {
       void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
       void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
+    },
+  })
+}
+
+// WS-09 ④ 팀 나가기: 성공하면 팀 목록을 다시 불러오고 해당 팀 워크스페이스 캐시를 지운다
+export function useLeaveTeam() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (teamId: number) => leaveTeam(teamId),
+    onSuccess: (_data, teamId) => {
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+      queryClient.removeQueries({ queryKey: workspaceKeys.all(teamId) })
     },
   })
 }
