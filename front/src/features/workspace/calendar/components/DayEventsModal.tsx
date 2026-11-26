@@ -136,7 +136,7 @@ export function DayEventsModal({
           </>
         }
       >
-        <ul className="-mx-1 flex max-h-[calc(100dvh-20rem)] flex-col gap-3 overflow-y-auto px-1 py-1">
+        <ul className="flex flex-col gap-3 py-1">
           {events.map((event) => (
             <li key={event.id}>
               <EventCard

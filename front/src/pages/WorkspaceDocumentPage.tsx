@@ -3,6 +3,7 @@ import axios from 'axios'
 import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getApiError, getErrorMessage } from '../api/errors'
+import { ArrowLeftIcon } from '../components/icons/Icons'
 import { Toast } from '../components/ui/Toast'
 import { useLoginMember } from '../features/auth/store'
 import { useWorkspace } from '../features/workspace/context'
@@ -27,6 +28,7 @@ import type {
   WorkspaceSidebarLabels,
 } from '../features/workspace/sidebar/types'
 import { WorkspaceItemSidebar } from '../features/workspace/sidebar/WorkspaceItemSidebar'
+import { useIsWide } from '../hooks/useIsWide'
 import { useTimedToast } from '../hooks/useTimedToast'
 
 const DOCUMENT_LIMIT_MESSAGE = '문서는 50개까지 만들 수 있어요'
@@ -81,6 +83,7 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
   const queryClient = useQueryClient()
   const loginMember = useLoginMember()
   const toast = useTimedToast()
+  const isWide = useIsWide()
 
   const listQuery = useDocumentList(teamId)
   const documents = listQuery.data
@@ -130,10 +133,12 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
 
   const openFirstOrEmpty = (excludeId?: number) => {
     const nextDoc = (documents ?? []).find((item) => item.id !== excludeId)
-    if (nextDoc) {
+    if (!nextDoc) {
+      writeLastDocumentId(teamId, null)
+    }
+    if (isWide && nextDoc) {
       navigate(`${basePath}/${nextDoc.id}`, { replace: true })
     } else {
-      writeLastDocumentId(teamId, null)
       navigate(basePath, { replace: true })
     }
   }
@@ -171,14 +176,14 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
     })
   }, [realtime, selectedId])
 
-  // /docs (ID 없음) 진입 시 마지막으로 연 문서 → 없으면 목록 첫 문서
+  // /docs (ID 없음) 진입 시 1024px 이상에서만 마지막으로 연 문서 → 없으면 목록 첫 문서로 이동
   const noId = param === undefined
   useEffect(() => {
-    if (!noId || !documents || documents.length === 0) return
+    if (!isWide || !noId || !documents || documents.length === 0) return
     const lastId = readLastDocumentId(teamId)
     const target = documents.find((item) => item.id === lastId) ?? documents[0]
     navigate(`${basePath}/${target.id}`, { replace: true })
-  }, [noId, documents, teamId, basePath, navigate])
+  }, [isWide, noId, documents, teamId, basePath, navigate])
 
   // URL에 ID가 있는데 목록에서 사라졌거나(타인 삭제·없는 ID) 잘못된 ID인 경우 처리
   useEffect(() => {
@@ -218,7 +223,7 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
           ...(prev ?? []).filter((item) => item.id !== documentId),
         ])
         writeLastDocumentId(teamId, documentId)
-        setRenamingId(documentId)
+        setRenamingId(isWide ? documentId : null)
         navigate(`${basePath}/${documentId}`)
       },
       onError: (error) => {
@@ -327,6 +332,9 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
   const empty = documents !== undefined && documents.length === 0
   const listFailed = listQuery.isError && !documents
   const modalOpen = deleteTarget !== null
+  // 1024px 미만에서는 안 보이는 쪽(목록 또는 본문)을 렌더링하지 않아 불필요한 동기화 연결을 막는다
+  const showList = isWide || noId
+  const showDetail = isWide || !noId
 
   return (
     <>
@@ -339,40 +347,58 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
             <NoticeError onRetry={() => listQuery.refetch()} />
           </section>
         ) : (
-          <section className="flex flex-1 flex-col rounded-card border border-line bg-surface lg:min-h-0 lg:flex-row lg:overflow-hidden">
-            <WorkspaceItemSidebar
-              items={documents}
-              isError={listQuery.isError}
-              basePath={basePath}
-              selectedId={selectedId}
-              renamingId={renamingId}
-              creating={createMutation.isPending}
-              renaming={renameMutation.isPending}
-              labels={DOCUMENT_LABELS}
-              onRetry={() => listQuery.refetch()}
-              onCreate={handleCreate}
-              onStartRename={(id) => setRenamingId(id)}
-              onSubmitRename={handleSubmitRename}
-              onCancelRename={() => setRenamingId(null)}
-              onRequestDelete={(item) => setDeleteTarget(item)}
-            />
-            <div
-              key={selectedDoc?.id ?? 'loading'}
-              className="flex min-h-0 min-w-0 flex-1 flex-col lg:overflow-hidden"
-            >
-              {selectedDoc ? (
-                <DocumentEditorPane
-                  teamId={teamId}
-                  documentId={selectedDoc.id}
-                  title={selectedDoc.title}
-                  offlinePreview={offlinePreview}
-                  onDocumentGone={handleEditorGone}
-                  onForbidden={handleEditorForbidden}
-                />
-              ) : (
-                <NoticeSkeleton />
-              )}
-            </div>
+          // 1024px 미만: WorkspaceLayout 본문 여백(px-6 py-6)을 상쇄해 목록을 화면 끝까지 붙인다
+          <section className="-mx-6 -my-6 flex flex-1 flex-col bg-surface lg:mx-0 lg:my-0 lg:min-h-0 lg:flex-row lg:overflow-hidden lg:rounded-card lg:border lg:border-line">
+            {showList && (
+              <WorkspaceItemSidebar
+                items={documents}
+                isError={listQuery.isError}
+                basePath={basePath}
+                selectedId={selectedId}
+                renamingId={renamingId}
+                creating={createMutation.isPending}
+                renaming={renameMutation.isPending}
+                labels={DOCUMENT_LABELS}
+                onRetry={() => listQuery.refetch()}
+                onCreate={handleCreate}
+                onStartRename={(id) => setRenamingId(id)}
+                onSubmitRename={handleSubmitRename}
+                onCancelRename={() => setRenamingId(null)}
+                onRequestDelete={(item) => setDeleteTarget(item)}
+              />
+            )}
+            {showDetail && (
+              <div
+                key={selectedDoc?.id ?? 'loading'}
+                className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface max-lg:fixed max-lg:inset-0 max-lg:z-30 max-lg:h-dvh max-lg:overflow-hidden lg:overflow-hidden"
+              >
+                {!isWide && (
+                  <div className="flex shrink-0 items-center gap-2 border-b border-divider px-2 py-2 lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => navigate(basePath)}
+                      aria-label="문서 목록으로"
+                      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-text transition-colors hover:bg-bg"
+                    >
+                      <ArrowLeftIcon className="h-5 w-5" />
+                    </button>
+                    <span className="truncate text-body font-bold text-text">문서 목록</span>
+                  </div>
+                )}
+                {selectedDoc ? (
+                  <DocumentEditorPane
+                    teamId={teamId}
+                    documentId={selectedDoc.id}
+                    title={selectedDoc.title}
+                    offlinePreview={offlinePreview}
+                    onDocumentGone={handleEditorGone}
+                    onForbidden={handleEditorForbidden}
+                  />
+                ) : (
+                  <NoticeSkeleton />
+                )}
+              </div>
+            )}
           </section>
         )}
       </div>

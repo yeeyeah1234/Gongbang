@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useEffectEvent, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getApiError } from '../api/errors'
+import { ArrowLeftIcon } from '../components/icons/Icons'
 import { Toast } from '../components/ui/Toast'
 import { useWorkspace } from '../features/workspace/context'
 import { workspaceKeys } from '../features/workspace/hooks'
@@ -24,6 +25,7 @@ import {
 import { useNoticeActions } from '../features/workspace/notice/useNoticeActions'
 import { GONE_MESSAGE, useNoticeDialog } from '../features/workspace/notice/useNoticeDialog'
 import { useNoticeEditor } from '../features/workspace/notice/useNoticeEditor'
+import { useIsWide } from '../hooks/useIsWide'
 import { useTimedToast } from '../hooks/useTimedToast'
 
 interface WorkspaceNoticePageProps {
@@ -51,12 +53,13 @@ function NoticeTab({ basePath }: { basePath: string }) {
   const queryClient = useQueryClient()
   const toast = useTimedToast()
   const forgetNotice = useForgetNotice(teamId)
+  const isWide = useIsWide()
 
   const selectedId = parseNoticeId(param)
   const list = useNoticeList(teamId)
   const dialog = useNoticeDialog({ basePath, selectedId, showToast: toast.show })
-  const editor = useNoticeEditor({ dialog, basePath, selectedId })
-  const actions = useNoticeActions({ dialog, list, basePath, selectedId })
+  const editor = useNoticeEditor({ dialog, basePath, selectedId, isWide })
+  const actions = useNoticeActions({ dialog, list, basePath, selectedId, isWide })
   const detail = useNoticeDetail(teamId, selectedId, !actions.detailPaused)
   const items = uniqueNotices(list.data)
   // 모달이 열린 동안에는 자동으로 옮기지 않는다 (작성 중인 내용이 사라지지 않게)
@@ -115,13 +118,13 @@ function NoticeTab({ basePath }: { basePath: string }) {
       void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
   }, [listNotMember, teamId, queryClient])
 
-  // /notice → 첫 공지(서버가 고정 → 최신순). 낡은 캐시로 가지 않게 목록 조회가 끝난 뒤 옮긴다.
+  // /notice → 1024px 이상에서만 첫 공지(서버가 고정 → 최신순)로 이동. 낡은 캐시로 가지 않게 목록 조회가 끝난 뒤 옮긴다.
   const noId = param === undefined
   const empty = list.data !== undefined && items.length === 0
   const listFailed = list.isError && !list.data
   const { refetch } = list
   useEffect(() => {
-    if (!noId || empty || listFailed || modalOpen) return
+    if (!isWide || !noId || empty || listFailed || modalOpen) return
     let active = true
     // cancelRefetch false: 이미 나간 조회가 있으면 그 결과를 같이 기다린다
     void refetch({ cancelRefetch: false }).then(({ data }) => {
@@ -131,7 +134,7 @@ function NoticeTab({ basePath }: { basePath: string }) {
     return () => {
       active = false
     }
-  }, [noId, empty, listFailed, modalOpen, refetch, navigate, basePath])
+  }, [isWide, noId, empty, listFailed, modalOpen, refetch, navigate, basePath])
 
   const onCreate = summary.isLeader ? editor.openCreate : undefined
 
@@ -215,6 +218,10 @@ function NoticeTab({ basePath }: { basePath: string }) {
     return null
   }
 
+  // 1024px 미만에서는 안 보이는 쪽(목록 또는 상세)을 렌더링하지 않는다
+  const showList = isWide || noId
+  const showDetail = isWide || !noId
+
   return (
     <>
       {/* inert: 공통 Modal에 포커스 가두기가 없어 Tab으로 뒤쪽 버튼을 누르지 못하게 */}
@@ -226,19 +233,41 @@ function NoticeTab({ basePath }: { basePath: string }) {
             <NoticeError onRetry={() => refetch()} />
           </section>
         ) : (
-          <section className="flex flex-1 flex-col rounded-card border border-line bg-surface lg:min-h-0 lg:flex-row lg:overflow-hidden">
-            <NoticeList
-              query={list}
-              items={items}
-              basePath={basePath}
-              selectedId={selectedId}
-              busy={dialog.busy}
-              onCreate={onCreate}
-            />
+          // 1024px 미만: WorkspaceLayout 본문 여백(px-6 py-6)을 상쇄해 목록을 화면 끝까지 붙인다
+          <section className="-mx-6 -my-6 flex flex-1 flex-col bg-surface lg:mx-0 lg:my-0 lg:min-h-0 lg:flex-row lg:overflow-hidden lg:rounded-card lg:border lg:border-line">
+            {showList && (
+              <NoticeList
+                query={list}
+                items={items}
+                basePath={basePath}
+                selectedId={selectedId}
+                busy={dialog.busy}
+                isWide={isWide}
+                onCreate={onCreate}
+              />
+            )}
             {/* key: 다른 공지를 열면 본문 스크롤을 맨 위로 */}
-            <div key={param} className="min-w-0 flex-1 lg:overflow-y-auto">
-              {renderDetail()}
-            </div>
+            {showDetail && (
+              <div
+                key={param}
+                className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface max-lg:fixed max-lg:inset-0 max-lg:z-30 max-lg:h-dvh max-lg:overflow-hidden"
+              >
+                {!isWide && (
+                  <div className="flex shrink-0 items-center gap-2 border-b border-divider px-2 py-2 lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => navigate(basePath)}
+                      aria-label="공지 목록으로"
+                      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-text transition-colors hover:bg-bg"
+                    >
+                      <ArrowLeftIcon className="h-5 w-5" />
+                    </button>
+                    <span className="truncate text-body font-bold text-text">공지 목록</span>
+                  </div>
+                )}
+                <div className="min-h-0 flex-1 overflow-y-auto">{renderDetail()}</div>
+              </div>
+            )}
           </section>
         )}
       </div>

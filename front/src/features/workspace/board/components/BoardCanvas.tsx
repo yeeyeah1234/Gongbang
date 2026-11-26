@@ -13,6 +13,7 @@ import type { Awareness } from 'y-protocols/awareness'
 import type { MemberColorIndex } from '../../../../components/ui/Avatar'
 import { useLoginMember } from '../../../auth/store'
 import { useWorkspace } from '../../context'
+import { useIsPhone } from '../../useIsPhone'
 import { DocumentSaveStatus } from '../../document/components/DocumentSaveStatus'
 import { isValidMemberColorIndex, resolveCursorColor } from '../../document/cursorColor'
 import { NoticeSkeleton } from '../../notice/components/NoticeStates'
@@ -182,6 +183,7 @@ function BoardCanvasContent({
 }: BoardCanvasContentProps) {
   const { summary, myColorIndex: teamColorIndex } = useWorkspace()
   const loginMember = useLoginMember()
+  const isPhone = useIsPhone()
 
   const [excalidrawAPI, setExcalidrawAPI] = useState<ExcalidrawImperativeAPI | null>(null)
   const bindingRef = useRef<ExcalidrawYjsBinding | null>(null)
@@ -360,28 +362,45 @@ function BoardCanvasContent({
     [session],
   )
 
+  // 휴대폰(<640px)에서는 보기 전용으로 전환하고, 640px 이상으로 넓어지면 편집 가능으로 되돌린다 (상세명세 8-2)
+  useEffect(() => {
+    if (!excalidrawAPI) return
+    excalidrawAPI.updateScene({ appState: { viewModeEnabled: isPhone } })
+  }, [excalidrawAPI, isPhone])
+
   const renderTopRightUI = useCallback(() => null, [])
 
   return (
-    <div className="gb-board relative flex h-full min-h-[520px] w-full flex-1 flex-col">
-      <div className="relative min-h-0 w-full flex-1">
-        <Excalidraw
-          excalidrawAPI={setExcalidrawAPI}
-          langCode="ko-KR"
-          theme="light"
-          isCollaborating={!offlinePreview}
-          aiEnabled={false}
-          UIOptions={BOARD_UI_OPTIONS}
-          initialData={BOARD_INITIAL_DATA}
-          onChange={handleCanvasChange}
-          onPointerUpdate={handlePointerUpdate}
-          renderTopRightUI={renderTopRightUI}
+    <div className="gb-board relative flex min-h-0 w-full flex-1 flex-col lg:h-full lg:min-h-[520px]">
+      {isPhone && (
+        <p
+          role="status"
+          className="shrink-0 border-b border-divider bg-primary-soft px-4 py-2 text-center text-caption font-medium text-primary"
         >
-          <MainMenu>
-            <MainMenu.DefaultItems.SearchMenu />
-            <MainMenu.DefaultItems.Help />
-          </MainMenu>
-        </Excalidraw>
+          화이트보드 편집은 PC에서 해 주세요
+        </p>
+      )}
+      <div className="relative min-h-0 w-full flex-1">
+        <div className="absolute inset-0">
+          <Excalidraw
+            excalidrawAPI={setExcalidrawAPI}
+            langCode="ko-KR"
+            theme="light"
+            viewModeEnabled={isPhone}
+            isCollaborating={!offlinePreview}
+            aiEnabled={false}
+            UIOptions={BOARD_UI_OPTIONS}
+            initialData={BOARD_INITIAL_DATA}
+            onChange={handleCanvasChange}
+            onPointerUpdate={handlePointerUpdate}
+            renderTopRightUI={renderTopRightUI}
+          >
+            <MainMenu>
+              <MainMenu.DefaultItems.SearchMenu />
+              <MainMenu.DefaultItems.Help />
+            </MainMenu>
+          </Excalidraw>
+        </div>
       </div>
 
       {/* 작업 영역 오른쪽 아래: 저장 상태 (WS-04, 첫 사용자 편집 전 숨김) */}

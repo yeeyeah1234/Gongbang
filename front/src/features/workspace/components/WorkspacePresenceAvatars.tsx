@@ -1,6 +1,8 @@
 import { Avatar } from '../../../components/ui/Avatar'
 import { formatPresenceTooltip, withSelfFirst } from '../onlineMembers'
 import type { WorkspaceOnlineMember } from '../types'
+import { useIsPhone } from '../useIsPhone'
+import { WorkspacePresencePopover } from './WorkspacePresencePopover'
 
 // WS-03 ① 아바타는 최대 5개(나 포함), 넘치면 「+N」
 const MAX_AVATARS = 5
@@ -12,13 +14,19 @@ interface WorkspacePresenceAvatarsProps {
 
 /**
  * WS-03 워크스페이스 헤더 접속자 표시:
- * ① 아바타 최대 5개 + 초과 시 「+N」 + 「접속 중 N명」
+ * ① 아바타 최대 5개 + 초과 시 「+N」 + 「접속 중 N명」 (휴대폰 <640px은 버튼 + 팝오버)
  * ② 팀장 아바타 오른쪽 위 왕관
  * ③ 팀원 고유 색(8색) 테두리
  * ④ 호버·포커스 시 「[팀장] 닉네임 · 탭 > 문서명」 툴팁
  */
 export function WorkspacePresenceAvatars({ self, onlineMembers }: WorkspacePresenceAvatarsProps) {
+  const isPhone = useIsPhone()
   const members = withSelfFirst(self, onlineMembers)
+
+  if (isPhone) {
+    return <WorkspacePresencePopover self={self} members={members} />
+  }
+
   const shown = members.slice(0, MAX_AVATARS)
   const hiddenMembers = members.slice(MAX_AVATARS)
   const hiddenCount = hiddenMembers.length

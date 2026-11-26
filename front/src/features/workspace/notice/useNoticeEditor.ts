@@ -7,12 +7,13 @@ interface NoticeEditorOptions {
   dialog: NoticeDialog
   basePath: string
   selectedId: number | null
+  isWide: boolean
 }
 
 const EMPTY: NoticeCreateRequest = { title: '', content: '', pinned: false }
 
 // NTC-02 작성, NTC-03 수정
-export function useNoticeEditor({ dialog, basePath, selectedId }: NoticeEditorOptions) {
+export function useNoticeEditor({ dialog, basePath, selectedId, isWide }: NoticeEditorOptions) {
   const create = useCreateNotice()
   const update = useUpdateNotice()
   const { form, setForm } = dialog
@@ -47,8 +48,9 @@ export function useNoticeEditor({ dialog, basePath, selectedId }: NoticeEditorOp
     create.mutate(
       { title: strip(values.title), content: strip(values.content), pinned: values.pinned },
       {
-        // 주소 없는 /notice(빈 화면)에서는 뒤로 가기에 남기지 않는다
-        onSuccess: (noticeId) => dialog.leave(`${basePath}/${noticeId}`, selectedId === null),
+        // PC의 빈 화면(/notice)에서는 뒤로 가기에 남기지 않고, 1024px 미만 목록에서는 뒤로 가기로 목록 복귀 허용
+        onSuccess: (noticeId) =>
+          dialog.leave(`${basePath}/${noticeId}`, isWide && selectedId === null),
         onError: (error) => dialog.fail(error),
       },
     )
