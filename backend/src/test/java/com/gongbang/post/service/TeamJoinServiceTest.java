@@ -17,6 +17,7 @@ import com.gongbang.chat.service.ChatMembershipService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.websocket.TeamEventPublisher;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
@@ -52,6 +53,7 @@ class TeamJoinServiceTest {
     @Mock private CalendarService calendarService;
     @Mock private ChatMembershipService chatMembershipService;
     @Mock private TeamEventPublisher teamEventPublisher;
+    @Mock private InvitationCancelService invitationCancelService;
 
     private TeamJoinService teamJoinService;
 
@@ -65,7 +67,8 @@ class TeamJoinServiceTest {
                         recruitNotifier,
                         calendarService,
                         chatMembershipService,
-                        teamEventPublisher);
+                        teamEventPublisher,
+                        invitationCancelService);
     }
 
     /** 목표 targetCount명, 확정 currentCount명인 글을 잠금 조회로 돌려준다. */
@@ -151,6 +154,8 @@ class TeamJoinServiceTest {
         assertThat(post.getCompletedAt()).isEqualTo(NOW);
         verify(recruitNotifier).rejected(post, 31L, null);
         verify(recruitNotifier).rejected(post, 32L, null);
+        // 모집완료 글로는 초대할 수 없으므로 대기 초대도 취소한다 (INT-005 ④)
+        verify(invitationCancelService).cancelPendingByPostId(POST_ID, NOW);
     }
 
     @Test

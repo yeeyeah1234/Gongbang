@@ -11,6 +11,7 @@ import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.PostCompleteResponse;
@@ -41,6 +42,7 @@ class PostCompleteServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private InvitationCancelService invitationCancelService;
     @Mock private RecruitNotifier recruitNotifier;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -55,6 +57,7 @@ class PostCompleteServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
+                        invitationCancelService,
                         recruitNotifier,
                         eventPublisher);
     }
@@ -77,7 +80,7 @@ class PostCompleteServiceTest {
     }
 
     @Test
-    @DisplayName("정원이 안 찬 글도 작성자가 누르면 모집완료가 되고 완료 시각을 남긴다 (②)")
+    @DisplayName("정원이 안 찬 글도 작성자가 누르면 모집완료가 되고 완료 시각을 남기며, 대기 초대를 취소한다 (②, INT-005 ④)")
     void 정원이_안_차도_모집완료된다() {
         RecruitPost post = givenPost();
 
@@ -85,6 +88,7 @@ class PostCompleteServiceTest {
 
         assertThat(post.getStatus()).isEqualTo(PostStatus.COMPLETED);
         assertThat(post.getCompletedAt()).isEqualTo(NOW);
+        verify(invitationCancelService).cancelPendingByPostId(POST_ID, NOW);
     }
 
     @Test

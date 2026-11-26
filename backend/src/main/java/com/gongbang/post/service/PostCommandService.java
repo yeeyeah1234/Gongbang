@@ -6,6 +6,7 @@ import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.validation.UrlPolicy;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
@@ -49,6 +50,7 @@ public class PostCommandService {
     private final ContestQueryService contestQueryService;
     private final PostDetailService postDetailService;
     private final ApplicationCloseService applicationCloseService;
+    private final InvitationCancelService invitationCancelService;
     private final RecruitNotifier recruitNotifier;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -225,7 +227,8 @@ public class PostCommandService {
         // ④, INT-003 ④: 대기 중이던 지원자에게 삭제 알림
         closedApplicantIds.forEach(
                 applicantId -> recruitNotifier.postDeleted(post, applicantId, memberId));
-        // TODO(확인 필요): 팀 초대(team_invitation, 김건우·김수형)가 생기면 이 글의 PENDING 초대를 CANCELED로 바꾼다 (④).
+        // ④ 대기 중인 팀 초대도 모두 취소한다 (team_invitation.status CANCELED, 김건우 InvitationCancelService)
+        invitationCancelService.cancelPendingByPostId(postId, now);
     }
 
     /**
@@ -252,7 +255,7 @@ public class PostCommandService {
      * 묻는 확인 모달은 화면에서 띄운다. 수락과 겹치지 않게 모집글 행을 잠근 뒤 처리한다.
      *
      * <p>③ 완료 뒤 새 지원·수락은 지원·수락 쪽에서 모집중이 아니면 막는다. ④ 남은 대기 지원은 자동 거절하고 거절 알림을 보낸다(보낸 사람 없음, 자동 완료와
-     * 같음). ⑤ 팀·채팅방은 손대지 않는다.
+     * 같음). 대기 중인 팀 초대도 취소한다(INT-005 ④). ⑤ 팀·채팅방은 손대지 않는다.
      */
     public PostCompleteResponse complete(Long memberId, Long postId) {
         return complete(memberId, postId, LocalDateTime.now(KST));
@@ -268,6 +271,8 @@ public class PostCommandService {
                 applicationCloseService.autoRejectPendingApplications(postId, now);
         rejectedApplicantIds.forEach(
                 applicantId -> recruitNotifier.rejected(post, applicantId, null));
+        // 모집완료 글로는 초대할 수 없으므로(INT-005 ④) 대기 중인 팀 초대도 취소한다 (team_invitation.status CANCELED)
+        invitationCancelService.cancelPendingByPostId(postId, now);
         return new PostCompleteResponse(rejectedApplicantIds.size());
     }
 
