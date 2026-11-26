@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
+import gongbangIcon from '../../../assets/gongbang-icon.png'
 import { Badge } from '../../../components/ui/Badge'
 import { Highlight } from '../../search/components/Highlight'
 import { bookmarkErrorMessage, useIsLoggedIn, useToggleBookmark } from '../hooks'
@@ -17,11 +18,15 @@ export function DDayBadge({ dDay }: { dDay: number }) {
   )
 }
 
-// MAIN-06 ①: 썸네일이 없거나 불러오지 못하면 기본 이미지 (로고 글자 칸)
+// MAIN-06 ①: 썸네일이 없거나 불러오지 못하면 기본 이미지 (공방 로고 아이콘)
 export function DefaultThumbnail() {
   return (
-    <div className="flex size-full items-center justify-center text-subheading font-bold text-text-disabled">
-      공방
+    <div className="flex size-full items-center justify-center p-4">
+      <img
+        src={gongbangIcon}
+        alt="공방 기본 이미지"
+        className="max-h-24 max-w-24 object-contain opacity-85"
+      />
     </div>
   )
 }
