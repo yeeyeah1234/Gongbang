@@ -5,6 +5,7 @@ import com.gongbang.chat.service.ChatMembershipService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.websocket.TeamEventPublisher;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.team.service.TeamService;
@@ -40,6 +41,7 @@ public class TeamJoinService {
     private final CalendarService calendarService;
     private final ChatMembershipService chatMembershipService;
     private final TeamEventPublisher teamEventPublisher;
+    private final InvitationCancelService invitationCancelService;
 
     /**
      * memberId를 이 글 팀의 확정 팀원으로 넣는다. 첫 확정이면 팀을 만들고 작성자를 팀장으로 넣는다 (INT-006 ①). 확정 인원이 목표에 닿으면 자동
@@ -84,6 +86,9 @@ public class TeamJoinService {
                     applicationCloseService.autoRejectPendingApplications(postId, now);
             rejectedApplicantIds.forEach(
                     applicantId -> recruitNotifier.rejected(post, applicantId, null));
+            // 모집완료 글로는 초대할 수 없으므로(INT-005 ④) 대기 중인 팀 초대도 취소한다. 초대 수락으로 들어온 경우 그 초대는 이미
+            // ACCEPTED라 함께 취소되지 않는다 (초대 수락 서비스가 joinByInvitation 전에 반영)
+            invitationCancelService.cancelPendingByPostId(postId, now);
         }
         return TeamJoinResult.of(teamId, post);
     }

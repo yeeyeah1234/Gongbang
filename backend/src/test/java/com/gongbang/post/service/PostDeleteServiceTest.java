@@ -11,6 +11,7 @@ import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.repository.RecruitPostRepository;
@@ -40,6 +41,7 @@ class PostDeleteServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private InvitationCancelService invitationCancelService;
     @Mock private RecruitNotifier recruitNotifier;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -54,6 +56,7 @@ class PostDeleteServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
+                        invitationCancelService,
                         recruitNotifier,
                         eventPublisher);
     }
@@ -86,13 +89,14 @@ class PostDeleteServiceTest {
     }
 
     @Test
-    @DisplayName("지우면 같은 시각으로 이 글의 대기 지원을 모두 종료한다 (④)")
+    @DisplayName("지우면 같은 시각으로 이 글의 대기 지원을 모두 종료하고 대기 초대도 취소한다 (④)")
     void 지우면_대기_지원을_종료한다() {
         givenPost();
 
         postCommandService.delete(AUTHOR_ID, POST_ID, NOW);
 
         verify(applicationCloseService).closePendingApplications(POST_ID, NOW);
+        verify(invitationCancelService).cancelPendingByPostId(POST_ID, NOW);
     }
 
     @Test

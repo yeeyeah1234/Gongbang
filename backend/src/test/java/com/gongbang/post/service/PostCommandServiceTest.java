@@ -12,6 +12,7 @@ import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.ExternalContest;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
@@ -45,6 +46,7 @@ class PostCommandServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private InvitationCancelService invitationCancelService;
     @Mock private RecruitNotifier recruitNotifier;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -59,6 +61,7 @@ class PostCommandServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
+                        invitationCancelService,
                         recruitNotifier,
                         eventPublisher);
     }

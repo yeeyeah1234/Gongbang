@@ -7,6 +7,7 @@ import static org.mockito.BDDMockito.given;
 import com.gongbang.application.service.ApplicationCloseService;
 import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.repository.RecruitPostRepository;
@@ -35,6 +36,7 @@ class PostDecreaseCountServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private InvitationCancelService invitationCancelService;
     @Mock private RecruitNotifier recruitNotifier;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -49,6 +51,7 @@ class PostDecreaseCountServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
+                        invitationCancelService,
                         recruitNotifier,
                         eventPublisher);
     }

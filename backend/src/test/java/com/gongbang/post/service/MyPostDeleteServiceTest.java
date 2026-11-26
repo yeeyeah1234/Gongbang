@@ -14,6 +14,7 @@ import com.gongbang.contest.service.ContestDetailService;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.MyPostDeleteResponse;
 import com.gongbang.post.repository.RecruitPostRepository;
@@ -44,6 +45,7 @@ class MyPostDeleteServiceTest {
     @Mock private ContestQueryService contestQueryService;
     @Mock private PostDetailService postDetailService;
     @Mock private ApplicationCloseService applicationCloseService;
+    @Mock private InvitationCancelService invitationCancelService;
     @Mock private RecruitNotifier recruitNotifier;
     @Mock private ApplicationEventPublisher eventPublisher;
 
@@ -58,6 +60,7 @@ class MyPostDeleteServiceTest {
                         contestQueryService,
                         postDetailService,
                         applicationCloseService,
+                        invitationCancelService,
                         recruitNotifier,
                         eventPublisher);
     }
@@ -103,6 +106,8 @@ class MyPostDeleteServiceTest {
 
         verify(applicationCloseService).closePendingApplications(10L, NOW);
         verify(recruitNotifier).postDeleted(post, 20L, AUTHOR_ID);
+        // MY-02도 PST-004와 같은 규칙이라 대기 초대를 취소한다
+        verify(invitationCancelService).cancelPendingByPostId(10L, NOW);
     }
 
     @Test
