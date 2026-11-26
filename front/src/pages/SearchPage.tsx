@@ -142,12 +142,12 @@ function SearchResults({
       )}
       {posts.length > 0 && (
         <ResultSection title="팀원 모집" count={data.pages[0].posts.totalCount}>
-          <PostTable posts={posts} />
+          <PostTable posts={posts} highlight={keyword} />
         </ResultSection>
       )}
       {boardPosts.length > 0 && (
         <ResultSection title="커뮤니티 게시판" count={data.pages[0].boardPosts.totalCount}>
-          <BoardTable posts={boardPosts} />
+          <BoardTable posts={boardPosts} highlight={keyword} />
         </ResultSection>
       )}
       <div ref={sentinelRef} aria-hidden="true" className="h-1" />
