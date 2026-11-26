@@ -9,6 +9,7 @@ import com.gongbang.team.dto.TeamMemberResponse;
 import com.gongbang.team.dto.TeamRenameRequest;
 import com.gongbang.team.dto.TeamRenameResponse;
 import com.gongbang.team.dto.WorkspaceSummaryResponse;
+import com.gongbang.team.service.TeamLeaveService;
 import com.gongbang.team.service.TeamListService;
 import com.gongbang.team.service.TeamMemberManagementService;
 import com.gongbang.team.service.TeamQueryService;
@@ -31,6 +32,7 @@ public class TeamController {
     private final TeamQueryService teamQueryService;
     private final TeamMemberManagementService teamMemberManagementService;
     private final TeamListService teamListService;
+    private final TeamLeaveService teamLeaveService;
 
     /** WS-08 워크스페이스 팀 목록 (API 명세서 GET /api/teams): 내가 현재 팀원인 팀. */
     @GetMapping("/api/teams")
@@ -71,6 +73,18 @@ public class TeamController {
             @PathVariable Long memberId) {
         return ApiResponse.success(
                 teamMemberManagementService.kickMember(teamId, me.getMemberId(), memberId));
+    }
+
+    /**
+     * WS-09 팀 나가기: 현재 일반 팀원만(팀장은 409 LEADER_CANNOT_LEAVE).
+     *
+     * <p>TODO(확인 필요): API 명세서에 경로가 없어 DELETE /api/teams/{teamId}/members/me로 정함.
+     */
+    @DeleteMapping("/api/teams/{teamId}/members/me")
+    public ApiResponse<Void> leaveTeam(
+            @AuthenticationPrincipal LoginMember me, @PathVariable Long teamId) {
+        teamLeaveService.leaveTeam(teamId, me.getMemberId());
+        return ApiResponse.success(null);
     }
 
     /** NET-06 팀장 위임: 팀장만. */

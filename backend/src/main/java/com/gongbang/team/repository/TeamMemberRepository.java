@@ -2,9 +2,12 @@ package com.gongbang.team.repository;
 
 import com.gongbang.team.domain.TeamMember;
 import com.gongbang.team.domain.TeamRole;
+import jakarta.persistence.LockModeType;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,8 +38,22 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
             Collection<Long> teamIds);
 
     /** 특정 회원의 현재 팀원 행 조회. */
-    java.util.Optional<TeamMember> findByTeamIdAndMemberIdAndLeftAtIsNull(
-            Long teamId, Long memberId);
+    Optional<TeamMember> findByTeamIdAndMemberIdAndLeftAtIsNull(Long teamId, Long memberId);
+
+    /** 현재 팀원의 역할만 스칼라로 조회한다(1차 캐시에 엔티티를 올리지 않기 위해 프로젝션 사용, WS-09). */
+    @Query(
+            "select tm.role from TeamMember tm"
+                    + " where tm.team.id = :teamId and tm.memberId = :memberId and tm.leftAt is null")
+    Optional<TeamRole> findActiveRole(
+            @Param("teamId") Long teamId, @Param("memberId") Long memberId);
+
+    /** 특정 회원의 현재 팀원 행을 배타 잠금(FOR UPDATE)으로 조회해 최신 커밋 상태를 확인한다 (WS-09). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+            "select tm from TeamMember tm"
+                    + " where tm.team.id = :teamId and tm.memberId = :memberId and tm.leftAt is null")
+    Optional<TeamMember> findByTeamIdAndMemberIdAndLeftAtIsNullForUpdate(
+            @Param("teamId") Long teamId, @Param("memberId") Long memberId);
 
     /** 현재 팀원들이 쓰고 있는 색 번호. */
     @Query(
