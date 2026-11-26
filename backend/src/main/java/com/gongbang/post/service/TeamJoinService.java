@@ -48,6 +48,21 @@ public class TeamJoinService {
      * <p>모집완료 글이면 409 POST_COMPLETED, 정원이 찼으면 409 POST_FULL, 이미 현재 팀원이면 409 ALREADY_TEAM_MEMBER
      * (TeamService), 없거나 삭제된 글이면 404 POST_NOT_FOUND.
      */
+    /**
+     * INT-005 팀 초대 수락 (김건우 초대 수락 서비스가 부른다). join과 같은 정원·모집완료 규칙으로 확정 팀원을 등록하고, 그 회원이 이 글에 대기 중인 지원이
+     * 있으면 「수락」으로 바꾼다 (③). 수락 알림(INT-003 ②)은 보내지 않는다: 초대를 수락한 사람이 본인이기 때문이다 (NOTI-04 ②).
+     *
+     * <p>잠금 순서를 지원 수락(REC-004)과 같게 모집글 → 지원으로 지킨다. 대기 지원을 join보다 먼저 수락으로 바꿔, 이 수락으로 정원이 차서 남은 대기
+     * 지원을 자동 거절할 때 이 회원의 지원이 거절되지 않게 한다. join이 실패하면(409 POST_FULL 등) 부르는 쪽 트랜잭션과 함께 지원 변경도 되돌아간다.
+     *
+     * <p>부르는 쪽은 join과 같이 트랜잭션을 READ COMMITTED로 시작한다 (클래스 설명 참고).
+     */
+    public TeamJoinResult joinByInvitation(Long postId, Long memberId, LocalDateTime now) {
+        postCommandService.lockPost(postId);
+        applicationCloseService.acceptPendingApplication(postId, memberId, now);
+        return join(postId, memberId, now);
+    }
+
     public TeamJoinResult join(Long postId, Long memberId, LocalDateTime now) {
         RecruitPost post = postCommandService.lockPost(postId);
         if (!post.isRecruiting()) {
