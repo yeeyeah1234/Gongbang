@@ -60,6 +60,16 @@ public class MemberService {
 
     // ---------- 다른 도메인이 쓰는 조회 ----------
 
+    /** SRCH-05 ① / MY-05: 공개 프로필과 같은 ACTIVE 기준. 정확 일치 우선, 나머지 ID 오름차순 최대 50명. */
+    @Transactional(readOnly = true)
+    public List<Long> findActiveMemberIdsByNickname(String keyword) {
+        if (keyword == null) return List.of();
+        String normalized = keyword.strip();
+        if (normalized.codePointCount(0, normalized.length()) < 2) return List.of();
+        return memberRepository.findActiveIdsByNicknameContaining(
+                normalized, org.springframework.data.domain.PageRequest.of(0, 50));
+    }
+
     @Transactional(readOnly = true)
     public Optional<Member> findByEmail(String email) {
         return memberRepository.findByEmail(email);
