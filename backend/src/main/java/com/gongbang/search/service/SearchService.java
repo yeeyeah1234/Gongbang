@@ -7,7 +7,6 @@ import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
-import com.gongbang.member.domain.Member;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.dto.PostListItemResponse;
 import com.gongbang.post.service.PostQueryService;
@@ -58,17 +57,11 @@ public class SearchService {
         PageResponse<BoardPostListItemResponse> boardPosts =
                 PageResponse.of(List.of(), page, size, 0);
         if (searchType.includesCommunity()) {
-            // SRCH-05 ①: 제목·본문 일치 또는 닉네임이 맞는 회원이 쓴 글. 정렬 기준은 PST-001·BRD-001 (SRCH-02 ②)
-            List<Long> authorIds = authorIdsByNickname(trimmed);
+            // SRCH-05 ①: 제목·본문 일치 또는 닉네임이 맞는 ACTIVE 회원이 쓴 글. 정렬 기준은 PST-001·BRD-001 (SRCH-02 ②)
+            List<Long> authorIds = memberService.findActiveMemberIdsByNickname(trimmed);
             posts = postQueryService.searchPosts(trimmed, authorIds, sort, page, size);
             boardPosts = boardPostQueryService.searchPosts(trimmed, authorIds, sort, page, size);
         }
         return new SearchResponse(contests, posts, boardPosts);
-    }
-
-    // SRCH-05 ① 작성자(닉네임) 검색. 지금은 닉네임이 정확히 같은 ACTIVE 회원만 찾는다.
-    // TODO(확인 필요): 정진우 member service에 닉네임 부분 일치 메서드(ACTIVE, 최대 50명)가 생기면 그걸로 바꾼다
-    private List<Long> authorIdsByNickname(String keyword) {
-        return memberService.findByNickname(keyword).map(Member::getId).stream().toList();
     }
 }

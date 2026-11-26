@@ -15,19 +15,16 @@ import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
-import com.gongbang.member.domain.Member;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.service.PostQueryService;
 import com.gongbang.search.dto.SearchResponse;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class SearchServiceTest {
@@ -111,27 +108,25 @@ class SearchServiceTest {
                 .searchPosts(anyString(), any(), anyString(), anyInt(), anyInt());
         verify(boardPostQueryService, never())
                 .searchPosts(anyString(), any(), anyString(), anyInt(), anyInt());
-        verify(memberService, never()).findByNickname(anyString());
+        verify(memberService, never()).findActiveMemberIdsByNickname(anyString());
     }
 
     @Test
-    @DisplayName("커뮤니티 검색에는 닉네임이 같은 회원 id를 작성자 조건으로 같이 넘긴다")
-    void 닉네임이_같은_회원의_글도_찾는다() {
-        Member author = Member.createEmailMember("a@test.local", "hash", "기획왕");
-        ReflectionTestUtils.setField(author, "id", 42L);
-        given(memberService.findByNickname("기획왕")).willReturn(Optional.of(author));
+    @DisplayName("커뮤니티 검색에는 닉네임이 맞는 활성 회원 id 목록을 작성자 조건으로 같이 넘긴다")
+    void 닉네임이_맞는_회원의_글도_찾는다() {
+        given(memberService.findActiveMemberIdsByNickname("기획")).willReturn(List.of(42L, 7L));
         givenEmptyCommunity();
 
-        searchService.search(" 기획왕 ", "post", "deadline", false, 2, 10, null);
+        searchService.search(" 기획 ", "post", "deadline", false, 2, 10, null);
 
-        verify(postQueryService).searchPosts("기획왕", List.of(42L), "deadline", 2, 10);
-        verify(boardPostQueryService).searchPosts("기획왕", List.of(42L), "deadline", 2, 10);
+        verify(postQueryService).searchPosts("기획", List.of(42L, 7L), "deadline", 2, 10);
+        verify(boardPostQueryService).searchPosts("기획", List.of(42L, 7L), "deadline", 2, 10);
     }
 
     @Test
     @DisplayName("닉네임이 맞는 회원이 없으면 작성자 조건 없이 제목·본문으로만 찾는다")
     void 닉네임이_없으면_작성자_조건은_비운다() {
-        given(memberService.findByNickname("데이터 분석")).willReturn(Optional.empty());
+        given(memberService.findActiveMemberIdsByNickname("데이터 분석")).willReturn(List.of());
         givenEmptyCommunity();
 
         searchService.search("데이터 분석", "post", "accuracy", false, 0, 20, null);
@@ -145,7 +140,7 @@ class SearchServiceTest {
     void 전체_탭은_모두_찾는다() {
         given(contestQueryService.searchContests("공모전", "latest", true, 0, 20, 7L))
                 .willReturn(PageResponse.of(List.of(), 0, 20, 0));
-        given(memberService.findByNickname("공모전")).willReturn(Optional.empty());
+        given(memberService.findActiveMemberIdsByNickname("공모전")).willReturn(List.of());
         givenEmptyCommunity();
 
         SearchResponse result = searchService.search("공모전", "all", "latest", true, 0, 20, 7L);
@@ -160,7 +155,7 @@ class SearchServiceTest {
     @Test
     @DisplayName("커뮤니티 탭이면 공모전은 찾지 않고 빈 목록을 준다")
     void 커뮤니티_탭은_공모전을_찾지_않는다() {
-        given(memberService.findByNickname("공모전")).willReturn(Optional.empty());
+        given(memberService.findActiveMemberIdsByNickname("공모전")).willReturn(List.of());
         givenEmptyCommunity();
 
         SearchResponse result = searchService.search("공모전", "post", "accuracy", false, 0, 20, null);
