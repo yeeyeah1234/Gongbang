@@ -15,7 +15,7 @@ export function WorkspaceNoAccess({ onGoList }: WorkspaceNoAccessProps) {
         </span>
         <h1 className="text-heading font-bold text-text">이 워크스페이스에 접근할 권한이 없어요</h1>
         <p className="text-body text-text-sub">
-          팀원만 들어올 수 있어요. 팀에서 나갔거나 초대받지 않은 워크스페이스일 수 있어요.
+          팀에서 나갔거나, 강제 퇴장됐거나, 삭제된 팀이면 들어올 수 없어요.
         </p>
         <Button variant="primary" size="md" className="mt-2" onClick={onGoList}>
           워크스페이스 목록으로

@@ -151,4 +151,25 @@ class TeamServiceTest {
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("isDeleted: 삭제된 팀이면 true, 아니면 false")
+    void isDeleted_확인() {
+        given(teamRepository.existsByIdAndDeletedAtIsNotNull(TEAM_ID)).willReturn(true);
+        assertThat(teamService.isDeleted(TEAM_ID)).isTrue();
+
+        given(teamRepository.existsByIdAndDeletedAtIsNotNull(99L)).willReturn(false);
+        assertThat(teamService.isDeleted(99L)).isFalse();
+    }
+
+    @Test
+    @DisplayName("requireExists: 없거나 삭제된 팀이면 404 RESOURCE_NOT_FOUND")
+    void requireExists_삭제된_팀이면_404() {
+        given(teamRepository.existsByIdAndDeletedAtIsNull(TEAM_ID)).willReturn(false);
+
+        BusinessException e =
+                assertThrows(BusinessException.class, () -> teamService.requireExists(TEAM_ID));
+
+        assertThat(e.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
+    }
 }

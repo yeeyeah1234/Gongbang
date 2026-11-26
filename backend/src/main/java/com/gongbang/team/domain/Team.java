@@ -11,7 +11,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 모집글 하나에 팀 하나 (post_id UQ). 팀은 삭제하지 않는다 (AGENTS.md 6). */
+/** 모집글 하나에 팀 하나 (post_id UQ). 팀장 혼자 남은 팀은 WS-08 ⑨에서 deleted_at으로 소프트 삭제한다. */
 @Entity
 @Table(name = "team")
 @Getter
@@ -36,6 +36,9 @@ public class Team {
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     private Team(Long postId, String name) {
         this.postId = postId;
         this.name = name;
@@ -53,5 +56,14 @@ public class Team {
     /** 팀 내 활동 시각(채팅 전송 등)을 갱신한다. */
     public void touchLastActivity(LocalDateTime activityAt) {
         this.lastActivityAt = activityAt != null ? activityAt : LocalDateTime.now();
+    }
+
+    /** WS-08 ⑨ 팀 소프트 삭제: deleted_at을 기록한다. */
+    public void delete(LocalDateTime now) {
+        this.deletedAt = now != null ? now : LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 }

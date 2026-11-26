@@ -67,11 +67,22 @@ export function WorkspaceLayout({
   const basePath = `${WORKSPACE_LIST_PATH}/${teamIdParam}`
   const loginMember = useLoginMember()
 
-  const [removedFromTeamId, setRemovedFromTeamId] = useState<number | null>(null)
-  const removed = removedFromTeamId === teamId
+  const [removedState, setRemovedState] = useState<{
+    teamId: number
+    reason: 'left' | 'deleted'
+  } | null>(null)
+  const removed = removedState?.teamId === teamId
+  const removedByDeletion = removed && removedState.reason === 'deleted'
 
   const markRemoved = useCallback(() => {
-    setRemovedFromTeamId(teamId)
+    setRemovedState((prev) =>
+      prev?.teamId === teamId && prev.reason === 'deleted' ? prev : { teamId, reason: 'left' },
+    )
+    void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+  }, [teamId, queryClient])
+
+  const markDeleted = useCallback(() => {
+    setRemovedState({ teamId, reason: 'deleted' })
     void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
   }, [teamId, queryClient])
 
@@ -96,10 +107,14 @@ export function WorkspaceLayout({
     onKicked: markRemoved,
   })
 
-  // WS-06 ④ 워크스페이스를 보고 있던 중(다른 탭에서 나가기·강퇴) 권한을 잃으면 즉시 안내 모달을 띄운다
+  // WS-06 ④·WS-08 ⑨ 워크스페이스를 보고 있던 중(다른 탭에서 나가기·강퇴·팀 삭제) 권한을 잃으면 즉시 안내 모달을 띄운다
   useEffect(() => {
     if (!ready || removed || summary?.myMemberId === undefined) return
     return realtime.subscribeTeamEvent((event) => {
+      if (event.type === 'TEAM_DELETED') {
+        markDeleted()
+        return
+      }
       if (
         (event.type === 'MEMBER_LEFT' || event.type === 'MEMBER_KICKED') &&
         event.targetId === summary.myMemberId
@@ -107,7 +122,7 @@ export function WorkspaceLayout({
         markRemoved()
       }
     })
-  }, [ready, removed, summary?.myMemberId, realtime, markRemoved])
+  }, [ready, removed, summary?.myMemberId, realtime, markRemoved, markDeleted])
   // 조회 실패(공지 API 머지 전 등)면 data가 없어 배너도 펼치기 버튼도 숨긴다
   const pinnedNotice = pinned.data ?? null
   const [pinnedCollapsed, setPinnedCollapsed] = usePinnedCollapsed(
@@ -195,11 +210,15 @@ export function WorkspaceLayout({
           open
           size="sm"
           title="워크스페이스를 볼 수 없어요"
-          description="팀에서 나가 이 워크스페이스를 볼 수 없어요"
+          description={
+            removedByDeletion
+              ? '팀이 삭제되어 더 이상 이 워크스페이스를 볼 수 없어요.'
+              : '팀에서 나가 이 워크스페이스를 볼 수 없어요'
+          }
           onClose={goListAfterRemoved}
           footer={
             <Button variant="primary" size="md" onClick={goListAfterRemoved}>
-              워크스페이스 목록으로
+              {removedByDeletion ? '확인' : '워크스페이스 목록으로'}
             </Button>
           }
         />

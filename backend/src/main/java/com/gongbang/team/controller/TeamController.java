@@ -9,6 +9,7 @@ import com.gongbang.team.dto.TeamMemberResponse;
 import com.gongbang.team.dto.TeamRenameRequest;
 import com.gongbang.team.dto.TeamRenameResponse;
 import com.gongbang.team.dto.WorkspaceSummaryResponse;
+import com.gongbang.team.service.TeamDeleteService;
 import com.gongbang.team.service.TeamLeaveService;
 import com.gongbang.team.service.TeamListService;
 import com.gongbang.team.service.TeamMemberManagementService;
@@ -33,6 +34,7 @@ public class TeamController {
     private final TeamMemberManagementService teamMemberManagementService;
     private final TeamListService teamListService;
     private final TeamLeaveService teamLeaveService;
+    private final TeamDeleteService teamDeleteService;
 
     /** WS-08 워크스페이스 팀 목록 (API 명세서 GET /api/teams): 내가 현재 팀원인 팀. */
     @GetMapping("/api/teams")
@@ -48,6 +50,14 @@ public class TeamController {
             @RequestBody TeamRenameRequest request) {
         return ApiResponse.success(
                 teamListService.renameTeam(teamId, me.getMemberId(), request.name()));
+    }
+
+    /** WS-08 ⑨ 팀 삭제(소프트 삭제): 팀장 혼자 남은 팀만 삭제 가능. */
+    @DeleteMapping("/api/teams/{teamId}")
+    public ApiResponse<Void> deleteTeam(
+            @AuthenticationPrincipal LoginMember me, @PathVariable Long teamId) {
+        teamDeleteService.deleteTeam(teamId, me.getMemberId());
+        return ApiResponse.success(null);
     }
 
     /** WS-02 워크스페이스 헤더 (API 명세서 GET /api/teams/{teamId}): 팀원만. */

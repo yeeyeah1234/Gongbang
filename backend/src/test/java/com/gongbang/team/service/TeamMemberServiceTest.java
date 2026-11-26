@@ -31,9 +31,12 @@ class TeamMemberServiceTest {
     }
 
     @Test
-    @DisplayName("현재 팀원이 아니면 requireMember는 403 NOT_TEAM_MEMBER")
+    @DisplayName("현재 팀원이 아니거나 삭제된 팀이면 requireMember는 403 NOT_TEAM_MEMBER")
     void 팀원이_아니면_requireMember_403() {
-        given(teamMemberRepository.existsByTeamIdAndMemberIdAndLeftAtIsNull(TEAM_ID, MEMBER_ID))
+        given(
+                        teamMemberRepository
+                                .existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndLeftAtIsNull(
+                                        TEAM_ID, MEMBER_ID))
                 .willReturn(false);
 
         BusinessException e =
@@ -46,11 +49,12 @@ class TeamMemberServiceTest {
     }
 
     @Test
-    @DisplayName("현재 팀장이 아니면 requireLeader는 403 NOT_TEAM_LEADER")
+    @DisplayName("현재 팀장이 아니거나 삭제된 팀이면 requireLeader는 403 NOT_TEAM_LEADER")
     void 팀장이_아니면_requireLeader_403() {
         given(
-                        teamMemberRepository.existsByTeamIdAndMemberIdAndRoleAndLeftAtIsNull(
-                                TEAM_ID, MEMBER_ID, TeamRole.LEADER))
+                        teamMemberRepository
+                                .existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndRoleAndLeftAtIsNull(
+                                        TEAM_ID, MEMBER_ID, TeamRole.LEADER))
                 .willReturn(false);
 
         BusinessException e =
@@ -60,5 +64,23 @@ class TeamMemberServiceTest {
 
         assertThat(e.getErrorCode()).isEqualTo(ErrorCode.NOT_TEAM_LEADER);
         assertThat(e.getErrorCode().getHttpStatus().value()).isEqualTo(403);
+    }
+
+    @Test
+    @DisplayName("삭제된 팀이면 isActiveMember와 isLeader는 false")
+    void 삭제된_팀이면_false() {
+        given(
+                        teamMemberRepository
+                                .existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndLeftAtIsNull(
+                                        TEAM_ID, MEMBER_ID))
+                .willReturn(false);
+        given(
+                        teamMemberRepository
+                                .existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndRoleAndLeftAtIsNull(
+                                        TEAM_ID, MEMBER_ID, TeamRole.LEADER))
+                .willReturn(false);
+
+        assertThat(teamMemberService.isActiveMember(TEAM_ID, MEMBER_ID)).isFalse();
+        assertThat(teamMemberService.isLeader(TEAM_ID, MEMBER_ID)).isFalse();
     }
 }

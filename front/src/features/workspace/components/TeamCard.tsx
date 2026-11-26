@@ -39,10 +39,12 @@ interface TeamCardProps {
   onToast: (message: string) => void
   // WS-09 ① 카드 오른쪽 아래 「팀 나가기」 클릭
   onRequestLeave?: (team: MyTeam) => void
+  // WS-08 ⑨ 팀장 혼자 남은 팀의 「팀 삭제」 클릭
+  onRequestDelete?: (team: MyTeam) => void
 }
 
 // WS-08 팀 카드. 카드 전체가 그 팀 워크스페이스로 가는 링크이고(④), 펜·입력칸은 링크 위에 따로 둔다(⑧)
-export function TeamCard({ team, onToast, onRequestLeave }: TeamCardProps) {
+export function TeamCard({ team, onToast, onRequestLeave, onRequestDelete }: TeamCardProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(team.name)
   const [error, setError] = useState<string | null>(null)
@@ -196,20 +198,35 @@ export function TeamCard({ team, onToast, onRequestLeave }: TeamCardProps) {
         <span className="shrink-0 text-small text-text-sub">팀원 {team.memberCount}명</span>
       </div>
 
-      {/* WS-09 ① 진행 중·종료 모든 카드 오른쪽 아래 「팀 나가기」 (링크 위에 두어 카드 입장과 분리) */}
-      {onRequestLeave && (
+      {/* WS-08 ⑨ 팀장 혼자 남은 팀은 「팀 삭제」, 그 외는 WS-09 ① 「팀 나가기」 (링크 위에 두어 카드 입장과 분리) */}
+      {team.isLeader && team.memberCount === 1 && onRequestDelete ? (
         <div className="mt-auto flex justify-end pt-4">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation()
-              onRequestLeave(team)
+              onRequestDelete(team)
             }}
             className="relative z-10 inline-flex h-10 cursor-pointer items-center justify-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text-sub transition-colors hover:border-danger-line hover:bg-bg hover:text-danger"
           >
-            팀 나가기
+            팀 삭제
           </button>
         </div>
+      ) : (
+        onRequestLeave && (
+          <div className="mt-auto flex justify-end pt-4">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRequestLeave(team)
+              }}
+              className="relative z-10 inline-flex h-10 cursor-pointer items-center justify-center rounded-full border border-line-strong bg-surface px-4 text-small font-medium text-text-sub transition-colors hover:border-danger-line hover:bg-bg hover:text-danger"
+            >
+              팀 나가기
+            </button>
+          </div>
+        )
       )}
     </article>
   )

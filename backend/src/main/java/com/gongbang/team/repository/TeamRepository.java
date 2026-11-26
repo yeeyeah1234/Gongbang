@@ -15,12 +15,29 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
 
     boolean existsByPostId(Long postId);
 
+    boolean existsByIdAndDeletedAtIsNull(Long id);
+
+    boolean existsByIdAndDeletedAtIsNotNull(Long id);
+
+    Optional<Team> findByIdAndDeletedAtIsNull(Long id);
+
+    /** WS-08 ⑨ 팀 삭제 사전 확인용 스칼라 프로젝션 (1차 캐시에 Team 엔티티를 올리지 않는다). */
+    interface ActiveTeamMeta {
+        Long getId();
+
+        Long getPostId();
+    }
+
+    @Query(
+            "select t.id as id, t.postId as postId from Team t"
+                    + " where t.id = :teamId and t.deletedAt is null")
+    Optional<ActiveTeamMeta> findActiveMeta(@Param("teamId") Long teamId);
+
     /**
-     * 팀원을 추가할 때 팀 행을 잠근다 (SELECT … FOR UPDATE, AGENTS.md 7). 같은 팀에 동시에 들어와도 색 번호가 겹치지 않게 한다. 잠금은 그
-     * 트랜잭션이 끝날 때 풀린다.
+     * 팀원을 추가하거나 삭제·수정할 때 삭제되지 않은 팀 행을 잠근다 (SELECT … FOR UPDATE, AGENTS.md 7). 잠금은 그 트랜잭션이 끝날 때 풀린다.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select t from Team t where t.id = :teamId")
+    @Query("select t from Team t where t.id = :teamId and t.deletedAt is null")
     Optional<Team> findByIdForUpdate(@Param("teamId") Long teamId);
 
     /**
@@ -71,7 +88,7 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
                             + " JOIN team t ON t.id = tm.team_id"
                             + " LEFT JOIN recruit_post rp ON rp.id = t.post_id"
                             + " LEFT JOIN contest c ON c.id = rp.contest_id"
-                            + " WHERE tm.member_id = :memberId AND tm.left_at IS NULL",
+                            + " WHERE tm.member_id = :memberId AND tm.left_at IS NULL AND t.deleted_at IS NULL",
             nativeQuery = true)
     List<MyTeamRow> findMyTeams(@Param("memberId") Long memberId);
 }

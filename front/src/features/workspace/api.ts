@@ -40,3 +40,8 @@ export async function renameTeam(teamId: number, name: string) {
 export async function leaveTeam(teamId: number) {
   await apiClient.delete<ApiResponse<null>>(`/api/teams/${teamId}/members/me`)
 }
+
+// WS-08 ⑨ 팀 삭제 (DELETE /api/teams/{teamId}). 팀장 혼자 남은 팀만 삭제 가능, 팀원이 남아 있으면 409 TEAM_HAS_OTHER_MEMBERS
+export async function deleteTeam(teamId: number) {
+  await apiClient.delete<ApiResponse<null>>(`/api/teams/${teamId}`)
+}

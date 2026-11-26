@@ -23,15 +23,31 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     /** 현재 팀원인지 (left_at IS NULL). */
     boolean existsByTeamIdAndMemberIdAndLeftAtIsNull(Long teamId, Long memberId);
 
+    /** 삭제되지 않은 팀의 현재 팀원인지 (left_at IS NULL AND team.deleted_at IS NULL). */
+    boolean existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndLeftAtIsNull(
+            Long teamId, Long memberId);
+
     /** 현재 팀원이면서 그 역할인지. */
     boolean existsByTeamIdAndMemberIdAndRoleAndLeftAtIsNull(
             Long teamId, Long memberId, TeamRole role);
+
+    /** 삭제되지 않은 팀의 현재 팀원이면서 그 역할인지. */
+    boolean existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndRoleAndLeftAtIsNull(
+            Long teamId, Long memberId, TeamRole role);
+
+    /** 활성 팀원 수 (사전 확인용 스칼라 조회, WS-08 ⑨). */
+    long countByTeamIdAndLeftAtIsNull(Long teamId);
 
     /** 나간 기록이 하나라도 있는지 (leave_type은 보지 않는다, PST-006 ⑨). */
     boolean existsByTeamIdAndMemberIdAndLeftAtIsNotNull(Long teamId, Long memberId);
 
     /** 현재 팀원 목록 (joinedAt 오름차순). */
     List<TeamMember> findAllByTeamIdAndLeftAtIsNullOrderByJoinedAtAscIdAsc(Long teamId);
+
+    /** WS-08 ⑨ 팀 삭제: 현재 활성 팀원 행을 배타 잠금(FOR UPDATE)으로 조회해 스냅샷 읽기를 방지한다. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select tm from TeamMember tm where tm.team.id = :teamId and tm.leftAt is null")
+    List<TeamMember> findAllByTeamIdAndLeftAtIsNullForUpdate(@Param("teamId") Long teamId);
 
     /** WS-08 팀 목록: 여러 팀의 현재 팀원을 한 번에 (팀 안에서는 입장 순). */
     List<TeamMember> findAllByTeamIdInAndLeftAtIsNullOrderByJoinedAtAscIdAsc(

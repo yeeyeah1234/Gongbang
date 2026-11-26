@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import {
+  deleteTeam,
   fetchMyTeams,
   fetchNoticeUnreadCount,
   fetchPinnedNotice,
@@ -82,6 +83,18 @@ export function useLeaveTeam() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (teamId: number) => leaveTeam(teamId),
+    onSuccess: (_data, teamId) => {
+      void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+      queryClient.removeQueries({ queryKey: workspaceKeys.all(teamId) })
+    },
+  })
+}
+
+// WS-08 ⑨ 팀 삭제: 성공하면 팀 목록을 다시 불러오고 해당 팀 워크스페이스 캐시를 지운다
+export function useDeleteTeam() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (teamId: number) => deleteTeam(teamId),
     onSuccess: (_data, teamId) => {
       void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
       queryClient.removeQueries({ queryKey: workspaceKeys.all(teamId) })
