@@ -1,9 +1,9 @@
 -- NET-02 · INT-005 팀 초대 테이블 (DB 명세서 team_invitation)
 CREATE TABLE team_invitation (
-    id BIGINT NOT NULL AUTO_INCREMENT,
-    post_id BIGINT NOT NULL,
-    inviter_id BIGINT NOT NULL,
-    invitee_id BIGINT NOT NULL,
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    post_id BIGINT UNSIGNED NOT NULL,
+    inviter_id BIGINT UNSIGNED NOT NULL,
+    invitee_id BIGINT UNSIGNED NOT NULL,
     status VARCHAR(10) NOT NULL DEFAULT 'PENDING',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     responded_at DATETIME NULL,
