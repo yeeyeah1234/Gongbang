@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
-import { ChevronDownIcon, FlagIcon, UserIcon } from '../../../components/icons/Icons'
+import { ChevronDownIcon, FlagIcon, PlusIcon, UserIcon } from '../../../components/icons/Icons'
 import { useIsLoggedIn, useLoginMember } from '../../auth/store'
+import { TeamInviteModal } from '../../invitation/components/TeamInviteModal'
 import { LoginRequiredModal } from '../../post/components/LoginRequiredModal'
 import type { ReportTargetType } from '../types'
 import { ReportModal } from './ReportModal'
@@ -17,10 +18,8 @@ interface MemberActionPopoverProps {
 }
 
 /**
- * NET-02 작성자 프로필/닉네임 클릭 드롭다운 메뉴 (프로필 보기 · 신고하기).
+ * NET-02 작성자 프로필/닉네임 클릭 드롭다운 메뉴 (프로필 보기 · 팀 초대하기 · 신고하기).
  * 본인 또는 탈퇴한 사용자(`memberId === null`)는 드롭다운을 열지 않는다.
- *
- * TODO(확인 필요): 팀 초대(`team_invitation`) API가 구현되면 초대 메뉴 항목을 추가한다.
  */
 export function MemberActionPopover({
   memberId,
@@ -34,6 +33,7 @@ export function MemberActionPopover({
   const isLoggedIn = useIsLoggedIn()
   const loginMember = useLoginMember()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [inviteOpen, setInviteOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -63,6 +63,15 @@ export function MemberActionPopover({
 
   if (!canOpenMenu) {
     return <span className="inline-flex items-center gap-2 font-bold text-text">{children}</span>
+  }
+
+  const handleOpenInvite = () => {
+    setMenuOpen(false)
+    if (!isLoggedIn) {
+      setLoginModalOpen(true)
+      return
+    }
+    setInviteOpen(true)
   }
 
   const handleOpenReport = () => {
@@ -110,6 +119,17 @@ export function MemberActionPopover({
                 <span>프로필 보기</span>
               </Link>
             </li>
+            <li role="none">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={handleOpenInvite}
+                className="flex h-10 w-full cursor-pointer items-center gap-2.5 px-4 text-left text-small font-medium text-text transition-colors hover:bg-bg"
+              >
+                <PlusIcon className="size-4 text-text-sub" />
+                <span>팀 초대하기</span>
+              </button>
+            </li>
             <li role="none" className="mt-1 border-t border-divider pt-1">
               <button
                 type="button"
@@ -124,6 +144,14 @@ export function MemberActionPopover({
           </ul>
         )}
       </div>
+
+      <TeamInviteModal
+        open={inviteOpen}
+        inviteeId={memberId}
+        targetNickname={nickname}
+        onClose={() => setInviteOpen(false)}
+        onInvited={onReportSuccess}
+      />
 
       <ReportModal
         open={reportOpen}
