@@ -1,4 +1,5 @@
 import { Link, NavLink, Outlet } from 'react-router'
+import gongbangLogo from '../../assets/gongbang-logo.png'
 import { useLoginMember } from '../auth/store'
 import { useState, type ReactNode } from 'react'
 import { useIsWide } from '../../hooks/useIsWide'
@@ -44,7 +45,7 @@ export function AdminShell({
       ) : (
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-divider bg-surface px-6 py-5 sm:px-8">
           <Link to={`${basePath}/verifications`} className="flex items-center gap-3">
-            <span className="text-subheading font-bold text-primary">공방</span>
+            <img src={gongbangLogo} alt="공방" className="h-9 w-auto md:h-10" />
             <span className="border-l border-line pl-3 text-body">
               공모전 · 커뮤니티 · 워크스페이스
             </span>

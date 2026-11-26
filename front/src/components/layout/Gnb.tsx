@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import gongbangLogo from '../../assets/gongbang-logo.png'
 import { useIsLoggedIn } from '../../features/contest/hooks'
 import { loginPathWithRedirect } from '../../features/auth/redirect'
 import { UserMenu } from '../../features/auth/components/UserMenu'
@@ -194,9 +195,9 @@ export function Gnb() {
           <Link
             to="/"
             onClick={closePanels}
-            className="shrink-0 text-subheading font-bold text-primary"
+            className="flex shrink-0 items-center rounded-input outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
           >
-            공방
+            <img src={gongbangLogo} alt="공방" className="h-9 w-auto md:h-10" />
           </Link>
 
           <nav aria-label="메인 메뉴" className="hidden shrink-0 gap-8 md:flex">
