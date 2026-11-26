@@ -75,6 +75,8 @@ public enum ErrorCode {
             "JPG, PNG, WEBP, GIF, AVIF 이미지만 업로드할 수 있어요"),
     // NET-02 신고 (API 명세서)
     CANNOT_REPORT_SELF(HttpStatus.BAD_REQUEST, "CANNOT_REPORT_SELF", "자기 자신은 신고할 수 없어요"),
+    // NET-02 팀 초대
+    CANNOT_INVITE_SELF(HttpStatus.BAD_REQUEST, "CANNOT_INVITE_SELF", "자기 자신은 초대할 수 없어요"),
     // NET-01 대댓글 1단계 제한 (API 명세서)
     REPLY_DEPTH_EXCEEDED(HttpStatus.BAD_REQUEST, "REPLY_DEPTH_EXCEEDED", "답글에는 다시 답글을 달 수 없어요"),
 
@@ -121,6 +123,8 @@ public enum ErrorCode {
     NOT_CHAT_ROOM_MEMBER(HttpStatus.FORBIDDEN, "NOT_CHAT_ROOM_MEMBER", "채팅방 참여자만 접근할 수 있습니다."),
     // NET-01 댓글 수정·삭제 권한 (API 명세서)
     NOT_COMMENT_AUTHOR(HttpStatus.FORBIDDEN, "NOT_COMMENT_AUTHOR", "댓글 작성자만 할 수 있어요"),
+    // NET-02 · INT-005 팀 초대 수락·거절 권한 (API 명세서)
+    NOT_INVITEE(HttpStatus.FORBIDDEN, "NOT_INVITEE", "초대받은 본인만 처리할 수 있어요"),
 
     // 404 Not Found
     // PST-004 ⑤ 문구
@@ -140,6 +144,8 @@ public enum ErrorCode {
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT_ROOM_NOT_FOUND", "존재하지 않는 채팅방입니다."),
     // NET-01 댓글 조회 (API 명세서)
     COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "COMMENT_NOT_FOUND", "삭제되었거나 없는 댓글이에요"),
+    // NET-02 · INT-005 팀 초대 조회
+    INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "INVITATION_NOT_FOUND", "존재하지 않거나 삭제된 초대예요"),
 
     // ---- 정진우 404 ----
     // AUTH-01 ②, AUTH-02 ⑥ 문구
@@ -200,6 +206,10 @@ public enum ErrorCode {
     // WS-09 ③ 문구 (TODO(확인 필요): API 명세서에 코드가 없어 LEADER_CANNOT_WITHDRAW에 맞춰 409로 정함)
     LEADER_CANNOT_LEAVE(
             HttpStatus.CONFLICT, "LEADER_CANNOT_LEAVE", "팀장은 다른 팀원에게 팀장 권한을 넘긴 뒤 나갈 수 있어요"),
+    // NET-02 팀 초대 (API 명세서)
+    ALREADY_INVITED(HttpStatus.CONFLICT, "ALREADY_INVITED", "이미 초대한 회원이에요"),
+    // NET-02 · NOTI-02 ④ 문구 (API 명세서)
+    INVITATION_CLOSED(HttpStatus.CONFLICT, "INVITATION_CLOSED", "마감된 초대예요"),
 
     // 429 Too Many Requests
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", "요청 횟수를 초과했습니다."),
