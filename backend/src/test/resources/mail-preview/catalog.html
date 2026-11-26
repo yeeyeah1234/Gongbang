@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>공방 메일 전체 미리보기</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:'Malgun Gothic',sans-serif;background:#f4f6f9;color:#202b3b}header{background:white;border-bottom:1px solid #e3e7ee;padding:20px 28px;display:flex;gap:24px;align-items:center}header img{width:112px;height:auto}h1{font-size:20px;margin:0 0 6px}p{font-size:13px;color:#667285;line-height:1.7;margin:0}.layout{display:grid;grid-template-columns:240px 1fr;min-height:calc(100vh - 100px)}nav{padding:16px;background:white;border-right:1px solid #e3e7ee}nav a{display:block;padding:12px 10px;color:#364155;text-decoration:none;border-radius:6px;font-size:13px}nav a:hover,nav a:focus{background:#fff0e6;outline-color:#ff6b2b}small{color:#a64516}main{padding:24px}section{margin:auto;max-width:840px;transition:max-width .15s}iframe{width:100%;height:850px;border:1px solid #e3e7ee;background:white;border-radius:10px}.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px}button{background:white;border:1px solid #d5dce5;border-radius:6px;padding:10px 16px;cursor:pointer;color:#202b3b}button[aria-pressed=true]{background:#202b3b;color:white}.notice{margin:16px 0 0}@media(max-width:700px){header{padding:16px;align-items:flex-start}header img{width:80px}.layout{display:block}nav{display:flex;overflow:auto;padding:8px;border-bottom:1px solid #e3e7ee}nav a{white-space:nowrap}main{padding:12px}h1{font-size:17px}}
+</style></head><body>
+<header><img src="logo.png" alt="공방"><div><h1>메일 전체 미리보기</h1><p>현재 메일 18종 + 미병합 2종 · 모두 같은 로고와 공통 디자인을 사용합니다.</p></div></header>
+<div class="layout"><nav aria-label="메일 종류">{{links}}</nav><main>
+<div class="tools"><button type="button" aria-pressed="true" onclick="size(this,'840px')">PC</button><button type="button" aria-pressed="false" onclick="size(this,'377px')">모바일 375px</button><span id="selected" style="font-size:13px;color:#667285">01 인증번호</span></div>
+<section id="canvas"><iframe title="선택한 메일 디자인" name="mail-preview" src="01-verification_code.html" sandbox="allow-same-origin"></iframe></section>
+<p class="notice">테스트용 예시 내용입니다. 이 화면은 실제 메일을 발송하지 않으며, 메일 속 버튼 이동은 차단했습니다.<br>마감 D-7·D-1, 인증 승인·반려, 경고·정지는 같은 메일 종류에서 실제 발생 내용에 따라 본문이 달라집니다.</p>
+</main></div><script>
+function size(button,width){document.getElementById('canvas').style.maxWidth=width;document.querySelectorAll('.tools button').forEach(b=>b.setAttribute('aria-pressed',String(b===button)))}
+document.querySelector('iframe').addEventListener('load',function(){this.contentDocument.querySelectorAll('a').forEach(a=>a.addEventListener('click',e=>e.preventDefault()))});
+document.querySelectorAll('nav a').forEach(a=>a.addEventListener('click',()=>{document.getElementById('selected').textContent=a.textContent;document.querySelector('iframe').title=a.textContent+' 메일 미리보기'}));
+</script></body></html>
