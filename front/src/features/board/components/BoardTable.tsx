@@ -1,3 +1,4 @@
+import { Highlight } from '../../search/components/Highlight'
 import { Link, useNavigate } from 'react-router'
 import { Badge } from '../../../components/ui/Badge'
 import { formatPostDate } from '../../post/format'
@@ -17,13 +18,14 @@ const COLUMNS = [
 ]
 
 // BRD-001 ④⑤ 게시글 목록 표. 줄 어디를 눌러도 상세로 간다. 키보드는 제목 링크로 이동한다.
-export function BoardTable({ posts }: { posts: BoardListItem[] }) {
+// highlight: SRCH-02 ③ 통합 검색에서 넘기면 제목·작성자 닉네임 안의 검색어를 강조한다 (목록 화면은 넘기지 않음)
+export function BoardTable({ posts, highlight }: { posts: BoardListItem[]; highlight?: string }) {
   const navigate = useNavigate()
 
   return (
     <>
       {/* 좁은 화면(lg 미만)에서는 표 대신 같은 정보를 카드로 보여 준다 */}
-      <BoardCards posts={posts} />
+      <BoardCards posts={posts} highlight={highlight} />
       <div className="hidden overflow-x-auto lg:block">
         <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
           <thead>
@@ -58,12 +60,12 @@ export function BoardTable({ posts }: { posts: BoardListItem[] }) {
                     onClick={(event) => event.stopPropagation()}
                     className="block truncate rounded-input text-body-lg text-text outline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
                   >
-                    {post.title}
+                    <Highlight text={post.title} keyword={highlight} />
                   </Link>
                 </td>
                 <td className="truncate px-3 text-body text-text-sub">{post.contest?.title}</td>
                 <td className="truncate px-3 text-body text-text">
-                  {post.author.nickname ?? '탈퇴한 사용자'}
+                  <Highlight text={post.author.nickname ?? '탈퇴한 사용자'} keyword={highlight} />
                 </td>
                 <td className="px-3 text-body text-text-sub">{formatPostDate(post.createdAt)}</td>
                 <td className="px-3 text-body text-text-sub">{post.viewCount}</td>
@@ -79,7 +81,7 @@ export function BoardTable({ posts }: { posts: BoardListItem[] }) {
 }
 
 // BRD-001 ④⑤ 좁은 화면용 카드. 카드 전체가 상세로 가는 링크다
-function BoardCards({ posts }: { posts: BoardListItem[] }) {
+function BoardCards({ posts, highlight }: { posts: BoardListItem[]; highlight?: string }) {
   return (
     <ul className="flex flex-col border-t border-line lg:hidden">
       {posts.map((post) => (
@@ -97,10 +99,12 @@ function BoardCards({ posts }: { posts: BoardListItem[] }) {
               )}
             </div>
             <p className="line-clamp-2 text-body-lg font-bold break-words text-text">
-              {post.title}
+              <Highlight text={post.title} keyword={highlight} />
             </p>
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small text-text-sub">
-              <span className="text-text">{post.author.nickname ?? '탈퇴한 사용자'}</span>
+              <span className="text-text">
+                <Highlight text={post.author.nickname ?? '탈퇴한 사용자'} keyword={highlight} />
+              </span>
               <span>{formatPostDate(post.createdAt)}</span>
               <span>조회 {post.viewCount}</span>
               <span>좋아요 {post.likeCount}</span>
