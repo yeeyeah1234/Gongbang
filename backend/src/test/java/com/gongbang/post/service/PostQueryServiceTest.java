@@ -296,4 +296,17 @@ class PostQueryServiceTest {
         verify(recruitPostSearchRepository, never())
                 .search(any(), any(), any(), any(), anyLong(), any(Integer.class));
     }
+
+    @Test
+    @DisplayName("팀 초대 모달용 내 모집중 글은 모집중·삭제 안 된 글을 최신순으로 저장소에 요청한다 (NET-02, INT-005 ④)")
+    void 내_모집중_글() {
+        RecruitPost post = contestPost(1L, 3L);
+        given(
+                        recruitPostRepository
+                                .findByAuthorIdAndStatusAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
+                                        7L, PostStatus.RECRUITING))
+                .willReturn(List.of(post));
+
+        assertThat(postQueryService.getMyRecruitingPosts(7L)).containsExactly(post);
+    }
 }
