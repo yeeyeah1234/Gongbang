@@ -9,6 +9,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.dto.MemberProfileSummary;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.domain.PostSearchSort;
+import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.MyPostItemResponse;
 import com.gongbang.post.dto.PostListItemResponse;
@@ -58,6 +59,16 @@ public class PostQueryService {
                 .findById(postId)
                 .filter(post -> post.getDeletedAt() == null)
                 .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+    }
+
+    /**
+     * NET-02 팀 초대 모달(김건우 GET /api/members/me/recruiting-posts)용: 내가 쓴 모집중인 글, 최신순. 삭제된 글과 모집완료 글은
+     * 뺀다 (INT-005 ④). 모집 종료일이 지난 「모집마감」 글은 저장된 상태가 모집중이라 넣는다 (초대 수락은 종료일 뒤에도 가능, REC-001).
+     */
+    public List<RecruitPost> getMyRecruitingPosts(Long authorId) {
+        return recruitPostRepository
+                .findByAuthorIdAndStatusAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
+                        authorId, PostStatus.RECRUITING);
     }
 
     /** PST-001 모집글 목록. 비회원도 본다 (⑤). 삭제된 글은 빠진다. */

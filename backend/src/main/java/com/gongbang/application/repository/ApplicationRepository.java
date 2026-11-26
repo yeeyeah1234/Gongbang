@@ -42,6 +42,14 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     Optional<Application> findByPostIdAndApplicantId(Long postId, Long applicantId);
 
+    /** INT-005 ③: 초대 수락 때 그 회원의 이 글 지원을 잠가 읽는다 (모집글 행을 잠근 뒤에 부른다). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+            "select a from Application a"
+                    + " where a.postId = :postId and a.applicantId = :applicantId")
+    Optional<Application> findByPostIdAndApplicantIdForUpdate(
+            @Param("postId") Long postId, @Param("applicantId") Long applicantId);
+
     /**
      * REC-004: 모집글을 먼저 잠그려고 지원의 모집글 ID만 값으로 읽는다. 엔티티를 읽지 않으므로 뒤의 잠금 조회(findByIdForUpdate)가 옛 값을
      * 돌려주지 않는다.

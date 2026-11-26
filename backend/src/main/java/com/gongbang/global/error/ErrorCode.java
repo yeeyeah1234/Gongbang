@@ -197,6 +197,9 @@ public enum ErrorCode {
     // TODO(확인 필요): 기능정의서에 문구가 없어 임시로 정함 (NTC-05, 고정 동시 요청으로 팀당 고정 1개 UNIQUE 위반)
     NOTICE_PIN_CONFLICT(
             HttpStatus.CONFLICT, "NOTICE_PIN_CONFLICT", "다른 공지가 방금 고정됐어요. 새로고침 후 다시 시도해 주세요"),
+    // WS-09 ③ 문구 (TODO(확인 필요): API 명세서에 코드가 없어 LEADER_CANNOT_WITHDRAW에 맞춰 409로 정함)
+    LEADER_CANNOT_LEAVE(
+            HttpStatus.CONFLICT, "LEADER_CANNOT_LEAVE", "팀장은 다른 팀원에게 팀장 권한을 넘긴 뒤 나갈 수 있어요"),
 
     // 429 Too Many Requests
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_REQUESTS", "요청 횟수를 초과했습니다."),

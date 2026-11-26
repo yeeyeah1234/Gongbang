@@ -23,6 +23,7 @@ import { Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { getApiError } from '../../../api/errors'
 import type { MemberColorIndex } from '../../../components/ui/Avatar'
 import { Button } from '../../../components/ui/Button'
+import { Modal } from '../../../components/ui/Modal'
 import { useLoginMember } from '../../auth/store'
 import { useChatRooms, useTeamMembers } from '../../chat/hooks'
 import { useWorkspaceRealtime } from '../../chat/useWorkspaceRealtime'
@@ -66,14 +67,22 @@ export function WorkspaceLayout({
   const basePath = `${WORKSPACE_LIST_PATH}/${teamIdParam}`
   const loginMember = useLoginMember()
 
+  const [removedFromTeamId, setRemovedFromTeamId] = useState<number | null>(null)
+  const removed = removedFromTeamId === teamId
+
+  const markRemoved = useCallback(() => {
+    setRemovedFromTeamId(teamId)
+    void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+  }, [teamId, queryClient])
+
   const summaryQuery = useWorkspaceSummary(teamId)
   const summary = summaryQuery.data
   const ready = summary !== undefined
-  const pinned = usePinnedNotice(teamId, ready)
-  const noticeUnread = useNoticeUnreadCount(teamId, ready)
+  const pinned = usePinnedNotice(teamId, ready && !removed)
+  const noticeUnread = useNoticeUnreadCount(teamId, ready && !removed)
   const refreshNoticeIndicators = useRefreshNoticeIndicators(teamId)
-  const chatRoomsQuery = useChatRooms(teamId, ready)
-  const teamMembersQuery = useTeamMembers(teamId, ready)
+  const chatRoomsQuery = useChatRooms(teamId, ready && !removed)
+  const teamMembersQuery = useTeamMembers(teamId, ready && !removed)
   const totalChatUnread = useMemo(() => {
     if (!chatRoomsQuery.data) return chatUnreadCount
     return chatRoomsQuery.data.reduce((sum, room) => sum + room.unreadCount, 0)
@@ -82,9 +91,23 @@ export function WorkspaceLayout({
   const realtime = useWorkspaceRealtime({
     teamId,
     myMemberId: summary?.myMemberId ?? null,
-    enabled: ready,
+    enabled: ready && !removed,
     onRefreshNotice: refreshNoticeIndicators,
+    onKicked: markRemoved,
   })
+
+  // WS-06 ④ 워크스페이스를 보고 있던 중(다른 탭에서 나가기·강퇴) 권한을 잃으면 즉시 안내 모달을 띄운다
+  useEffect(() => {
+    if (!ready || removed || summary?.myMemberId === undefined) return
+    return realtime.subscribeTeamEvent((event) => {
+      if (
+        (event.type === 'MEMBER_LEFT' || event.type === 'MEMBER_KICKED') &&
+        event.targetId === summary.myMemberId
+      ) {
+        markRemoved()
+      }
+    })
+  }, [ready, removed, summary?.myMemberId, realtime, markRemoved])
   // 조회 실패(공지 API 머지 전 등)면 data가 없어 배너도 펼치기 버튼도 숨긴다
   const pinnedNotice = pinned.data ?? null
   const [pinnedCollapsed, setPinnedCollapsed] = usePinnedCollapsed(
@@ -133,10 +156,11 @@ export function WorkspaceLayout({
   }, [summary?.myMemberId, teamMembersQuery.data])
 
   const handlePresenceForbidden = useCallback(() => {
+    markRemoved()
     void queryClient.invalidateQueries({ queryKey: workspaceKeys.summary(teamId) })
-  }, [queryClient, teamId])
+  }, [markRemoved, queryClient, teamId])
 
-  const syncEnabled = ready && !forbidden && loginMember !== null
+  const syncEnabled = ready && !forbidden && !removed && loginMember !== null
   const syncSocket = useWorkspaceSyncSocket({
     teamId,
     enabled: syncEnabled,
@@ -156,12 +180,32 @@ export function WorkspaceLayout({
   })
   const resolvedOnlineMembers = onlineMembers.length > 0 ? onlineMembers : presenceMembers
 
-  // 403 뒤 재조회가 500이면 오류만 바뀌고 예전 data는 남는다. 비워 두어야 빠진 팀이 다시 보이지 않는다
+  // 403·이탈 뒤 재조회가 500이면 오류만 바뀌고 예전 data는 남는다. 비워 두어야 빠진 팀이 다시 보이지 않는다
   useEffect(() => {
-    if (!forbidden || !ready) return
+    if ((!forbidden && !removed) || !ready) return
     const queryKey = workspaceKeys.summary(teamId)
     queryClient.getQueryCache().find({ queryKey })?.setState({ data: undefined })
-  }, [forbidden, ready, teamId, queryClient])
+  }, [forbidden, removed, ready, teamId, queryClient])
+
+  if (removed) {
+    const goListAfterRemoved = () => navigate(WORKSPACE_LIST_PATH, { replace: true })
+    return (
+      <main className="min-h-screen bg-bg">
+        <Modal
+          open
+          size="sm"
+          title="워크스페이스를 볼 수 없어요"
+          description="팀에서 나가 이 워크스페이스를 볼 수 없어요"
+          onClose={goListAfterRemoved}
+          footer={
+            <Button variant="primary" size="md" onClick={goListAfterRemoved}>
+              워크스페이스 목록으로
+            </Button>
+          }
+        />
+      </main>
+    )
+  }
 
   if (forbidden) return <WorkspaceNoAccess onGoList={goList} />
 

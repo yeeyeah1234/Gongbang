@@ -9,6 +9,7 @@ import com.gongbang.application.domain.RejectType;
 import com.gongbang.application.repository.ApplicationRepository;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -87,5 +88,27 @@ class ApplicationCloseServiceTest {
                             assertThat(application.getRejectType()).isEqualTo(RejectType.AUTO);
                             assertThat(application.getProcessedAt()).isEqualTo(NOW);
                         });
+    }
+
+    @Test
+    @DisplayName("초대를 수락한 회원의 대기 지원은 「수락」으로 바꾸고, 이미 처리된 지원이나 지원이 없으면 그대로 둔다 (INT-005 ③)")
+    void 초대_수락_때_대기_지원을_수락으로() {
+        Application pending = Application.pending(POST_ID, 20L);
+        given(applicationRepository.findByPostIdAndApplicantIdForUpdate(POST_ID, 20L))
+                .willReturn(Optional.of(pending));
+        assertThat(applicationCloseService.acceptPendingApplication(POST_ID, 20L, NOW)).isTrue();
+        assertThat(pending.getStatus()).isEqualTo(ApplicationStatus.ACCEPTED);
+        assertThat(pending.getProcessedAt()).isEqualTo(NOW);
+
+        Application rejected = Application.pending(POST_ID, 21L);
+        rejected.reject(RejectType.MANUAL, NOW.minusDays(1));
+        given(applicationRepository.findByPostIdAndApplicantIdForUpdate(POST_ID, 21L))
+                .willReturn(Optional.of(rejected));
+        assertThat(applicationCloseService.acceptPendingApplication(POST_ID, 21L, NOW)).isFalse();
+        assertThat(rejected.getStatus()).isEqualTo(ApplicationStatus.REJECTED);
+
+        given(applicationRepository.findByPostIdAndApplicantIdForUpdate(POST_ID, 22L))
+                .willReturn(Optional.empty());
+        assertThat(applicationCloseService.acceptPendingApplication(POST_ID, 22L, NOW)).isFalse();
     }
 }

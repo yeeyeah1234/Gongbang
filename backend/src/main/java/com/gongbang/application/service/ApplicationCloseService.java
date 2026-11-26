@@ -40,6 +40,24 @@ public class ApplicationCloseService {
     }
 
     /**
+     * INT-005 ③: 팀 초대를 수락한 회원이 이 글에 대기 중인 지원이 있으면 「수락」으로 바꾼다. 대기 지원이 없거나 이미 처리된 지원(거절 등)이면 그대로 둔다.
+     * 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근 뒤 부른다 (잠금 순서 모집글 → 지원).
+     *
+     * @return 대기 지원을 수락으로 바꿨으면 true
+     */
+    public boolean acceptPendingApplication(Long postId, Long applicantId, LocalDateTime now) {
+        return applicationRepository
+                .findByPostIdAndApplicantIdForUpdate(postId, applicantId)
+                .filter(Application::isPending)
+                .map(
+                        application -> {
+                            application.accept(now);
+                            return true;
+                        })
+                .orElse(false);
+    }
+
+    /**
      * REC-006 ④: 모집완료(자동·수동)로 남은 대기 지원을 모두 자동 거절(AUTO)한다. 부르는 쪽 트랜잭션 안에서 모집글 행을 잠근 뒤 부른다.
      *
      * @return 거절된 지원의 지원자 ID (거절 알림용)
