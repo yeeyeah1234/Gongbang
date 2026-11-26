@@ -1,3 +1,4 @@
+import { Highlight } from '../../search/components/Highlight'
 import { Link, useNavigate } from 'react-router'
 import { Badge } from '../../../components/ui/Badge'
 import { formatPostDate } from '../format'
@@ -6,6 +7,8 @@ import type { PostListItem } from '../types'
 
 interface PostTableProps {
   posts: PostListItem[]
+  // SRCH-02 ③ 통합 검색에서 넘기면 제목·작성자 닉네임 안의 검색어를 강조한다 (목록 화면은 넘기지 않음)
+  highlight?: string
 }
 
 // Figma WF-01 열 너비 (1680px 기준). 모집글 제목이 남는 너비를 모두 쓴다.
@@ -21,13 +24,13 @@ const COLUMNS = [
 ]
 
 // PST-001 ②③④ 모집글 목록 표. 줄 어디를 눌러도 상세로 간다 (⑤). 키보드는 제목 링크로 이동한다.
-export function PostTable({ posts }: PostTableProps) {
+export function PostTable({ posts, highlight }: PostTableProps) {
   const navigate = useNavigate()
 
   return (
     <>
       {/* 좁은 화면(lg 미만)에서는 표 대신 같은 정보를 카드로 보여 준다 */}
-      <PostCards posts={posts} />
+      <PostCards posts={posts} highlight={highlight} />
       {/* 표가 화면보다 넓어지면 표만 가로로 스크롤한다 */}
       <div className="hidden overflow-x-auto lg:block">
         <table className="w-full min-w-[1240px] table-fixed border-collapse text-left">
@@ -75,11 +78,11 @@ export function PostTable({ posts }: PostTableProps) {
                     onClick={(event) => event.stopPropagation()}
                     className="block truncate rounded-input text-body-lg text-text outline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-primary"
                   >
-                    {post.title}
+                    <Highlight text={post.title} keyword={highlight} />
                   </Link>
                 </td>
                 <td className="truncate px-3 text-body text-text">
-                  {post.author.nickname ?? '탈퇴한 사용자'}
+                  <Highlight text={post.author.nickname ?? '탈퇴한 사용자'} keyword={highlight} />
                 </td>
                 <td className="px-3 text-body text-text-sub">{formatPostDate(post.createdAt)}</td>
                 <td className="px-3 text-body text-text-sub">{post.viewCount}</td>
@@ -100,7 +103,7 @@ export function PostTable({ posts }: PostTableProps) {
 }
 
 // PST-001 ②③④ 좁은 화면용 카드. 카드 전체가 상세로 가는 링크다 (⑤)
-function PostCards({ posts }: PostTableProps) {
+function PostCards({ posts, highlight }: PostTableProps) {
   return (
     <ul className="flex flex-col border-t border-line lg:hidden">
       {posts.map((post) => (
@@ -119,13 +122,15 @@ function PostCards({ posts }: PostTableProps) {
               )}
             </div>
             <p className="line-clamp-2 text-body-lg font-bold break-words text-text">
-              {post.title}
+              <Highlight text={post.title} keyword={highlight} />
             </p>
             {post.contest && (
               <p className="truncate text-small text-text-sub">{post.contest.title}</p>
             )}
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-small text-text-sub">
-              <span className="text-text">{post.author.nickname ?? '탈퇴한 사용자'}</span>
+              <span className="text-text">
+                <Highlight text={post.author.nickname ?? '탈퇴한 사용자'} keyword={highlight} />
+              </span>
               <span>{formatPostDate(post.createdAt)}</span>
               <span>조회 {post.viewCount}</span>
               <span className="font-bold text-text">
