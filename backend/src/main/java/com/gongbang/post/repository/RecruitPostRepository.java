@@ -1,8 +1,10 @@
 package com.gongbang.post.repository;
 
+import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +21,10 @@ public interface RecruitPostRepository extends JpaRepository<RecruitPost, Long> 
 
     /** MY-02 내 모집글 (삭제된 글 제외). */
     Page<RecruitPost> findByAuthorIdAndDeletedAtIsNull(Long authorId, Pageable pageable);
+
+    /** NET-02 팀 초대 모달: 내가 쓴 삭제되지 않은 글 중 주어진 상태의 글, 최신순. */
+    List<RecruitPost> findByAuthorIdAndStatusAndDeletedAtIsNullOrderByCreatedAtDescIdDesc(
+            Long authorId, PostStatus status);
 
     /**
      * 목표·확정 인원을 바꾸는 처리(PST-003 수정, REC-004 수락 등)에서 모집글 행을 잠근다 (SELECT … FOR UPDATE, AGENTS.md 7).

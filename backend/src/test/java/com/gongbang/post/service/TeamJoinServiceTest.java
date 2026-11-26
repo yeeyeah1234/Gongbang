@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -182,5 +184,37 @@ class TeamJoinServiceTest {
         assertThat(errorOf()).isEqualTo(ErrorCode.ALREADY_TEAM_MEMBER);
         assertThat(post.getCurrentCount()).isEqualTo(2);
         verifyNoInteractions(chatMembershipService, teamEventPublisher);
+    }
+
+    @Test
+    @DisplayName("초대 수락: 모집글을 먼저 잠그고, 그 회원의 대기 지원을 수락으로 바꾼 뒤 팀원으로 넣는다 (INT-005 ①③, 잠금 순서 모집글 → 지원)")
+    void 초대_수락은_대기_지원을_먼저_수락으로() {
+        givenPost("AI 팀원 모집", 2, 4);
+        given(teamService.findTeamIdByPostId(POST_ID)).willReturn(Optional.of(TEAM_ID));
+
+        TeamJoinResult result = teamJoinService.joinByInvitation(POST_ID, MEMBER_ID, NOW);
+
+        InOrder order = inOrder(postCommandService, applicationCloseService, teamService);
+        order.verify(postCommandService).lockPost(POST_ID);
+        order.verify(applicationCloseService).acceptPendingApplication(POST_ID, MEMBER_ID, NOW);
+        order.verify(teamService).addMember(TEAM_ID, MEMBER_ID);
+        assertThat(result.currentCount()).isEqualTo(3);
+        // 본인이 수락한 것이라 수락 알림은 보내지 않는다 (NOTI-04 ②)
+        verify(recruitNotifier, never()).accepted(any(), anyLong(), any());
+    }
+
+    @Test
+    @DisplayName("초대 수락도 지원 수락과 같은 정원 규칙: 정원이 찼으면 POST_FULL이고 팀원으로 넣지 않는다")
+    void 초대_수락_정원_규칙() {
+        givenPost("AI 팀원 모집", 4, 4);
+        assertThat(
+                        assertThrows(
+                                        BusinessException.class,
+                                        () ->
+                                                teamJoinService.joinByInvitation(
+                                                        POST_ID, MEMBER_ID, NOW))
+                                .getErrorCode())
+                .isEqualTo(ErrorCode.POST_FULL);
+        verify(teamService, never()).addMember(anyLong(), anyLong());
     }
 }
