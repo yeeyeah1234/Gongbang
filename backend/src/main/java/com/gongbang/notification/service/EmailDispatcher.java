@@ -4,6 +4,7 @@ import com.gongbang.notification.domain.EmailOutbox;
 import com.gongbang.notification.domain.SendMode;
 import com.gongbang.notification.repository.EmailOutboxRepository;
 import com.gongbang.notification.repository.NotificationRepository;
+import jakarta.mail.MessagingException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -13,7 +14,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -31,6 +31,7 @@ public class EmailDispatcher {
     private final EmailOutboxRepository outboxRepository;
     private final NotificationRepository notificationRepository;
     private final ObjectProvider<JavaMailSender> mailSender;
+    private final EmailMessageComposer messageComposer;
 
     @Value("${spring.mail.host:}")
     private String mailHost;
@@ -123,15 +124,10 @@ public class EmailDispatcher {
             return false;
         }
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(senderAddress());
-            message.setTo(mail.getToEmail());
-            message.setSubject(mail.getSubject());
-            message.setText(mail.getBody());
-            sender.send(message);
+            sender.send(messageComposer.compose(sender, senderAddress(), mail));
             mail.sent(now);
             return true;
-        } catch (RuntimeException e) {
+        } catch (RuntimeException | MessagingException e) {
             // 원인 종류만 남긴다 (주소·내용은 남기지 않음, AGENTS 9). 인증 실패면 MailAuthenticationException
             log.warn(
                     "메일 발송 실패 id={} 종류={} 원인={}",
