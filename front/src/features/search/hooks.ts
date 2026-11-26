@@ -15,9 +15,11 @@ export function useSearch(params: SearchParams) {
     enabled: ready,
     queryFn: ({ pageParam }) => fetchSearch({ ...params, page: pageParam, size: SEARCH_PAGE_SIZE }),
     initialPageParam: 0,
-    // 공모전 결과 기준으로 다음 페이지를 부른다 (모집글이 생기면 둘 중 하나라도 남았는지로 바꾼다)
+    // 공모전·모집글·게시글 중 하나라도 남았으면 다음 페이지를 부른다 (세 목록은 같은 page로 함께 넘어간다)
     getNextPageParam: (lastPage) =>
-      lastPage.contests.hasNext || lastPage.posts.hasNext ? lastPage.contests.page + 1 : undefined,
+      lastPage.contests.hasNext || lastPage.posts.hasNext || lastPage.boardPosts.hasNext
+        ? lastPage.contests.page + 1
+        : undefined,
     retry: false,
   })
 }

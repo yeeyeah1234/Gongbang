@@ -1,10 +1,15 @@
 package com.gongbang.search.service;
 
+import com.gongbang.board.dto.BoardPostListItemResponse;
+import com.gongbang.board.service.BoardPostQueryService;
 import com.gongbang.contest.dto.ContestCardResponse;
 import com.gongbang.contest.service.ContestQueryService;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.MemberService;
+import com.gongbang.post.dto.PostListItemResponse;
+import com.gongbang.post.service.PostQueryService;
 import com.gongbang.search.domain.SearchType;
 import com.gongbang.search.dto.SearchResponse;
 import java.util.List;
@@ -12,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** SRCH-02·05 통합 검색: 한 검색어로 공모전·모집글·작성자를 함께 찾는다. */
+/** SRCH-02·05 통합 검색: 한 검색어로 공모전·팀원 모집글·커뮤니티 게시글·작성자를 함께 찾는다. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,6 +28,9 @@ public class SearchService {
 
     // 다른 도메인은 repository가 아니라 service로 부른다 (AGENTS.md 3장)
     private final ContestQueryService contestQueryService;
+    private final PostQueryService postQueryService;
+    private final BoardPostQueryService boardPostQueryService;
+    private final MemberService memberService;
 
     public SearchResponse search(
             String keyword,
@@ -38,16 +46,22 @@ public class SearchService {
         }
         SearchType searchType = SearchType.from(type);
 
+        // 「마감된 공모전 포함」은 공모전에만 적용한다. 모집완료·모집마감 모집글은 항상 넣는다 (SRCH-02 ①)
         PageResponse<ContestCardResponse> contests =
                 searchType.includesContests()
                         ? contestQueryService.searchContests(
                                 trimmed, sort, includeClosed, page, size, memberId)
                         : PageResponse.of(List.of(), page, size, 0);
 
-        // TODO(확인 필요): 모집글 제목·본문, 작성자 닉네임 검색(SRCH-05 ①)은 모집글(김수형)·회원(정진우) 도메인이 생기면
-        // 그 service를 불러 채운다. 정렬 sort는 모집글에도 같이 적용한다(마감 임박순은 모집 종료일 기준, SRCH-02 ②).
-        PageResponse<Object> posts = PageResponse.of(List.of(), page, size, 0);
-
-        return new SearchResponse(contests, posts);
+        PageResponse<PostListItemResponse> posts = PageResponse.of(List.of(), page, size, 0);
+        PageResponse<BoardPostListItemResponse> boardPosts =
+                PageResponse.of(List.of(), page, size, 0);
+        if (searchType.includesCommunity()) {
+            // SRCH-05 ①: 제목·본문 일치 또는 닉네임이 맞는 ACTIVE 회원이 쓴 글. 정렬 기준은 PST-001·BRD-001 (SRCH-02 ②)
+            List<Long> authorIds = memberService.findActiveMemberIdsByNickname(trimmed);
+            posts = postQueryService.searchPosts(trimmed, authorIds, sort, page, size);
+            boardPosts = boardPostQueryService.searchPosts(trimmed, authorIds, sort, page, size);
+        }
+        return new SearchResponse(contests, posts, boardPosts);
     }
 }

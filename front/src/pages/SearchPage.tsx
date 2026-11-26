@@ -1,8 +1,11 @@
 import axios from 'axios'
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
 import { Toast } from '../components/ui/Toast'
+import { BoardTable } from '../features/board/components/BoardTable'
 import { ContestCard } from '../features/contest/components/ContestCard'
+import { PostTable } from '../features/post/components/PostTable'
 import type { ContestCardItem } from '../features/contest/types'
 import { usePopularContests, useSearch } from '../features/search/hooks'
 import type { SearchSort, SearchType } from '../features/search/types'
@@ -118,17 +121,60 @@ function SearchResults({
   }
 
   const contests = data.pages.flatMap((page) => page.contests.items)
-  // TODO(확인 필요): 모집글·작성자 결과(SRCH-05 ①)는 모집글 도메인이 생기면 「커뮤니티」 영역으로 함께 보여 준다
-  const postCount = data.pages[0].posts.totalCount
-  if (contests.length === 0 && postCount === 0) {
+  const posts = data.pages.flatMap((page) => page.posts.items)
+  const boardPosts = data.pages.flatMap((page) => page.boardPosts.items)
+  if (contests.length === 0 && posts.length === 0 && boardPosts.length === 0) {
     return <NoResults keyword={keyword} onToast={onToast} />
   }
 
+  // [전체] 탭은 묶음마다 제목을 붙이고, [커뮤니티] 탭은 「팀원 모집」「커뮤니티 게시판」 두 묶음으로 나눈다 (SRCH-02 ①).
+  // [공모전] 탭은 공모전만 나오므로 제목 없이 카드만 보여 준다
   return (
-    <>
-      <ContestGrid contests={contests} highlight={keyword} onToast={onToast} />
+    <div className="flex flex-col gap-10 md:gap-12">
+      {contests.length > 0 && (
+        <ResultSection
+          title="공모전"
+          count={data.pages[0].contests.totalCount}
+          hidden={type === 'contest'}
+        >
+          <ContestGrid contests={contests} highlight={keyword} onToast={onToast} />
+        </ResultSection>
+      )}
+      {posts.length > 0 && (
+        <ResultSection title="팀원 모집" count={data.pages[0].posts.totalCount}>
+          <PostTable posts={posts} highlight={keyword} />
+        </ResultSection>
+      )}
+      {boardPosts.length > 0 && (
+        <ResultSection title="커뮤니티 게시판" count={data.pages[0].boardPosts.totalCount}>
+          <BoardTable posts={boardPosts} highlight={keyword} />
+        </ResultSection>
+      )}
       <div ref={sentinelRef} aria-hidden="true" className="h-1" />
-    </>
+    </div>
+  )
+}
+
+// 결과 묶음. hidden이면 제목 없이 내용만 보여 준다 ([공모전] 탭)
+function ResultSection({
+  title,
+  count,
+  hidden = false,
+  children,
+}: {
+  title: string
+  count: number
+  hidden?: boolean
+  children: ReactNode
+}) {
+  if (hidden) return <>{children}</>
+  return (
+    <section aria-label={title}>
+      <h2 className="mb-4 text-subheading font-bold text-text md:mb-6">
+        {title} <span className="text-text-sub">{count}</span>
+      </h2>
+      {children}
+    </section>
   )
 }
 

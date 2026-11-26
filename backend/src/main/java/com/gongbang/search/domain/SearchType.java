@@ -26,4 +26,9 @@ public enum SearchType {
     public boolean includesContests() {
         return this == ALL || this == CONTEST;
     }
+
+    // [커뮤니티]는 팀원 모집글과 커뮤니티 게시글을 함께 찾는다 (SRCH-02 ①)
+    public boolean includesCommunity() {
+        return this == ALL || this == POST;
+    }
 }
