@@ -43,11 +43,11 @@ public class EmailTemplateRenderer {
             Matcher code = CODE.matcher(body);
             if (code.find()) {
                 codeCard =
-                        "<div style=\"margin:0 0 24px;padding:24px 12px;background:#182b44;border:1px solid #182b44;border-radius:12px;text-align:center\">"
-                                + "<p style=\"margin:0 0 12px;color:#cbd5e1;font-size:12px;letter-spacing:1px\">이메일 인증번호</p>"
-                                + "<strong style=\"font-family:Arial,sans-serif;font-size:36px;letter-spacing:8px;color:#ffffff\">"
+                        "<div style=\"margin:0 0 24px;padding:24px 12px;background:#fff8f2;border:1px solid #f9dcc9;border-radius:8px;text-align:center\">"
+                                + "<p style=\"margin:0 0 12px;color:#8b6b56;font-size:12px;letter-spacing:1px\">이메일 인증번호</p>"
+                                + "<strong style=\"font-family:Arial,sans-serif;font-size:36px;letter-spacing:8px;color:#202b3b\">"
                                 + code.group(1)
-                                + "</strong><p style=\"margin:16px 0 0;font-size:12px;color:#ffc697\">발급 후 3분 동안 유효해요</p></div>";
+                                + "</strong><p style=\"margin:16px 0 0;font-size:12px;color:#a54d24\">발급 후 3분 동안 유효해요</p></div>";
                 body = body.substring(code.end());
             }
         } else if (!mail.isSecurity()) {
@@ -86,14 +86,12 @@ public class EmailTemplateRenderer {
                         escape(title),
                         "heading",
                         "VERIFICATION_CODE".equals(mail.getMailType())
-                                ? "이메일 인증을<br>완료해 주세요."
+                                ? "인증번호를<br>입력해 주세요."
                                 : escape(title),
                         "brand",
                         brand,
                         "category",
-                        "VERIFICATION_CODE".equals(mail.getMailType())
-                                ? "이메일 인증"
-                                : mail.isSecurity() ? "계정 안내" : "공방 알림",
+                        category(mail),
                         "code",
                         codeCard,
                         "body",
@@ -109,6 +107,25 @@ public class EmailTemplateRenderer {
                     result, Matcher.quoteReplacement(slots.get(matcher.group(1))));
         matcher.appendTail(result);
         return result.toString();
+    }
+
+    private static String category(EmailOutbox mail) {
+        return switch (mail.getMailType()) {
+            case "VERIFICATION_CODE" -> "이메일 인증";
+            case "SIGNUP_COMPLETE" -> "가입 완료";
+            case "LOGIN_LOCKED", "PASSWORD_CHANGED" -> "계정 보안";
+            case "WITHDRAWN", "RESTORED" -> "계정 안내";
+            case "APPLY_NEW", "APPLY_ACCEPTED", "APPLY_REJECTED" -> "지원 소식";
+            case "POST_DELETED" -> "모집글 안내";
+            case "TEAM_INVITE" -> "팀 초대";
+            case "COMMENT", "REPLY" -> "댓글 소식";
+            case "NOTICE_NEW" -> "워크스페이스 공지";
+            case "TEAM_DEADLINE", "BOOKMARK_DEADLINE" -> "공모전 마감 안내";
+            case "VERIFY_RESULT" -> "인증 심사 결과";
+            case "POLICY_NOTICE" -> "서비스 정책 안내";
+            case "NICKNAME_CHANGE_REQUIRED", "ACCOUNT_SANCTION" -> "계정 이용 안내";
+            default -> mail.isSecurity() ? "계정 안내" : "공방 알림";
+        };
     }
 
     private boolean safeUrl(String value) {
@@ -129,10 +146,10 @@ public class EmailTemplateRenderer {
     }
 
     private static String button(String url, String label) {
-        return "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"margin:24px 0 0\"><tr><td align=\"center\" bgcolor=\"#ff6b2b\" style=\"border-radius:10px;mso-padding-alt:16px 24px\">"
+        return "<table role=\"presentation\" width=\"100%\" cellspacing=\"0\" cellpadding=\"0\" style=\"margin:24px 0 0\"><tr><td align=\"center\" bgcolor=\"#202b3b\" style=\"border-radius:6px;mso-padding-alt:16px 24px\">"
                 + "<a href=\""
                 + escape(url)
-                + "\" style=\"display:block;padding:16px 24px;font-weight:700;font-size:15px;color:#182b44;text-decoration:none\">"
+                + "\" style=\"display:block;padding:16px 24px;font-weight:700;font-size:15px;color:#ffffff;text-decoration:none\">"
                 + label
                 + " &rarr;</a></td></tr></table>";
     }
