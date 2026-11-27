@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '../../../components/ui/Button'
 import { Link } from 'react-router'
 import { getErrorMessage } from '../../../api/errors'
 import { useMarkAllRead, useRecentNotifications, useUnreadCount } from '../hooks'
@@ -93,6 +94,13 @@ export function NotificationBell({ onError }: { onError?: (message: string) => v
           </div>
           {recent.isLoading ? (
             <div className="m-4 h-40 animate-pulse rounded-input bg-surface-sub" />
+          ) : recent.isError ? (
+            <div role="alert" className="space-y-3 px-4 py-6">
+              <p>{getErrorMessage(recent.error, '알림을 불러오지 못했어요.')}</p>
+              <Button size="sm" onClick={() => recent.refetch()} disabled={recent.isFetching}>
+                다시 시도
+              </Button>
+            </div>
           ) : items.length === 0 ? (
             <p className="px-4 py-10 text-center text-small text-text-sub">새 알림이 없어요</p>
           ) : (

@@ -69,6 +69,13 @@ public class CommentModerationService {
                 .toList();
     }
 
+    /** 신고 간 숨김·복원을 대상 행 기준으로 직렬화한다. 호출자 트랜잭션에서 유지한다. */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void lockForModeration(Long actor, Long id) {
+        access.requireAdmin(actor);
+        em.find(Comment.class, id, LockModeType.PESSIMISTIC_WRITE);
+    }
+
     @Transactional
     public void restoreHidden(Long actor, Long id, LocalDateTime expectedHiddenAt) {
         access.requireAdmin(actor);

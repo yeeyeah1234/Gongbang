@@ -7,6 +7,7 @@ import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.websocket.TeamEventPublisher;
 import com.gongbang.global.websocket.UserEventPublisher;
 import com.gongbang.member.dto.MemberProfileSummary;
+import com.gongbang.member.service.MemberLifecycleService;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.post.service.PostCommandService;
 import com.gongbang.team.domain.Team;
@@ -32,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class TeamMemberManagementService {
 
+    private final MemberLifecycleService lifecycle;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
     private final TeamMemberService teamMemberService;
@@ -115,9 +117,11 @@ public class TeamMemberManagementService {
                 .findByIdForUpdate(teamId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
+        lifecycle.lockActiveMembers(List.of(targetMemberId));
+
         TeamMember currentLeader =
                 teamMemberRepository
-                        .findByTeamIdAndMemberIdAndLeftAtIsNull(teamId, actorMemberId)
+                        .findByTeamIdAndMemberIdAndLeftAtIsNullForUpdate(teamId, actorMemberId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.NOT_TEAM_LEADER));
         if (currentLeader.getRole() != TeamRole.LEADER) {
             throw new BusinessException(ErrorCode.NOT_TEAM_LEADER);
@@ -125,7 +129,7 @@ public class TeamMemberManagementService {
 
         TeamMember newLeader =
                 teamMemberRepository
-                        .findByTeamIdAndMemberIdAndLeftAtIsNull(teamId, targetMemberId)
+                        .findByTeamIdAndMemberIdAndLeftAtIsNullForUpdate(teamId, targetMemberId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.NOT_TEAM_MEMBER));
 
         currentLeader.changeRole(TeamRole.MEMBER);

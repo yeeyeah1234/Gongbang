@@ -57,6 +57,32 @@ public class ServiceNoticeService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.Map<Long, String> titles(LoginMember admin, java.util.Collection<Long> ids) {
+        checkAdmin(admin);
+        return repository.findAllById(ids).stream()
+                .collect(
+                        java.util.stream.Collectors.toMap(
+                                ServiceNotice::getId, ServiceNotice::getTitle));
+    }
+
+    @Transactional(readOnly = true)
+    public AdminNotice adminDetail(LoginMember admin, Long id) {
+        checkAdmin(admin);
+        var n =
+                repository
+                        .findById(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        return new AdminNotice(
+                n.getId(),
+                n.getTitle(),
+                n.getContent(),
+                n.getCreatedAt(),
+                n.getDeletedAt(),
+                n.isPolicyChange(),
+                n.getEmailQueuedAt());
+    }
+
+    @Transactional(readOnly = true)
     public ServiceNoticeResponse get(Long id) {
         return ServiceNoticeResponse.from(find(id));
     }

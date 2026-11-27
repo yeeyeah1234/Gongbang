@@ -2,6 +2,7 @@ package com.gongbang.team.service;
 
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.member.service.MemberLifecycleService;
 import com.gongbang.team.domain.Team;
 import com.gongbang.team.domain.TeamMember;
 import com.gongbang.team.repository.TeamMemberRepository;
@@ -24,6 +25,7 @@ public class TeamService {
     /** 팀원 고유 색 1~8 (WS-03). */
     static final int MAX_COLOR_INDEX = 8;
 
+    private final MemberLifecycleService lifecycle;
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
 
@@ -36,6 +38,7 @@ public class TeamService {
             throw new IllegalStateException("이미 팀이 있는 모집글입니다: postId=" + postId);
         }
 
+        lifecycle.lockActiveMembers(java.util.List.of(leaderMemberId));
         Team team = teamRepository.save(Team.create(postId, name));
         teamMemberRepository.save(TeamMember.leader(team, leaderMemberId));
         return team.getId();
@@ -55,6 +58,7 @@ public class TeamService {
                         // TODO(확인 필요): 없는 팀. 문서에 TEAM_NOT_FOUND 같은 에러 코드가 없음.
                         .orElseThrow(() -> new IllegalStateException("없는 팀입니다: teamId=" + teamId));
 
+        lifecycle.lockActiveMembers(java.util.List.of(memberId));
         if (teamMemberRepository.existsByTeamIdAndMemberIdAndLeftAtIsNull(teamId, memberId)) {
             throw new BusinessException(ErrorCode.ALREADY_TEAM_MEMBER);
         }

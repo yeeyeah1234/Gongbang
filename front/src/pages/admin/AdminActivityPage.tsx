@@ -1,3 +1,5 @@
+import { Link } from 'react-router'
+import { Modal } from '../../components/ui/Modal'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { readAdmin } from '../../features/admin/operations'
@@ -45,6 +47,7 @@ interface Activity {
   action: string
   targetType: string
   targetId: number
+  targetLabel: string | null
   reason: string | null
   createdAt: string
 }
@@ -54,6 +57,16 @@ interface ActivityPage {
   totalPages: number
 }
 export default function AdminActivityPage() {
+  const [selected, setSelected] = useState<Activity | null>(null)
+  const target = useQuery({
+    queryKey: ['admin', 'activity-target', selected?.id],
+    queryFn: () =>
+      readAdmin<{ title: string; content: string; url: string | null }>(
+        `activity-logs/${selected!.id}/target`,
+      ),
+    enabled: selected !== null,
+    retry: false,
+  })
   const [action, setAction] = useState('')
   const [page, setPage] = useState(0)
   const logs = useQuery({
@@ -134,8 +147,11 @@ export default function AdminActivityPage() {
                         COMMENT: '댓글',
                       } as Record<string, string>
                     )[log.targetType] ?? log.targetType}{' '}
-                    #{log.targetId}
+                    {log.targetLabel ?? `#${log.targetId}`}
                   </p>
+                  <Button size="sm" variant="text" onClick={() => setSelected(log)}>
+                    대상 상세 보기
+                  </Button>
                   {log.reason && <p className="mt-2 whitespace-pre-wrap">사유: {log.reason}</p>}
                 </li>
               ))}
@@ -154,6 +170,32 @@ export default function AdminActivityPage() {
           </div>
         </>
       )}
+      <Modal open={selected !== null} title="활동 대상 상세" onClose={() => setSelected(null)}>
+        <p className="mb-4 text-small text-text-sub">
+          대상의 현재 정보입니다. 삭제된 원문은 관리자에게만 표시되며 공개 화면으로 연결하지
+          않습니다.
+        </p>
+        {target.isPending ? (
+          <p role="status">조회 중입니다…</p>
+        ) : target.isError ? (
+          <div role="alert" className="space-y-3">
+            <p>{getErrorMessage(target.error, '대상 정보를 불러오지 못했어요.')}</p>
+            <Button onClick={() => target.refetch()} disabled={target.isFetching}>
+              다시 시도
+            </Button>
+          </div>
+        ) : target.data ? (
+          <div className="space-y-4 break-words">
+            <h2 className="text-subheading font-bold">{target.data.title}</h2>
+            <p className="whitespace-pre-wrap">{target.data.content}</p>
+            {target.data.url && (
+              <Link className="text-primary underline" to={target.data.url}>
+                원문 화면으로 이동
+              </Link>
+            )}
+          </div>
+        ) : null}
+      </Modal>
     </section>
   )
 }

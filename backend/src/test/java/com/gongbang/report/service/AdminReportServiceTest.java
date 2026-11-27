@@ -34,7 +34,7 @@ class AdminReportServiceTest {
 
     Report report() {
         var r = Report.create(1L, 2L, ReportTargetType.COMMENT, 9L, ReportReasonCode.ABUSE, "내용");
-        when(em.find(Report.class, 8L, LockModeType.PESSIMISTIC_WRITE)).thenReturn(r);
+        when(em.find(Report.class, 8L)).thenReturn(r);
         return r;
     }
 
@@ -43,7 +43,7 @@ class AdminReportServiceTest {
         var r =
                 Report.create(
                         1L, 2L, ReportTargetType.BOARD_POST, 9L, ReportReasonCode.ABUSE, "내용");
-        when(em.find(Report.class, 8L, LockModeType.PESSIMISTIC_WRITE)).thenReturn(r);
+        when(em.find(Report.class, 8L)).thenReturn(r);
         when(boardPosts.target(5L, 9L))
                 .thenReturn(
                         new com.gongbang.board.service.BoardPostModerationService.Target(
@@ -73,7 +73,8 @@ class AdminReportServiceTest {
         assertThat(r.getStatus()).isEqualTo(ReportStatus.DISMISSED);
         assertThat(r.getReviewerId()).isEqualTo(5L);
         assertThat(r.getReviewedAt()).isNotNull();
-        verifyNoInteractions(comments, members);
+        verify(comments, never()).hideForReview(any(), any());
+        verifyNoInteractions(members);
     }
 
     @Test

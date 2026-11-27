@@ -60,8 +60,16 @@ export default function NotificationsPage() {
           <Button
             variant="outline"
             size="sm"
+            disabled={deleteRead.isPending}
+            loading={deleteRead.isPending}
             onClick={() =>
-              deleteRead.mutate(undefined, { onSuccess: () => toast.show('읽은 알림을 지웠어요') })
+              deleteRead.mutate(undefined, {
+                onSuccess: () => toast.show('읽은 알림을 지웠어요'),
+                onError: (error) =>
+                  toast.show(
+                    getErrorMessage(error, '알림을 삭제하지 못했어요. 다시 시도해 주세요'),
+                  ),
+              })
             }
           >
             읽은 알림 삭제

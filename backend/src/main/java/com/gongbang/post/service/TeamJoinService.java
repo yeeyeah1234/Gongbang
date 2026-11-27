@@ -6,6 +6,7 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.websocket.TeamEventPublisher;
 import com.gongbang.invitation.service.InvitationCancelService;
+import com.gongbang.member.service.MemberLifecycleService;
 import com.gongbang.post.domain.RecruitPost;
 import com.gongbang.post.dto.TeamJoinResult;
 import com.gongbang.team.service.TeamService;
@@ -34,6 +35,7 @@ public class TeamJoinService {
     // DB 명세서 team.name: 「팀 생성 때 모집글 제목 앞 20자로 채움」
     static final int TEAM_NAME_MAX_LENGTH = 20;
 
+    private final MemberLifecycleService lifecycle;
     private final PostCommandService postCommandService;
     private final TeamService teamService;
     private final ApplicationCloseService applicationCloseService;
@@ -74,7 +76,15 @@ public class TeamJoinService {
             throw new BusinessException(ErrorCode.POST_FULL);
         }
 
-        Long teamId = teamService.findTeamIdByPostId(postId).orElseGet(() -> createTeam(post));
+        Long teamId =
+                teamService
+                        .findTeamIdByPostId(postId)
+                        .orElseGet(
+                                () -> {
+                                    lifecycle.lockActiveMembers(
+                                            List.of(post.getAuthorId(), memberId));
+                                    return createTeam(post);
+                                });
         teamService.addMember(teamId, memberId);
         chatMembershipService.addMemberToTeamRoom(teamId, memberId);
         teamEventPublisher.publish(teamId, "MEMBER_JOINED", memberId, memberId);

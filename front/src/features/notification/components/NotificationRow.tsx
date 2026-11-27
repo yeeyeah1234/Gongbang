@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { getErrorMessage } from '../../../api/errors'
 import { Button } from '../../../components/ui/Button'
+import { useAuthStore } from '../../auth/store'
 import { loadLoginMember } from '../../auth/session'
 import { respondAdminInvitation, respondInvitation } from '../api'
 import { CATEGORY_LABEL, timeAgo } from '../format'
@@ -31,6 +32,28 @@ export function NotificationRow({
 
   const responding = useRef(false)
   const [busy, setBusy] = useState(false)
+  const [rowError, setRowError] = useState<string | null>(null)
+  const reportError = (message: string) => {
+    setRowError(message)
+    onError?.(message)
+  }
+  const openAdmin = async () => {
+    if (responding.current) return
+    responding.current = true
+    setBusy(true)
+    setRowError(null)
+    try {
+      await loadLoginMember()
+      if (useAuthStore.getState().member?.role !== 'ADMIN') throw new Error('권한 갱신 필요')
+      onNavigate?.()
+      navigate('/admin/members')
+    } catch {
+      reportError('관리자 권한을 확인하지 못했어요. 관리자 페이지 버튼을 눌러 다시 시도해 주세요.')
+    } finally {
+      responding.current = false
+      setBusy(false)
+    }
+  }
 
   const open = async () => {
     if (markRead.isPending) return
@@ -39,7 +62,7 @@ export function NotificationRow({
       onNavigate?.()
       navigate(item.linkUrl)
     } catch (error) {
-      onError?.(getErrorMessage(error, '알림을 읽음 처리하지 못했어요. 다시 시도해 주세요'))
+      reportError(getErrorMessage(error, '알림을 읽음 처리하지 못했어요. 다시 시도해 주세요'))
     }
   }
 
@@ -54,11 +77,13 @@ export function NotificationRow({
       return
     responding.current = true
     setBusy(true)
+    setRowError(null)
     try {
       if (item.type === 'ADMIN_INVITE') {
         await respondAdminInvitation(item.invitation.invitationId, accept)
         if (accept) {
-          void loadLoginMember().catch(() => undefined)
+          setInviteResult('수락했어요')
+          await loadLoginMember()
           void queryClient.invalidateQueries({ queryKey: ['account-status'] })
         }
       } else {
@@ -68,7 +93,12 @@ export function NotificationRow({
       if (!item.isRead) markRead.mutate(item.notificationId)
       void queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     } catch (e) {
-      onError?.(getErrorMessage(e, '초대를 처리하지 못했어요. 상태를 확인해 주세요'))
+      reportError(
+        getErrorMessage(
+          e,
+          '초대 처리 또는 권한 갱신에 실패했어요. 상태를 확인하고 다시 시도해 주세요',
+        ),
+      )
       void queryClient.invalidateQueries({ queryKey: notificationKeys.all })
     } finally {
       responding.current = false
@@ -149,25 +179,31 @@ export function NotificationRow({
             )}
             {item.type === 'ADMIN_INVITE' &&
               (item.invitation?.status === 'ACCEPTED' || inviteResult === '수락했어요') && (
-                <Button
-                  variant="text"
-                  size="sm"
-                  onClick={() => {
-                    onNavigate?.()
-                    navigate('/admin/members')
-                  }}
-                >
+                <Button variant="text" size="sm" disabled={busy} onClick={openAdmin}>
                   관리자 페이지
                 </Button>
               )}
           </div>
+        )}
+        {rowError && (
+          <p role="alert" className="mt-2 text-caption text-danger">
+            {rowError}
+          </p>
         )}
       </div>
       {!compact && (
         <button
           type="button"
           aria-label="알림 삭제"
-          onClick={() => remove.mutate(item.notificationId)}
+          disabled={remove.isPending}
+          onClick={() => {
+            if (remove.isPending) return
+            setRowError(null)
+            remove.mutate(item.notificationId, {
+              onError: (error) =>
+                reportError(getErrorMessage(error, '알림을 삭제하지 못했어요. 다시 시도해 주세요')),
+            })
+          }}
           className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-text-sub hover:bg-bg hover:text-text"
         >
           ×

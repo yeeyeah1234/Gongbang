@@ -17,6 +17,7 @@ public class AdminActivityQueryService {
     private final AdminActivityRepository repository;
     private final AdminMemberService admins;
     private final MemberService members;
+    private final AdminActivityTargetService targets;
 
     public record Item(
             Long id,
@@ -25,6 +26,7 @@ public class AdminActivityQueryService {
             String action,
             String targetType,
             Long targetId,
+            String targetLabel,
             String reason,
             LocalDateTime createdAt) {}
 
@@ -39,6 +41,7 @@ public class AdminActivityQueryService {
                 action.isBlank()
                         ? repository.findAll(pageable)
                         : repository.findByAction(action, pageable);
+        var labels = targets.labels(actor, rows.getContent());
         return rows.map(
                 r ->
                         new Item(
@@ -48,7 +51,17 @@ public class AdminActivityQueryService {
                                 r.getAction(),
                                 r.getTargetType(),
                                 r.getTargetId(),
+                                labels.get(r.getTargetType() + ":" + r.getTargetId()),
                                 r.getReason(),
                                 r.getCreatedAt()));
+    }
+
+    public AdminActivityTargetService.Detail target(Long actor, Long id) {
+        admins.requireAdmin(actor);
+        var row =
+                repository
+                        .findById(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        return targets.detail(actor, row.getTargetType(), row.getTargetId());
     }
 }

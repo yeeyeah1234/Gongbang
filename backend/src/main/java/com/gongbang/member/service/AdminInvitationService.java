@@ -25,6 +25,18 @@ public class AdminInvitationService {
     private final AdminMemberService admins;
     private final NotificationService notifications;
 
+    public record Summary(Long inviterId, Long inviteeId, String status) {}
+
+    @Transactional(readOnly = true)
+    public Summary summary(Long actor, Long id) {
+        admins.requireAdmin(actor);
+        var i =
+                invitations
+                        .findById(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        return new Summary(i.getInviterId(), i.getInviteeId(), i.getStatus());
+    }
+
     public record Result(Long invitationId, String status) {}
 
     private LocalDateTime now() {

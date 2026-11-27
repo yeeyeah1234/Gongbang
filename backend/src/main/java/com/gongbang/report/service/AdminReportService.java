@@ -198,11 +198,24 @@ public class AdminReportService {
         throw new BusinessException(ErrorCode.INVALID_INPUT, "지원하지 않는 신고 대상입니다");
     }
 
+    private Report lockReport(Long actor, Long id) {
+        Report report = em.find(Report.class, id);
+        if (report == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        // 같은 글의 다른 신고도 대상 → 신고 순서로 잠근다. 대기 후 신고 상태를 다시 읽는다.
+        switch (report.getTargetType()) {
+            case POST -> posts.lockForModeration(actor, report.getTargetId());
+            case BOARD_POST -> boardPosts.lockForModeration(actor, report.getTargetId());
+            case COMMENT -> comments.lockForModeration(actor, report.getTargetId());
+            default -> {}
+        }
+        em.refresh(report, LockModeType.PESSIMISTIC_WRITE);
+        return report;
+    }
+
     @Transactional
     public Item review(Long actor, Long id, Review body) {
         access.requireAdmin(actor);
-        Report r = em.find(Report.class, id, LockModeType.PESSIMISTIC_WRITE);
-        if (r == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        Report r = lockReport(actor, id);
         if (r.getStatus() != ReportStatus.RECEIVED)
             throw new BusinessException(ErrorCode.INVALID_INPUT, "이미 처리한 신고입니다");
         String reason = body.reason() == null ? "" : body.reason().strip();
@@ -244,8 +257,7 @@ public class AdminReportService {
     @Transactional
     public Item cancelReview(Long actor, Long id, Review body) {
         access.requireAdmin(actor);
-        Report r = em.find(Report.class, id, LockModeType.PESSIMISTIC_WRITE);
-        if (r == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        Report r = lockReport(actor, id);
         if (r.getStatus() == ReportStatus.RECEIVED)
             throw new BusinessException(ErrorCode.INVALID_INPUT, "이미 접수 상태입니다");
         String reason = body.reason() == null ? "" : body.reason().strip();
@@ -256,9 +268,9 @@ public class AdminReportService {
             throw new BusinessException(ErrorCode.INVALID_INPUT, "계정 제재는 회원 관리에서 별도로 해제해 주세요");
         if (r.getAppliedHiddenAt() != null) {
             var q = QReport.report;
-            Long others =
+            var others =
                     new JPAQueryFactory(em)
-                            .select(q.count())
+                            .select(q.id)
                             .from(q)
                             .where(
                                     q.id.ne(id),
@@ -266,8 +278,9 @@ public class AdminReportService {
                                     q.targetId.eq(r.getTargetId()),
                                     q.status.eq(ReportStatus.RESOLVED),
                                     q.action.startsWith("HIDE_"))
-                            .fetchOne();
-            if (others != null && others > 0)
+                            .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                            .fetch();
+            if (!others.isEmpty())
                 throw new BusinessException(ErrorCode.INVALID_INPUT, "같은 글의 다른 숨김 신고를 먼저 취소해 주세요");
             switch (r.getAction()) {
                 case "HIDE_POST" ->

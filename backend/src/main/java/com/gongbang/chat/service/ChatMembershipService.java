@@ -69,6 +69,12 @@ public class ChatMembershipService {
         }
     }
 
+    /** MY-11: 탈퇴 시 남은 채팅방 참여 기록도 같은 트랜잭션에서 정리한다. */
+    @Transactional
+    public void removeMemberFromAllRooms(Long memberId) {
+        chatRoomMemberRepository.deleteByIdMemberId(memberId);
+    }
+
     private ChatRoom getOrCreateTeamRoom(Long teamId) {
         String roomKey = ChatRoom.teamRoomKey(teamId);
         return chatRoomRepository

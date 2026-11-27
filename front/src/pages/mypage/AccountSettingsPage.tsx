@@ -1,6 +1,6 @@
 import { useIsWide } from '../../hooks/useIsWide'
 import { MobileActionBar } from '../../components/layout/MobileActionBar'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getApiError, getErrorMessage } from '../../api/errors'
@@ -257,16 +257,29 @@ function NotificationSettingsTab({
 }) {
   const isWide = useIsWide()
   const queryClient = useQueryClient()
-  const { data, isLoading } = useQuery({
+  const {
+    data,
+    isLoading,
+    isError,
+    error: loadError,
+    refetch,
+  } = useQuery({
     queryKey: ['notifications', 'settings'],
     queryFn: fetchNotificationSettings,
+    retry: false,
   })
   const [settings, setSettings] = useState<NotificationSetting[] | null>(null)
   const list = settings ?? data ?? []
+  const savingRef = useRef(false)
+  const [saving, setSaving] = useState(false)
 
   const save = async (nextList: NotificationSetting[], changed: NotificationSetting[]) => {
+    if (savingRef.current || !data || isError) return
+    savingRef.current = true
+    setSaving(true)
     setSettings(nextList)
     try {
+      await queryClient.cancelQueries({ queryKey: ['notifications', 'settings'] })
       const saved = await saveNotificationSettings(changed)
       setSettings(saved)
       queryClient.setQueryData(['notifications', 'settings'], saved)
@@ -274,6 +287,9 @@ function NotificationSettingsTab({
     } catch (e) {
       setSettings(null)
       onToast(getErrorMessage(e))
+    } finally {
+      savingRef.current = false
+      setSaving(false)
     }
   }
 
@@ -312,7 +328,21 @@ function NotificationSettingsTab({
     void save(changed, changed)
   }
 
-  if (isLoading) return <div className="h-64 animate-pulse rounded-card bg-surface-sub" />
+  if (isLoading)
+    return (
+      <div
+        role="status"
+        aria-label="알림 설정 조회 중"
+        className="h-64 animate-pulse rounded-card bg-surface-sub"
+      />
+    )
+  if (isError || !data)
+    return (
+      <div role="alert" className="space-y-3">
+        <p>{getErrorMessage(loadError, '알림 설정을 불러오지 못했어요.')}</p>
+        <Button onClick={() => refetch()}>다시 시도</Button>
+      </div>
+    )
 
   return (
     <div className="mx-auto w-full max-w-[960px]">
@@ -321,7 +351,12 @@ function NotificationSettingsTab({
           <p className="text-body font-bold text-text">이메일 알림 모두 끄기</p>
           <p className="text-caption text-text-sub">사이트 알림은 기존 설정을 유지해요.</p>
         </div>
-        <Toggle label="이메일 알림 모두 끄기" checked={allEmailOff} onChange={turnOffAllEmail} />
+        <Toggle
+          disabled={saving}
+          label="이메일 알림 모두 끄기"
+          checked={allEmailOff}
+          onChange={turnOffAllEmail}
+        />
       </div>
       {!isWide ? (
         <div className="mt-4 divide-y divide-divider">
@@ -335,6 +370,7 @@ function NotificationSettingsTab({
                   <div className="flex min-h-10 items-center gap-3">
                     <span>사이트</span>
                     <Toggle
+                      disabled={saving}
                       label={`${row.title} 사이트 알림`}
                       checked={setting?.siteEnabled ?? row.type !== 'COMMUNITY_NEW'}
                       onChange={(v) => change(row.type, 'siteEnabled', v)}
@@ -346,6 +382,7 @@ function NotificationSettingsTab({
                       <span>발송 안 함</span>
                     ) : (
                       <Toggle
+                        disabled={saving}
                         label={`${row.title} 이메일 알림`}
                         checked={setting?.emailEnabled ?? true}
                         onChange={(v) => change(row.type, 'emailEnabled', v)}
@@ -380,6 +417,7 @@ function NotificationSettingsTab({
                   </td>
                   <td className="px-5 py-3 text-center">
                     <Toggle
+                      disabled={saving}
                       label={`${row.title} 사이트 알림`}
                       checked={s?.siteEnabled ?? row.type !== 'COMMUNITY_NEW'}
                       onChange={(v) => change(row.type, 'siteEnabled', v)}
@@ -390,6 +428,7 @@ function NotificationSettingsTab({
                       <span>발송 안 함</span>
                     ) : (
                       <Toggle
+                        disabled={saving}
                         label={`${row.title} 이메일 알림`}
                         checked={s?.emailEnabled ?? true}
                         onChange={(v) => change(row.type, 'emailEnabled', v)}
@@ -418,7 +457,9 @@ function NotificationSettingsTab({
           </tbody>
         </table>
       )}
-      <p className="mt-3 text-caption text-text-sub">바꾸는 즉시 저장돼요.</p>
+      <p className="mt-3 text-caption text-text-sub">
+        {saving ? '저장 중입니다…' : '바꾸는 즉시 저장돼요.'}
+      </p>
     </div>
   )
 }
@@ -426,7 +467,7 @@ function NotificationSettingsTab({
 // MY-11 회원 탈퇴 (Figma 11-3·20-2)
 function WithdrawTab() {
   const navigate = useNavigate()
-  const { data: profile } = useMyProfile()
+  const { data: profile, isPending, isError, refetch } = useMyProfile()
   const [confirmText, setConfirmText] = useState('')
   const [password, setPassword] = useState('')
   const [agree, setAgree] = useState(false)
@@ -434,10 +475,12 @@ function WithdrawTab() {
   const [leaderBlocked, setLeaderBlocked] = useState(false)
   const [done, setDone] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const isKakao = profile?.loginType === 'KAKAO'
-  const ready = confirmText.trim() === '탈퇴합니다' && agree && (isKakao || password)
+  const isSocial = !!profile && profile.loginType !== 'EMAIL'
+  const ready =
+    !!profile && !isError && confirmText.trim() === '탈퇴합니다' && agree && (isSocial || password)
 
   const submit = async () => {
+    if (!ready || saving) return
     setSaving(true)
     setError(null)
     try {
@@ -452,6 +495,14 @@ function WithdrawTab() {
     }
   }
 
+  if (isPending) return <p role="status">계정 정보를 불러오는 중입니다…</p>
+  if (isError || !profile)
+    return (
+      <div role="alert" className="space-y-3">
+        <p>계정 정보를 불러오지 못했어요.</p>
+        <Button onClick={() => refetch()}>다시 시도</Button>
+      </div>
+    )
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6">
       <div className="rounded-input border border-danger bg-danger-soft px-5 py-4">
@@ -477,8 +528,8 @@ function WithdrawTab() {
           className="h-14 rounded-input border border-line-input bg-surface px-4 text-body focus:border-2 focus:border-primary focus:outline-none"
         />
       </div>
-      {/* ② 카카오 계정은 카카오 재로그인 — TODO(확인 필요): AUTH-10(2차)이 생기면 연결 */}
-      {!isKakao && (
+      {/* 서버와 동일하게 이메일 계정만 서비스 비밀번호를 확인한다. */}
+      {!isSocial && (
         <PasswordInput
           id="withdraw-password"
           label="비밀번호 확인"
@@ -487,7 +538,7 @@ function WithdrawTab() {
           errorText={error ?? undefined}
         />
       )}
-      {isKakao && error && <p className="text-small text-danger">{error}</p>}
+      {isSocial && error && <p className="text-small text-danger">{error}</p>}
       <Checkbox
         label="안내 사항을 모두 확인했으며, 탈퇴에 동의합니다."
         checked={agree}

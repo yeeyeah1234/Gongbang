@@ -59,6 +59,8 @@ class TeamMemberManagementServiceTest {
     void setUp() {
         service =
                 new TeamMemberManagementService(
+                        org.mockito.Mockito.mock(
+                                com.gongbang.member.service.MemberLifecycleService.class),
                         teamRepository,
                         teamMemberRepository,
                         teamMemberService,
@@ -145,9 +147,9 @@ class TeamMemberManagementServiceTest {
         TeamMember nextLeader = TeamMember.member(team, 2L, 2);
 
         given(teamRepository.findByIdForUpdate(10L)).willReturn(Optional.of(team));
-        given(teamMemberRepository.findByTeamIdAndMemberIdAndLeftAtIsNull(10L, 1L))
+        given(teamMemberRepository.findByTeamIdAndMemberIdAndLeftAtIsNullForUpdate(10L, 1L))
                 .willReturn(Optional.of(currentLeader));
-        given(teamMemberRepository.findByTeamIdAndMemberIdAndLeftAtIsNull(10L, 2L))
+        given(teamMemberRepository.findByTeamIdAndMemberIdAndLeftAtIsNullForUpdate(10L, 2L))
                 .willReturn(Optional.of(nextLeader));
         given(memberService.displayName(2L)).willReturn("수형");
 

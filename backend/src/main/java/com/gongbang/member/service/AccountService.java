@@ -2,12 +2,14 @@ package com.gongbang.member.service;
 
 import com.gongbang.auth.service.AuthService;
 import com.gongbang.auth.service.PasswordPolicy;
+import com.gongbang.chat.service.ChatMembershipService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.Member;
 import com.gongbang.member.domain.MemberStatus;
 import com.gongbang.member.repository.MemberRepository;
 import com.gongbang.notification.service.EmailOutboxService;
+import com.gongbang.team.service.TeamWithdrawalService;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** MY-04 비밀번호 변경, MY-11 탈퇴·완전 삭제 */
@@ -27,6 +30,8 @@ public class AccountService {
 
     private static final String CONFIRM_TEXT = "탈퇴합니다";
 
+    private final TeamWithdrawalService teamWithdrawal;
+    private final ChatMembershipService chatMembership;
     private final MemberService memberService;
     private final MemberRepository memberRepository;
     private final AuthService authService;
@@ -62,8 +67,8 @@ public class AccountService {
         emailOutboxService.enqueuePasswordChanged(member);
     }
 
-    /** MY-11 ①~④ */
-    @Transactional(noRollbackFor = BusinessException.class)
+    /** MY-11 ①~④: 팀 나가기·회원 상태·토큰·메일은 전부 성공하거나 전부 롤백한다. */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public LocalDateTime withdraw(Long memberId, String password, String confirmText) {
         Member member = memberService.getActiveMember(memberId);
         if (!CONFIRM_TEXT.equals(confirmText == null ? null : confirmText.trim())) {
@@ -74,10 +79,16 @@ public class AccountService {
                         || !passwordEncoder.matches(password, member.getPasswordHash()))) {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH, "비밀번호가 맞지 않아요");
         }
-        // TODO(확인 필요): ③ 팀장인 채팅방이 있으면 409 LEADER_CANNOT_WITHDRAW.
-        //  team·team_member(이상현 TeamMemberService)가 develop에 들어오면 「팀장인지」 확인을 붙인다.
-        // TODO(확인 필요): ④ 참여 중인 채팅방·팀에서 나가기 = 이상현 「팀원 변동 처리」 연동
-        LocalDateTime now = LocalDateTime.now();
+        var plan = teamWithdrawal.prepare(memberId);
+        member = plan.member();
+        // 잠금을 기다리는 동안 비밀번호가 바뀐 경우도 기존 비밀번호로 탈퇴하지 못한다.
+        if (member.isEmailMember()
+                && (password == null
+                        || !passwordEncoder.matches(password, member.getPasswordHash())))
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);
+        teamWithdrawal.leaveAll(plan);
+        chatMembership.removeMemberFromAllRooms(memberId);
+        LocalDateTime now = LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
         member.withdraw(now);
         authService.revokeAllDevices(memberId);
         emailOutboxService.enqueueWithdrawn(member);
