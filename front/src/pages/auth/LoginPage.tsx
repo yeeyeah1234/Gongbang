@@ -29,7 +29,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    params.get('reason') === 'suspended'
+      ? '이용 정지된 계정입니다. 정지가 해제된 뒤 로그인해 주세요.'
+      : null,
+  )
   const [failCount, setFailCount] = useState(0)
   const [notRegistered, setNotRegistered] = useState(false)
   // ③ 5번 틀리면 추가 인증 (Figma 01-2)
@@ -74,6 +78,9 @@ export default function LoginPage() {
           setExtraRequired(true)
           setExtraToken(null)
           setError(null)
+          break
+        case 'ACCOUNT_SUSPENDED':
+          setError(message ?? '이용 정지된 계정입니다. 정지가 해제된 뒤 로그인해 주세요.')
           break
         case 'ACCOUNT_LOCKED':
           setLocked(message)

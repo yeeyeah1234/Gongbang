@@ -3,6 +3,7 @@ package com.gongbang.post.service;
 import com.gongbang.application.service.ApplicationCloseService;
 import com.gongbang.global.error.*;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.invitation.service.InvitationCancelService;
 import com.gongbang.member.service.AdminMemberService;
 import com.gongbang.notification.domain.NotificationType;
 import com.gongbang.notification.service.NotificationService;
@@ -23,10 +24,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminPostService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final RecruitPostRepository repository;
     private final AdminMemberService access;
     private final ApplicationCloseService applications;
     private final NotificationService notifications;
+    private final InvitationCancelService invitations;
     private final EntityManager em;
 
     public record Item(
@@ -126,10 +129,11 @@ public class AdminPostService {
                         .findByIdForUpdate(id)
                         .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
         if (p.getDeletedAt() != null) return;
-        p.forceHide(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
-        var receivers =
-                applications.closePendingApplications(
-                        id, LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+        var now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
+        p.forceHide(now);
+        audit.record(actor, "POST_HIDE", "POST", id, null);
+        invitations.cancelPendingByPostId(id, now);
+        var receivers = applications.closePendingApplications(id, now);
         // 알림과 이메일 대기열은 변경과 함께 커밋된다. 실제 메일은 기존 outbox 작업이 전송한다.
         for (Long receiver : receivers)
             notifications.send(
@@ -140,5 +144,30 @@ public class AdminPostService {
                     id,
                     "지원한 모집글 '" + p.getTitle() + "'이 관리자에 의해 삭제되어 모집이 마감됐어요.",
                     "/notifications");
+    }
+
+    @Transactional
+    public void restoreHidden(Long actor, Long id, LocalDateTime expectedHiddenAt) {
+        access.requireAdmin(actor);
+        var target =
+                repository
+                        .findByIdForUpdate(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (target == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        target.restoreModeratedContent(expectedHiddenAt);
+        audit.record(actor, "POST_RESTORE", "POST", id, null);
+    }
+
+    @Transactional
+    public LocalDateTime hideForReview(Long actor, Long id) {
+        access.requireAdmin(actor);
+        var target =
+                repository
+                        .findByIdForUpdate(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (target == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        if (target.getDeletedAt() != null) return null;
+        hide(actor, id);
+        return target.getDeletedAt();
     }
 }

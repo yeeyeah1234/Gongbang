@@ -325,7 +325,25 @@ function Operations({ kind, preview }: { kind: Kind; preview: boolean }) {
                 </div>
               )}
               {query.data?.content.length === 0 && (
-                <p className="py-12 text-center text-text-sub">조회된 항목이 없습니다.</p>
+                <div className="py-12 text-center text-text-sub">
+                  <p>
+                    {kind === 'reports'
+                      ? `${labels[type] ?? '전체 대상'} · ${labels[status] ?? '전체 상태'}에 해당하는 신고가 없습니다.`
+                      : '조회된 항목이 없습니다.'}
+                  </p>
+                  {kind === 'reports' && (
+                    <Button
+                      onClick={() => {
+                        setType('')
+                        setStatus('')
+                        setPage(0)
+                        setDetailOpen(false)
+                      }}
+                    >
+                      전체 신고 보기
+                    </Button>
+                  )}
+                </div>
               )}
               <div className="divide-y divide-divider">
                 {query.data?.content.map((item) => (
@@ -599,7 +617,7 @@ function MemberDetail({ item, act }: { item: AdminItem; act: Act }) {
         </dl>
         <Button
           className="mt-6"
-          disabled={item.status !== 'ACTIVE'}
+          disabled={item.status !== 'ACTIVE' || item.role === 'ADMIN'}
           onClick={() =>
             act({
               label: '로그인 잠금 해제 및 실패 횟수 초기화',
@@ -617,22 +635,23 @@ function MemberDetail({ item, act }: { item: AdminItem; act: Act }) {
           disabled={item.status !== 'ACTIVE' || item.role === 'ADMIN'}
           onClick={() =>
             act({
-              label: '관리자 권한 부여 (다른 회원에게 관리자 권한을 부여할 수 있는 동일 권한)',
+              label: '관리자 초대 발송 (상대방이 수락하면 동일한 관리 권한 부여)',
               path: `members/${item.id}/admin-role`,
               method: 'post',
             })
           }
         >
-          {item.role === 'ADMIN' ? '관리자 권한 보유' : '관리자 권한 부여'}
+          {item.role === 'ADMIN' ? '관리자 권한 보유' : '관리자 초대 보내기'}
         </Button>
         <p className="mt-3 text-small text-text-sub">
-          모든 관리자는 동일한 관리 권한을 가지며, 다른 회원에게도 관리자 권한을 부여할 수 있습니다.
+          초대받은 회원이 알림에서 수락하면 관리자가 됩니다. 수락 후 신규 관리자를 제외한 기존
+          관리자에게 알립니다.
         </p>
       </div>
       <ActionForm
         title="계정 제재 · 이용 정지 관리"
-        disabled={item.status !== 'ACTIVE'}
-        actions={['WARN', 'SUSPEND', 'UNSUSPEND', 'REQUIRE_NICKNAME']}
+        disabled={item.status !== 'ACTIVE' || item.role === 'ADMIN'}
+        actions={['WARN', 'SUSPEND', 'SUSPEND_PERMANENT', 'UNSUSPEND', 'REQUIRE_NICKNAME']}
         onAction={(body) =>
           act({
             label: '회원 조치 적용',
@@ -646,8 +665,10 @@ function MemberDetail({ item, act }: { item: AdminItem; act: Act }) {
   )
 }
 const actionLabels: Record<string, string> = {
+  CANCEL_REVIEW: '신고 처리 취소 및 숨김 복원',
   WARN: '경고',
-  SUSPEND: '이용 정지',
+  SUSPEND: '기간 이용 정지',
+  SUSPEND_PERMANENT: '무기한 이용 정지',
   UNSUSPEND: '이용 정지 해제',
   REQUIRE_NICKNAME: '닉네임 변경 요구',
   HIDE_COMMENT: '댓글 숨김',
@@ -780,6 +801,7 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
     'REQUIRE_NICKNAME',
     'WARN',
     'SUSPEND',
+    'SUSPEND_PERMANENT',
     'DISMISS',
   ]
   return (
@@ -843,6 +865,23 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
           <p className="mt-4 whitespace-pre-wrap">처리 사유: {item.reviewNote}</p>
         )}
       </div>
+      {item.status !== 'RECEIVED' &&
+        ['HIDE_POST', 'HIDE_BOARD_POST', 'HIDE_COMMENT', 'DISMISS'].includes(item.action ?? '') && (
+          <ActionForm
+            title="신고 처리 취소"
+            actions={['CANCEL_REVIEW']}
+            disabled={detail.isPending || detail.isError}
+            onAction={(body) =>
+              act({
+                label:
+                  '처리 취소 · 해당 조치로 숨긴 글/댓글 복원 (모집 상태·지원 이력은 복원하지 않음)',
+                path: `reports/${item.id}/cancel-review`,
+                method: 'post',
+                body,
+              })
+            }
+          />
+        )}
       <ActionForm
         actions={actions}
         disabled={item.status !== 'RECEIVED' || detail.isPending || detail.isError}

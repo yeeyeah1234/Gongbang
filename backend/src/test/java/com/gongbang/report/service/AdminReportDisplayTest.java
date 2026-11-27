@@ -26,6 +26,7 @@ class AdminReportDisplayTest {
     final BoardPostModerationService board = mock(BoardPostModerationService.class);
     final AdminReportService service =
             new AdminReportService(
+                    mock(com.gongbang.admin.service.AdminActivityWriter.class),
                     access,
                     mock(AdminMemberManagementService.class),
                     members,

@@ -15,7 +15,11 @@ import org.junit.jupiter.api.Test;
 class AdminMemberServiceTest {
     final MemberRepository repository = mock(MemberRepository.class);
     final NotificationService notifications = mock(NotificationService.class);
-    final AdminMemberService service = new AdminMemberService(repository, notifications);
+    final AdminMemberService service =
+            new AdminMemberService(
+                    mock(com.gongbang.admin.service.AdminActivityWriter.class),
+                    repository,
+                    notifications);
 
     Member actor(MemberRole role) {
         Member m = mock(Member.class);

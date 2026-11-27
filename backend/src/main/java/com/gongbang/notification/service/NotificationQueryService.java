@@ -3,6 +3,7 @@ package com.gongbang.notification.service;
 import com.gongbang.global.common.PageResponse;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
+import com.gongbang.invitation.service.InvitationQueryService;
 import com.gongbang.member.service.MemberService;
 import com.gongbang.notification.domain.Notification;
 import com.gongbang.notification.domain.NotificationType;
@@ -30,16 +31,15 @@ public class NotificationQueryService {
 
     private final NotificationRepository notificationRepository;
     private final MemberService memberService;
+    private final InvitationQueryService invitationQueryService;
+    private final com.gongbang.member.service.AdminInvitationService adminInvitations;
 
     @Transactional(readOnly = true)
     public long unreadCount(Long memberId) {
         return notificationRepository.countByReceiverIdAndReadFalse(memberId);
     }
 
-    /**
-     * category: COMMENT / TEAM_BUILDING / WORKSPACE / DEADLINE / NOTICE (없으면 전체). TODO(확인 필요): 팀 초대
-     * 알림의 invitation(초대 id·상태)은 team_invitation(김건우·김수형)이 생기면 채운다.
-     */
+    /** 알림 목록과 팀 초대의 현재 상태를 함께 조회한다. */
     @Transactional(readOnly = true)
     public PageResponse<NotificationResponse> list(
             Long memberId, int page, int size, boolean unreadOnly, String category) {
@@ -60,6 +60,34 @@ public class NotificationQueryService {
         Page<Notification> result =
                 notificationRepository.findPage(
                         memberId, unreadOnly, types, PageRequest.of(page, size));
+        var invitationIds =
+                result.getContent().stream()
+                        .filter(
+                                n ->
+                                        n.getType() == NotificationType.TEAM_INVITE
+                                                && "INVITATION".equals(n.getTargetType())
+                                                && n.getTargetId() != null)
+                        .map(Notification::getTargetId)
+                        .distinct()
+                        .toList();
+        var statuses =
+                invitationIds.isEmpty()
+                        ? java.util.Map.<Long, String>of()
+                        : invitationQueryService.findStatuses(invitationIds);
+        var adminIds =
+                result.getContent().stream()
+                        .filter(
+                                n ->
+                                        n.getType() == NotificationType.ADMIN_INVITE
+                                                && "ADMIN_INVITATION".equals(n.getTargetType())
+                                                && n.getTargetId() != null)
+                        .map(Notification::getTargetId)
+                        .distinct()
+                        .toList();
+        var adminStatuses =
+                adminIds.isEmpty()
+                        ? java.util.Map.<Long, String>of()
+                        : adminInvitations.findStatuses(adminIds);
         List<NotificationResponse> items =
                 result.getContent().stream()
                         .map(
@@ -71,7 +99,11 @@ public class NotificationQueryService {
                                                         : new NotificationResponse.Actor(
                                                                 n.getActorId(),
                                                                 memberService.displayName(
-                                                                        n.getActorId()))))
+                                                                        n.getActorId())),
+                                                (n.getType() == NotificationType.ADMIN_INVITE
+                                                                ? adminStatuses
+                                                                : statuses)
+                                                        .get(n.getTargetId())))
                         .toList();
         return PageResponse.of(items, page, size, result.getTotalElements());
     }

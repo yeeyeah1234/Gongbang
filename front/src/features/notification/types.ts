@@ -13,7 +13,7 @@ export interface NotificationItem {
   createdAt: string
   invitation: {
     invitationId: number
-    status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'CLOSED'
+    status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'CANCELED'
   } | null
 }
 

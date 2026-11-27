@@ -18,8 +18,10 @@ class CalendarReminderServiceTest {
     private final CalendarService calendar = mock(CalendarService.class);
     private final TeamMemberService members = mock(TeamMemberService.class);
     private final NotificationService notifications = mock(NotificationService.class);
+    private final com.gongbang.team.service.TeamService teams =
+            mock(com.gongbang.team.service.TeamService.class);
     private final CalendarReminderService service =
-            new CalendarReminderService(scheduled, calendar, members, notifications);
+            new CalendarReminderService(scheduled, calendar, members, notifications, teams);
     private final LocalDateTime start = LocalDateTime.of(2030, 1, 2, 14, 0);
 
     private CalendarEvent event(boolean allDay) {
@@ -32,9 +34,10 @@ class CalendarReminderServiceTest {
         service.refresh(
                 new CalendarEventChangedEvent(
                         1L, 3L, CalendarEventChangeType.UPDATED, start.minusHours(1)));
-        verify(scheduled).schedule(NotificationType.EVENT_REMIND, "EVENT", 3L, start);
+        verify(scheduled)
+                .schedule(NotificationType.EVENT_REMIND, "EVENT", 3L, start.minusHours(24));
         assertThat(CalendarReminderService.fireAt(event(true)))
-                .isEqualTo(start.toLocalDate().atTime(9, 0));
+                .isEqualTo(start.toLocalDate().minusDays(1).atTime(9, 0));
     }
 
     @Test
@@ -49,7 +52,9 @@ class CalendarReminderServiceTest {
     void 현재팀원에게_작성자도포함하여_발송한다() {
         when(calendar.findForReminder(3L)).thenReturn(Optional.of(event(false)));
         when(members.findActiveMemberIds(1L)).thenReturn(List.of(2L, 4L));
-        service.send(new ScheduledNotification(NotificationType.EVENT_REMIND, "EVENT", 3L, start));
+        service.send(
+                new ScheduledNotification(
+                        NotificationType.EVENT_REMIND, "EVENT", 3L, start.minusHours(24)));
         for (long receiver : new long[] {2L, 4L}) {
             verify(notifications)
                     .send(
@@ -58,9 +63,30 @@ class CalendarReminderServiceTest {
                             null,
                             "EVENT",
                             3L,
-                            "일정이 시작돼요: 회의",
+                            "내일 14:00 ‘회의’ 일정이 있어요",
                             "/workspaces/1/calendar");
         }
+    }
+
+    @Test
+    void 종일일정은_시각없는_내일문구로_알린다() {
+        when(calendar.findForReminder(3L)).thenReturn(Optional.of(event(true)));
+        when(members.findActiveMemberIds(1L)).thenReturn(List.of(2L));
+        service.send(
+                new ScheduledNotification(
+                        NotificationType.EVENT_REMIND,
+                        "EVENT",
+                        3L,
+                        start.toLocalDate().minusDays(1).atTime(9, 0)));
+        verify(notifications)
+                .send(
+                        2L,
+                        NotificationType.EVENT_REMIND,
+                        null,
+                        "EVENT",
+                        3L,
+                        "내일 ‘회의’ 일정이 있어요",
+                        "/workspaces/1/calendar");
     }
 
     @Test
@@ -70,5 +96,18 @@ class CalendarReminderServiceTest {
                 new ScheduledNotification(
                         NotificationType.EVENT_REMIND, "EVENT", 3L, start.minusHours(1)));
         verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void 삭제된팀은_예약과발송을차단한다() {
+        when(calendar.findForReminder(3L)).thenReturn(Optional.of(event(false)));
+        when(teams.isDeleted(1L)).thenReturn(true);
+        service.refresh(
+                new CalendarEventChangedEvent(1L, 3L, CalendarEventChangeType.UPDATED, start));
+        verify(scheduled).cancel("EVENT", 3L);
+        service.send(
+                new ScheduledNotification(
+                        NotificationType.EVENT_REMIND, "EVENT", 3L, start.minusHours(24)));
+        verifyNoInteractions(notifications, members);
     }
 }

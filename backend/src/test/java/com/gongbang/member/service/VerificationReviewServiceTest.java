@@ -24,7 +24,14 @@ class VerificationReviewServiceTest {
     final RealNameCipher cipher = mock(RealNameCipher.class);
     final VerificationReviewService service =
             new VerificationReviewService(
-                    requests, certificates, awards, members, notifications, proofFiles, cipher);
+                    org.mockito.Mockito.mock(com.gongbang.admin.service.AdminActivityWriter.class),
+                    requests,
+                    certificates,
+                    awards,
+                    members,
+                    notifications,
+                    proofFiles,
+                    cipher);
 
     @BeforeEach
     void admin() {

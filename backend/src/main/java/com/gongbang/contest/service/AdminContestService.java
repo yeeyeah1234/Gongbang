@@ -13,6 +13,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminContestService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final AdminMemberService access;
     private final CategoryRepository categories;
     private final CalendarService calendar;
     private final EntityManager em;
+    private final ApplicationEventPublisher events;
 
     public record Item(
             Long id,
@@ -114,6 +117,20 @@ public class AdminContestService {
         c.updateByAdmin(body.title().strip(), body.endDate(), category);
         em.flush();
         calendar.syncContestMilestones(id);
+        if (!body.expectedEndDate().equals(body.endDate())) {
+            events.publishEvent(new ContestDeadlineChangedEvent(id, body.endDate()));
+        }
+        audit.record(
+                actor,
+                "CONTEST_UPDATE",
+                "CONTEST",
+                id,
+                "마감일: "
+                        + body.expectedEndDate()
+                        + " → "
+                        + body.endDate()
+                        + ", 카테고리 #"
+                        + body.categoryId());
         return item(c);
     }
 
@@ -136,5 +153,11 @@ public class AdminContestService {
                 .findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
                 .update(body.name().strip(), body.sortOrder());
+        audit.record(
+                actor,
+                "CATEGORY_UPDATE",
+                "CATEGORY",
+                id,
+                body.name().strip() + " / 순서 " + body.sortOrder());
     }
 }

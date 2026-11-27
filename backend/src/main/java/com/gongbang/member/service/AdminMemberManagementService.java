@@ -17,10 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminMemberManagementService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final MemberRepository members;
     private final AdminMemberService access;
     private final NotificationService notifications;
     private final EntityManager em;
+    private final com.gongbang.auth.service.AuthService auth;
 
     public record Item(
             Long id,
@@ -99,6 +101,8 @@ public class AdminMemberManagementService {
                 members.findForRoleUpdate(id)
                         .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
         if (!m.isActive()) throw new BusinessException(ErrorCode.INVALID_INPUT, "활성 회원만 처리할 수 있어요");
+        if (m.isAdmin())
+            throw new BusinessException(ErrorCode.NOT_ADMIN, "관리자에게는 제재·권한 변경을 적용할 수 없어요");
         String action = request.action();
         if ("UNLOCK".equals(action)) m.resetLoginFail();
         else if ("GRANT_ADMIN".equals(action))
@@ -106,7 +110,8 @@ public class AdminMemberManagementService {
         else {
             if (actor.equals(id))
                 throw new BusinessException(ErrorCode.INVALID_INPUT, "자신에게 제재할 수 없어요");
-            if (!java.util.Set.of("WARN", "SUSPEND", "UNSUSPEND", "REQUIRE_NICKNAME")
+            if (!java.util.Set.of(
+                            "WARN", "SUSPEND", "SUSPEND_PERMANENT", "UNSUSPEND", "REQUIRE_NICKNAME")
                     .contains(action == null ? "" : action))
                 throw new BusinessException(ErrorCode.INVALID_INPUT);
             String reason = request.reason() == null ? "" : request.reason().strip();
@@ -116,7 +121,16 @@ public class AdminMemberManagementService {
                     || ("SUSPEND".equals(action)
                             && (request.until() == null || !request.until().isAfter(now))))
                 throw new BusinessException(ErrorCode.INVALID_INPUT);
-            m.moderate(action, reason, request.until(), actor, now);
+            boolean permanent = "SUSPEND_PERMANENT".equals(action);
+            if ("REQUIRE_NICKNAME".equals(action) && m.getNickname() != null)
+                members.blockNickname(m.getNickname());
+            m.moderate(
+                    permanent ? "SUSPEND" : action,
+                    reason,
+                    permanent ? LocalDateTime.of(9999, 12, 31, 23, 59, 59) : request.until(),
+                    actor,
+                    now);
+            if ("SUSPEND".equals(action) || permanent) auth.revokeAllDevices(id);
             boolean nickname = "REQUIRE_NICKNAME".equals(action);
             notifications.send(
                     id,
@@ -126,9 +140,23 @@ public class AdminMemberManagementService {
                     null,
                     "MEMBER",
                     id,
-                    (nickname ? "닉네임 변경이 필요해요: " : "계정 조치 안내 (" + action + "): ") + reason,
-                    "/mypage");
+                    (nickname
+                                    ? "닉네임 변경이 필요해요: "
+                                    : switch (action) {
+                                        case "WARN" -> "운영 정책 위반 경고: ";
+                                        case "SUSPEND" -> "이용 정지 안내 (" + request.until() + "까지): ";
+                                        case "SUSPEND_PERMANENT" -> "무기한 이용 정지 안내: ";
+                                        default -> "이용 정지 해제 안내: ";
+                                    })
+                            + reason,
+                    nickname ? "/mypage/nickname" : "/notifications");
         }
+        audit.record(
+                actor,
+                action,
+                "MEMBER",
+                id,
+                request.reason() == null ? null : request.reason().strip());
         return Item.of(m);
     }
 }

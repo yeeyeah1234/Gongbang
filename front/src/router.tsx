@@ -1,3 +1,4 @@
+import RequiredNicknamePage from './pages/mypage/RequiredNicknamePage'
 import { createBrowserRouter, Navigate, type RouteObject } from 'react-router'
 import { SiteLayout } from './components/layout/SiteLayout'
 import ContestDetailPage from './pages/ContestDetailPage'
@@ -34,6 +35,7 @@ import BoardEditPage from './pages/board/BoardEditPage'
 import BoardListPage from './pages/board/BoardListPage'
 import ServiceNoticePage from './pages/ServiceNoticePage'
 import { WorkspaceLayout } from './features/workspace/components/WorkspaceLayout'
+import AdminActivityPage from './pages/admin/AdminActivityPage'
 import AdminVerificationPage from './pages/admin/AdminVerificationPage'
 import { AdminLayout } from './features/admin/AdminLayout'
 import AdminMembersPage from './pages/admin/AdminMembersPage'
@@ -206,6 +208,10 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
 
 export const router = createBrowserRouter([
   {
+    element: <RequireLogin />,
+    children: [{ path: '/mypage/nickname', element: <RequiredNicknamePage /> }],
+  },
+  {
     // GNB가 붙는 화면
     element: <SiteLayout />,
     children: [
@@ -297,6 +303,7 @@ export const router = createBrowserRouter([
           { path: 'members', element: <AdminMemberManagementPage /> },
           { path: 'posts', element: <AdminPostManagementPage /> },
           { path: 'contests', element: <AdminContestManagementPage /> },
+          { path: 'activity-logs', element: <AdminActivityPage /> },
           { path: 'permissions', element: <AdminMembersPage /> },
         ],
       },

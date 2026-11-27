@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class ServiceNoticeService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
 
     private final ServiceNoticeRepository repository;
     private final NotificationService notificationService;
@@ -84,6 +85,12 @@ public class ServiceNoticeService {
                     "/service-notices/" + notice.getId());
         }
         queuePolicyEmail(notice, request);
+        audit.record(
+                admin.getMemberId(),
+                "NOTICE_CREATE",
+                "SERVICE_NOTICE",
+                notice.getId(),
+                request.sendEmail() ? "정책 변경 이메일 발송 요청" : null);
         return notice.getId();
     }
 
@@ -99,6 +106,12 @@ public class ServiceNoticeService {
         notice.update(request.title().trim(), request.content().trim());
         notice.setPolicyChange(request.policyChange());
         queuePolicyEmail(notice, request);
+        audit.record(
+                admin.getMemberId(),
+                "NOTICE_UPDATE",
+                "SERVICE_NOTICE",
+                notice.getId(),
+                request.sendEmail() ? "정책 변경 이메일 발송 요청" : null);
         return notice.getId();
     }
 
@@ -132,6 +145,7 @@ public class ServiceNoticeService {
     public void delete(LoginMember admin, Long id) {
         checkAdmin(admin);
         findForUpdate(id).delete(LocalDateTime.now(java.time.ZoneId.of("Asia/Seoul")));
+        audit.record(admin.getMemberId(), "NOTICE_DELETE", "SERVICE_NOTICE", id, null);
     }
 
     private ServiceNotice find(Long id) {

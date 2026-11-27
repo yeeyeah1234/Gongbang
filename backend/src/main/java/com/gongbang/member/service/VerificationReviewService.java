@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class VerificationReviewService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final VerificationRequestRepository requests;
     private final CertificateRepository certificates;
     private final AwardRepository awards;
@@ -193,6 +194,12 @@ public class VerificationReviewService {
         if (status == VerifyStatus.VERIFIED && !targetUpdated)
             throw new BusinessException(ErrorCode.INVALID_INPUT, "이력이 변경되었거나 삭제되어 다시 요청해야 합니다");
         request.review(status, trimmed, adminId);
+        audit.record(
+                adminId,
+                "VERIFY_" + status.name(),
+                "VERIFICATION",
+                requestId,
+                status == VerifyStatus.REJECTED ? trimmed : null);
         notifications.send(
                 request.getMemberId(),
                 NotificationType.VERIFY_RESULT,

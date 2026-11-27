@@ -3,7 +3,7 @@ export interface MyProfile {
   nicknameChangeRequired?: boolean
   memberId: number
   email: string
-  loginType: 'EMAIL' | 'KAKAO'
+  loginType: 'EMAIL' | 'KAKAO' | 'GOOGLE'
   role: 'USER' | 'ADMIN'
   nickname: string
   profileImageUrl: string | null

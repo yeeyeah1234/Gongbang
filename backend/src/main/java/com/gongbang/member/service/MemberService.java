@@ -200,7 +200,7 @@ public class MemberService {
     /** AUTH-06 ③ [중복 확인] */
     @Transactional(readOnly = true)
     public boolean isNicknameAvailable(String raw) {
-        String nickname = NicknamePolicy.validate(raw);
+        String nickname = validateAvailableNickname(raw);
         // MY-11 ⑤: 복원 대기 중인 닉네임도 다른 사람이 쓸 수 없다 (행이 남아 있어 UQ로 막힘)
         return !memberRepository.existsByNickname(nickname);
     }
@@ -209,7 +209,7 @@ public class MemberService {
     @Transactional
     public Member createEmailMember(String email, String passwordHash, SignupRequest request) {
         validateTerms(request.terms());
-        String nickname = NicknamePolicy.validate(request.nickname());
+        String nickname = validateAvailableNickname(request.nickname());
         Optional<Member> existing = memberRepository.findByEmail(email);
         if (existing.isPresent()) {
             Member old = existing.get();
@@ -265,7 +265,7 @@ public class MemberService {
             List<TermsItem> terms,
             List<String> interestCategoryCodes) {
         validateTerms(terms);
-        String nickname = NicknamePolicy.validate(rawNickname);
+        String nickname = validateAvailableNickname(rawNickname);
         if (findBySocialId(loginType, providerId).isPresent()
                 || memberRepository.findByEmail(email).isPresent()) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATED);
@@ -312,11 +312,19 @@ public class MemberService {
 
     @Transactional
     public MyProfileResponse updateMyProfile(Long memberId, UpdateProfileRequest request) {
-        Member member = getActiveMember(memberId);
+        Member member =
+                memberRepository
+                        .findForRoleUpdate(memberId)
+                        .filter(Member::isActive)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.UNAUTHORIZED));
+        if (member.isNicknameChangeRequired()
+                && (request.nickname() == null
+                        || request.nickname().strip().equalsIgnoreCase(member.getNickname())))
+            throw new BusinessException(ErrorCode.NICKNAME_FORBIDDEN);
         String nickname = member.getNickname();
         if (request.nickname() != null && !request.nickname().trim().equals(member.getNickname())) {
             // MY-01 ④: 닉네임을 바꿀 때만 중복 확인
-            nickname = NicknamePolicy.validate(request.nickname());
+            nickname = validateAvailableNickname(request.nickname());
             if (memberRepository.existsByNickname(nickname)) {
                 throw new BusinessException(ErrorCode.NICKNAME_DUPLICATED);
             }
@@ -440,6 +448,13 @@ public class MemberService {
         return roles == null || roles.isEmpty()
                 ? EnumSet.noneOf(DesiredRole.class)
                 : EnumSet.copyOf(roles);
+    }
+
+    private String validateAvailableNickname(String raw) {
+        String nickname = NicknamePolicy.validate(raw);
+        if (memberRepository.countBlockedNickname(nickname) > 0)
+            throw new BusinessException(ErrorCode.NICKNAME_FORBIDDEN);
+        return nickname;
     }
 
     private static String trimToNull(String value) {

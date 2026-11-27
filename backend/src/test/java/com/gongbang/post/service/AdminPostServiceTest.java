@@ -17,13 +17,17 @@ import org.springframework.test.util.ReflectionTestUtils;
 class AdminPostServiceTest {
     final RecruitPostRepository repository = mock(RecruitPostRepository.class);
     final ApplicationCloseService applications = mock(ApplicationCloseService.class);
+    final com.gongbang.invitation.service.InvitationCancelService invitations =
+            mock(com.gongbang.invitation.service.InvitationCancelService.class);
     final NotificationService notifications = mock(NotificationService.class);
     final AdminPostService service =
             new AdminPostService(
+                    org.mockito.Mockito.mock(com.gongbang.admin.service.AdminActivityWriter.class),
                     repository,
                     mock(AdminMemberService.class),
                     applications,
                     notifications,
+                    invitations,
                     mock(EntityManager.class));
 
     @Test
@@ -49,6 +53,8 @@ class AdminPostServiceTest {
                             anyString(),
                             eq("/notifications"));
         service.hide(1L, 8L);
+        verify(invitations).cancelPendingByPostId(8L, post.getDeletedAt());
+        verify(applications).closePendingApplications(8L, post.getDeletedAt());
         verify(notifications, times(2))
                 .send(anyLong(), any(), any(), anyString(), anyLong(), anyString(), anyString());
     }

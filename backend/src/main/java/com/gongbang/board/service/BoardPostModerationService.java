@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class BoardPostModerationService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final BoardPostRepository repository;
     private final AdminMemberService access;
 
@@ -48,6 +49,34 @@ public class BoardPostModerationService {
                 repository
                         .findByIdForUpdate(id)
                         .orElseThrow(() -> new BusinessException(ErrorCode.BOARD_POST_NOT_FOUND));
-        if (!post.isDeleted()) post.delete(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+        if (!post.isDeleted()) {
+            post.delete(LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+            audit.record(actor, "BOARD_POST_HIDE", "BOARD_POST", id, null);
+        }
+    }
+
+    @Transactional
+    public void restoreHidden(Long actor, Long id, LocalDateTime expectedHiddenAt) {
+        access.requireAdmin(actor);
+        var target =
+                repository
+                        .findByIdForUpdate(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (target == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        target.restoreModeratedContent(expectedHiddenAt);
+        audit.record(actor, "BOARD_POST_RESTORE", "BOARD_POST", id, null);
+    }
+
+    @Transactional
+    public LocalDateTime hideForReview(Long actor, Long id) {
+        access.requireAdmin(actor);
+        var target =
+                repository
+                        .findByIdForUpdate(id)
+                        .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
+        if (target == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        if (target.getDeletedAt() != null) return null;
+        hide(actor, id);
+        return target.getDeletedAt();
     }
 }

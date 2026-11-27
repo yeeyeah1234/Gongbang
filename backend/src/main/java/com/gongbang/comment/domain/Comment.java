@@ -134,4 +134,17 @@ public class Comment {
             this.updatedAt = this.createdAt;
         }
     }
+
+    public void restoreModeratedContent(java.time.LocalDateTime expectedHiddenAt) {
+        if (deletedAt == null
+                || expectedHiddenAt == null
+                || !deletedAt
+                        .truncatedTo(java.time.temporal.ChronoUnit.SECONDS)
+                        .equals(
+                                expectedHiddenAt.truncatedTo(
+                                        java.time.temporal.ChronoUnit.SECONDS)))
+            throw new com.gongbang.global.error.exception.BusinessException(
+                    com.gongbang.global.error.ErrorCode.INVALID_INPUT, "삭제 상태가 변경되어 자동 복원할 수 없어요");
+        deletedAt = null;
+    }
 }

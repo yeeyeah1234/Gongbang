@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminMemberService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final MemberRepository repository;
     private final NotificationService notificationService;
 
@@ -79,6 +80,7 @@ public class AdminMemberService {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         if (target.getRole() != MemberRole.ADMIN) {
             target.grantAdmin();
+            audit.record(actorId, "ADMIN_GRANTED", "MEMBER", memberId, null);
             // 권한 변경 결과를 시스템 알림으로 보내 부여한 관리자도 수신한다.
             for (Member admin :
                     repository.findByRoleAndStatus(MemberRole.ADMIN, MemberStatus.ACTIVE)) {

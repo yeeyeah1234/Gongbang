@@ -19,7 +19,12 @@ class AdminMemberManagementServiceTest {
     final NotificationService notifications = mock(NotificationService.class);
     final AdminMemberManagementService service =
             new AdminMemberManagementService(
-                    repository, access, notifications, mock(EntityManager.class));
+                    mock(com.gongbang.admin.service.AdminActivityWriter.class),
+                    repository,
+                    access,
+                    notifications,
+                    mock(EntityManager.class),
+                    mock(com.gongbang.auth.service.AuthService.class));
 
     Member target() {
         var m = Member.createEmailMember("member@example.com", "hash", "회원");
@@ -97,5 +102,44 @@ class AdminMemberManagementServiceTest {
                                                 "WARN", "사유", null)))
                 .isInstanceOf(BusinessException.class);
         verifyNoInteractions(repository, notifications);
+    }
+
+    @Test
+    void administratorCannotBeSanctioned() {
+        Member m = target();
+        m.grantAdmin();
+        assertThatThrownBy(
+                        () ->
+                                service.act(
+                                        1L,
+                                        2L,
+                                        new AdminMemberManagementService.Action(
+                                                "WARN", "reason", null)))
+                .isInstanceOf(BusinessException.class);
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void permanentSuspensionRemainsUntilExplicitlyReleased() {
+        Member m = target();
+        service.act(
+                1L,
+                2L,
+                new AdminMemberManagementService.Action("SUSPEND_PERMANENT", "reason", null));
+        assertThat(m.isSuspended()).isTrue();
+        assertThat(m.getSuspendedUntil().getYear()).isEqualTo(9999);
+        service.act(1L, 2L, new AdminMemberManagementService.Action("UNSUSPEND", "resolved", null));
+        assertThat(m.isSuspended()).isFalse();
+    }
+
+    @Test
+    void requiredNicknameIsReservedAgainstReuse() {
+        Member m = target();
+        service.act(
+                1L,
+                2L,
+                new AdminMemberManagementService.Action("REQUIRE_NICKNAME", "reason", null));
+        verify(repository).blockNickname(m.getNickname());
+        assertThat(m.isNicknameChangeRequired()).isTrue();
     }
 }

@@ -18,6 +18,7 @@ public class TeamDeadlineReminderService {
     private final ScheduledNotificationRepository repository;
     private final TeamMemberService members;
     private final NotificationService notifications;
+    private final com.gongbang.team.service.TeamService teams;
 
     @PostConstruct
     void register() {
@@ -25,9 +26,14 @@ public class TeamDeadlineReminderService {
     }
 
     @Scheduled(fixedDelay = 60000)
-    @Transactional
+    @Transactional(
+            propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void reconcile() {
         for (var e : calendar.milestones()) {
+            if (teams.isDeleted(e.getTeamId())) {
+                scheduled.cancel("MILESTONE", e.getId());
+                continue;
+            }
             var at = e.getStartAt().toLocalDate().atTime(9, 0);
             if (repository.existsByTargetTypeAndTargetIdAndFireAtAndStatusNot(
                     "MILESTONE", e.getId(), at, ScheduledNotification.Status.CANCELED)) continue;
@@ -39,6 +45,7 @@ public class TeamDeadlineReminderService {
         var e = calendar.findForReminder(item.getTargetId()).orElse(null);
         if (e == null
                 || !e.isAuto()
+                || teams.isDeleted(e.getTeamId())
                 || !e.getStartAt().toLocalDate().atTime(9, 0).equals(item.getFireAt())) return;
         for (Long id : members.findActiveMemberIds(e.getTeamId()))
             notifications.send(

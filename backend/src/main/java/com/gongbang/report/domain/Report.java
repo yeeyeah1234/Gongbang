@@ -112,4 +112,24 @@ public class Report {
             this.createdAt = LocalDateTime.now();
         }
     }
+
+    @Column(name = "applied_hidden_at")
+    private LocalDateTime appliedHiddenAt;
+
+    @Column(name = "hide_provenance_known")
+    private boolean hideProvenanceKnown;
+
+    public void rememberHiddenAt(LocalDateTime value) {
+        appliedHiddenAt = value;
+        hideProvenanceKnown = true;
+    }
+
+    public void reopen() {
+        status = ReportStatus.RECEIVED;
+        action = null;
+        reviewNote = null;
+        reviewerId = null;
+        reviewedAt = null;
+        appliedHiddenAt = null;
+    }
 }

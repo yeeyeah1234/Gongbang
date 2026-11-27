@@ -1,6 +1,6 @@
 import { MobileActionBar } from '../../components/layout/MobileActionBar'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useBlocker } from 'react-router'
+import { Navigate, useBlocker } from 'react-router'
 import { getErrorMessage } from '../../api/errors'
 import { Button } from '../../components/ui/Button'
 import { Chip } from '../../components/ui/Chip'
@@ -86,6 +86,10 @@ export default function MyProfilePage() {
     )
   }
 
+  if (profile.nicknameChangeRequired) {
+    return <Navigate to="/mypage/nickname" replace />
+  }
+
   return (
     <MyPageLayout
       breadcrumb={editing ? '마이페이지 / 내 프로필 / 수정' : '마이페이지 / 내 프로필'}
@@ -104,14 +108,6 @@ export default function MyProfilePage() {
       }
     >
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        {profile.nicknameChangeRequired && (
-          <div
-            role="alert"
-            className="rounded-card border border-danger-line bg-danger-soft p-4 text-danger xl:col-span-2"
-          >
-            관리자가 닉네임 변경을 요청했습니다. 프로필 수정에서 새 닉네임으로 변경해 주세요.
-          </div>
-        )}
         {editing ? (
           <ProfileEditCard
             profile={profile}

@@ -15,7 +15,11 @@ import org.junit.jupiter.api.Test;
 class BoardPostModerationServiceTest {
     final BoardPostRepository repository = mock(BoardPostRepository.class);
     final AdminMemberService access = mock(AdminMemberService.class);
-    final BoardPostModerationService service = new BoardPostModerationService(repository, access);
+    final BoardPostModerationService service =
+            new BoardPostModerationService(
+                    org.mockito.Mockito.mock(com.gongbang.admin.service.AdminActivityWriter.class),
+                    repository,
+                    access);
 
     @Test
     void 삭제된_글도_관리자가_조회하고_중복숨김은_삭제시각을_유지한다() {

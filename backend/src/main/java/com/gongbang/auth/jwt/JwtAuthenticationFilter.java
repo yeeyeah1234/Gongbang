@@ -33,28 +33,52 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String header = request.getHeader("Authorization");
         if (header != null && header.startsWith(BEARER)) {
-            jwtProvider
-                    .parseAccessToken(header.substring(BEARER.length()))
-                    .ifPresent(
-                            claims -> {
-                                var current =
-                                        members.findActiveMember(claims.memberId()).orElse(null);
-                                if (current == null || current.isSuspended()) return;
-                                LoginMember loginMember =
-                                        new LoginMember(claims.memberId(), current.getRole());
-                                var authentication =
-                                        new UsernamePasswordAuthenticationToken(
-                                                loginMember,
-                                                null,
-                                                List.of(
-                                                        new SimpleGrantedAuthority(
-                                                                "ROLE_"
-                                                                        + current.getRole()
-                                                                                .name())));
-                                SecurityContextHolder.getContext()
-                                        .setAuthentication(authentication);
-                            });
+            var claims =
+                    jwtProvider.parseAccessToken(header.substring(BEARER.length())).orElse(null);
+            if (claims != null) {
+                var current = members.findActiveMember(claims.memberId()).orElse(null);
+                if (current != null && current.isSuspended()) {
+                    reject(response, "ACCOUNT_SUSPENDED", "이용 정지된 계정입니다");
+                    return;
+                }
+                if (current != null
+                        && current.isNicknameChangeRequired()
+                        && !nicknameAllowed(request)) {
+                    reject(response, "NICKNAME_CHANGE_REQUIRED", "닉네임을 변경한 후 이용해 주세요");
+                    return;
+                }
+                if (current != null) {
+                    var authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    new LoginMember(claims.memberId(), current.getRole()),
+                                    null,
+                                    List.of(
+                                            new SimpleGrantedAuthority(
+                                                    "ROLE_" + current.getRole().name())));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            }
         }
         chain.doFilter(request, response);
+    }
+
+    private boolean nicknameAllowed(HttpServletRequest request) {
+        String path = request.getServletPath();
+        String method = request.getMethod();
+        return ("/api/members/me".equals(path) && ("GET".equals(method) || "PATCH".equals(method)))
+                || ("/api/auth/logout".equals(path) && "POST".equals(method));
+    }
+
+    private void reject(HttpServletResponse response, String code, String message)
+            throws IOException {
+        response.setStatus(403);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter()
+                .write(
+                        "{\"success\":false,\"data\":null,\"error\":{\"code\":\""
+                                + code
+                                + "\",\"message\":\""
+                                + message
+                                + "\"}}");
     }
 }

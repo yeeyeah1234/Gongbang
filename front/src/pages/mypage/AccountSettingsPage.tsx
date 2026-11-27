@@ -92,18 +92,28 @@ export default function AccountSettingsPage() {
 
 // MY-04 비밀번호 변경 (Figma 11-1)
 function PasswordTab({ onToast }: { onToast: (m: string) => void }) {
-  const { data: profile } = useMyProfile()
+  const { data: profile, isPending, isError, refetch } = useMyProfile()
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  // ⑥ 카카오 계정
-  if (profile?.loginType === 'KAKAO') {
+  if (isPending) return <p role="status">계정 정보를 불러오는 중입니다…</p>
+  if (isError || !profile)
+    return (
+      <div role="alert">
+        <p>계정 정보를 불러오지 못했어요.</p>
+        <Button onClick={() => refetch()}>다시 시도</Button>
+      </div>
+    )
+
+  // 소셜 계정의 비밀번호는 해당 로그인 서비스에서 관리한다.
+  if (profile.loginType !== 'EMAIL') {
     return (
       <p className="rounded-input bg-bg px-5 py-4 text-small text-text-sub">
-        카카오로 가입한 계정은 카카오에서 비밀번호를 관리해요
+        {profile.loginType === 'GOOGLE' ? '구글' : '카카오'}로 가입한 계정은 해당 로그인 서비스에서
+        비밀번호를 관리해요
       </p>
     )
   }
@@ -112,6 +122,7 @@ function PasswordTab({ onToast }: { onToast: (m: string) => void }) {
   const ready = current && isPasswordValid(next) && next === confirm && next !== current
 
   const submit = async () => {
+    if (!ready || saving) return
     setSaving(true)
     setError(null)
     try {
@@ -128,7 +139,13 @@ function PasswordTab({ onToast }: { onToast: (m: string) => void }) {
   }
 
   return (
-    <div className="flex max-w-[480px] flex-col gap-6">
+    <form
+      className="mx-auto flex w-full max-w-[560px] flex-col gap-5 rounded-card border border-line bg-surface p-4 sm:p-6"
+      onSubmit={(event) => {
+        event.preventDefault()
+        void submit()
+      }}
+    >
       <div>
         <PasswordInput
           id="current-password"
@@ -171,23 +188,27 @@ function PasswordTab({ onToast }: { onToast: (m: string) => void }) {
           · 비밀번호를 바꾸면 이 기기를 제외한 다른 기기에서는 모두 로그아웃돼요.
         </p>
       </div>
-      <MobileActionBar>
-        <Button
-          variant="outline"
-          onClick={() => {
-            setCurrent('')
-            setNext('')
-            setConfirm('')
-            setError(null)
-          }}
-        >
-          취소
-        </Button>
-        <Button variant="primary" disabled={!ready} loading={saving} onClick={submit}>
-          비밀번호 변경
-        </Button>
-      </MobileActionBar>
-    </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <MobileActionBar>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={saving}
+            onClick={() => {
+              setCurrent('')
+              setNext('')
+              setConfirm('')
+              setError(null)
+            }}
+          >
+            취소
+          </Button>
+          <Button type="submit" variant="primary" disabled={!ready || saving} loading={saving}>
+            비밀번호 변경
+          </Button>
+        </MobileActionBar>
+      </div>
+    </form>
   )
 }
 
@@ -294,7 +315,7 @@ function NotificationSettingsTab({
   if (isLoading) return <div className="h-64 animate-pulse rounded-card bg-surface-sub" />
 
   return (
-    <div>
+    <div className="mx-auto w-full max-w-[960px]">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-input bg-surface-sub px-5 py-4">
         <div>
           <p className="text-body font-bold text-text">이메일 알림 모두 끄기</p>
@@ -432,7 +453,7 @@ function WithdrawTab() {
   }
 
   return (
-    <div className="flex max-w-[640px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6">
       <div className="rounded-input border border-danger bg-danger-soft px-5 py-4">
         <p className="text-small font-bold text-danger">탈퇴 전에 꼭 확인해 주세요</p>
         <ul className="mt-2 flex flex-col gap-1 text-caption text-text">
@@ -472,14 +493,16 @@ function WithdrawTab() {
         checked={agree}
         onChange={(e) => setAgree(e.target.checked)}
       />
-      <MobileActionBar>
-        <Button variant="outline" onClick={() => navigate('/mypage/profile')}>
-          취소
-        </Button>
-        <Button variant="danger" disabled={!ready} loading={saving} onClick={submit}>
-          탈퇴 신청
-        </Button>
-      </MobileActionBar>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <MobileActionBar>
+          <Button variant="outline" onClick={() => navigate('/mypage/profile')}>
+            취소
+          </Button>
+          <Button variant="danger" disabled={!ready} loading={saving} onClick={submit}>
+            탈퇴 신청
+          </Button>
+        </MobileActionBar>
+      </div>
 
       {/* Figma 20-2 팀장 탈퇴 불가 안내 */}
       <Modal
