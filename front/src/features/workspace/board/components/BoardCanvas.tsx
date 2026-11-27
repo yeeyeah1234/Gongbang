@@ -206,7 +206,10 @@ function BoardCanvasContent({
   // Y.Map('elements') ↔ Excalidraw 양방향 바인딩 연결
   useEffect(() => {
     if (!excalidrawAPI) return
-    const binding = createExcalidrawYjsBinding(session.ydoc, excalidrawAPI)
+    const binding = createExcalidrawYjsBinding(session.ydoc, excalidrawAPI, {
+      provider: session.provider,
+      onLocalWrite: session.markUserEdited,
+    })
     bindingRef.current = binding
     return () => {
       binding.destroy()
@@ -214,7 +217,7 @@ function BoardCanvasContent({
         bindingRef.current = null
       }
     }
-  }, [session.ydoc, excalidrawAPI])
+  }, [session, excalidrawAPI])
 
   // 내 awareness 사용자 정보 설정·갱신 (15초 awareness heartbeat 유지를 위해 연결 직후 비어 있지 않게 설정)
   useEffect(() => {
