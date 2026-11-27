@@ -150,14 +150,15 @@ export function installDocumentPreviewApi(view: PreviewView): DocumentPreviewCon
     if (method === 'post' && url === `/api/teams/${PREVIEW_TEAM_ID}/documents`) {
       if (docs.length >= MAX_DOCUMENTS) return { status: 409, code: 'DOCUMENT_LIMIT' }
       const id = nextId++
+      const title = '제목 없는 문서'
       docs.unshift({
         id,
-        title: '제목 없는 문서',
+        title,
         updatedByNickname: myNickname,
         updatedAt: nowKstDateTime(),
         createdBy: me,
       })
-      return { status: 200, data: { documentId: id } }
+      return { status: 200, data: { documentId: id, title } }
     }
 
     const id = Number(url.split('/').pop())

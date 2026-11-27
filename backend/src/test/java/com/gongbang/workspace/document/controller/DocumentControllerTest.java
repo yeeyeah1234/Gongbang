@@ -15,6 +15,7 @@ import com.gongbang.global.error.GlobalExceptionHandler;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.MemberRole;
 import com.gongbang.workspace.document.dto.DocumentListItemResponse;
+import com.gongbang.workspace.document.dto.DocumentTitleResponse;
 import com.gongbang.workspace.document.service.DocumentQueryService;
 import com.gongbang.workspace.document.service.DocumentService;
 import java.time.LocalDateTime;
@@ -87,15 +88,16 @@ class DocumentControllerTest {
     }
 
     @Test
-    @DisplayName("생성: 새 문서 ID를 돌려주고, 50개면 409 DOCUMENT_LIMIT")
+    @DisplayName("생성: { documentId, title }을 돌려주고, 50개면 409 DOCUMENT_LIMIT")
     void 생성() throws Exception {
         given(documentService.create(MEMBER_ID, 3L))
-                .willReturn(500L)
+                .willReturn(new DocumentTitleResponse(500L, "제목 없는 문서 (2)"))
                 .willThrow(new BusinessException(ErrorCode.DOCUMENT_LIMIT));
 
         mockMvc.perform(post("/api/teams/3/documents"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.documentId").value(500));
+                .andExpect(jsonPath("$.data.documentId").value(500))
+                .andExpect(jsonPath("$.data.title").value("제목 없는 문서 (2)"));
         mockMvc.perform(post("/api/teams/3/documents"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error.code").value("DOCUMENT_LIMIT"));

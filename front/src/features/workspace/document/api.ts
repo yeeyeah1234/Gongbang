@@ -1,6 +1,11 @@
 import { apiClient } from '../../../api/client'
 import type { ApiResponse } from '../../../api/types'
-import type { DocumentIdResponse, DocumentListItem, DocumentRenameRequest } from './types'
+import type {
+  DocumentIdResponse,
+  DocumentListItem,
+  DocumentRenameRequest,
+  DocumentTitleResponse,
+} from './types'
 
 // DOC-01 문서 목록 (최근 수정순)
 export async function fetchDocuments(teamId: number) {
@@ -10,8 +15,9 @@ export async function fetchDocuments(teamId: number) {
 
 // DOC-02 새 문서 생성. 50개 초과 시 409 DOCUMENT_LIMIT
 export async function createDocument(teamId: number) {
-  return (await apiClient.post<ApiResponse<DocumentIdResponse>>(`/api/teams/${teamId}/documents`))
-    .data.data.documentId
+  return (
+    await apiClient.post<ApiResponse<DocumentTitleResponse>>(`/api/teams/${teamId}/documents`)
+  ).data.data
 }
 
 // DOC-03 문서 이름 바꾸기

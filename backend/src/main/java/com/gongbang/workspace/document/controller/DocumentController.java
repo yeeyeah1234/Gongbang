@@ -4,6 +4,7 @@ import com.gongbang.auth.domain.LoginMember;
 import com.gongbang.global.common.ApiResponse;
 import com.gongbang.workspace.document.dto.DocumentListItemResponse;
 import com.gongbang.workspace.document.dto.DocumentRenameRequest;
+import com.gongbang.workspace.document.dto.DocumentTitleResponse;
 import com.gongbang.workspace.document.service.DocumentQueryService;
 import com.gongbang.workspace.document.service.DocumentService;
 import java.util.List;
@@ -36,12 +37,11 @@ public class DocumentController {
         return ApiResponse.success(documentQueryService.getDocuments(me.getMemberId(), teamId));
     }
 
-    /** DOC-02 생성 (제목 「제목 없는 문서」, 빈 본문). */
+    /** DOC-02 생성 (기본 제목 번호 포함, 빈 본문). */
     @PostMapping("/api/teams/{teamId}/documents")
-    public ApiResponse<Map<String, Long>> create(
+    public ApiResponse<DocumentTitleResponse> create(
             @AuthenticationPrincipal LoginMember me, @PathVariable Long teamId) {
-        return ApiResponse.success(
-                Map.of("documentId", documentService.create(me.getMemberId(), teamId)));
+        return ApiResponse.success(documentService.create(me.getMemberId(), teamId));
     }
 
     /** DOC-03 이름 변경. */

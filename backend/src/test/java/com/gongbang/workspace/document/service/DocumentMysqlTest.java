@@ -7,6 +7,7 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.team.service.TeamService;
 import com.gongbang.workspace.document.dto.DocumentListItemResponse;
+import com.gongbang.workspace.document.dto.DocumentTitleResponse;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.time.LocalDateTime;
@@ -141,8 +142,10 @@ class DocumentMysqlTest {
         long leaderId = member();
         long teamId = teamWithLeader(leaderId);
 
-        long documentId = documentService.create(leaderId, teamId);
+        DocumentTitleResponse created = documentService.create(leaderId, teamId);
+        long documentId = created.documentId();
 
+        assertThat(created.title()).isEqualTo("제목 없는 문서");
         Map<String, Object> row =
                 jdbcTemplate.queryForMap(
                         "SELECT team_id, title, content, created_by, updated_by, created_at,"
@@ -159,6 +162,31 @@ class DocumentMysqlTest {
     }
 
     @Test
+    @DisplayName("생성: 기본 제목 번호가 증가하고, 삭제·이름 변경된 문서와 이상한 형태는 무시한다")
+    void 기본_제목_번호가_증가한다() {
+        long leaderId = member();
+        long teamId = teamWithLeader(leaderId);
+
+        DocumentTitleResponse first = documentService.create(leaderId, teamId);
+        DocumentTitleResponse second = documentService.create(leaderId, teamId);
+        DocumentTitleResponse third = documentService.create(leaderId, teamId);
+        assertThat(first.title()).isEqualTo("제목 없는 문서");
+        assertThat(second.title()).isEqualTo("제목 없는 문서 (2)");
+        assertThat(third.title()).isEqualTo("제목 없는 문서 (3)");
+
+        // (3)을 삭제하고 (2)를 복사본으로 바꾸면 살아 있는 기본 제목 중 최댓값은 1 → (2)
+        documentService.delete(leaderId, third.documentId());
+        documentService.rename(leaderId, second.documentId(), "제목 없는 문서 (복사본)");
+        DocumentTitleResponse afterDelete = documentService.create(leaderId, teamId);
+        assertThat(afterDelete.title()).isEqualTo("제목 없는 문서 (2)");
+
+        // (5)를 만들어 두면 다음 번호는 (6)
+        documentService.rename(leaderId, afterDelete.documentId(), "제목 없는 문서 (5)");
+        DocumentTitleResponse sixth = documentService.create(leaderId, teamId);
+        assertThat(sixth.title()).isEqualTo("제목 없는 문서 (6)");
+    }
+
+    @Test
     @DisplayName("목록: updated_at 최신순, 같은 시각이면 ID 역순. 수정한 사람 닉네임과 canDelete가 채워진다")
     void 목록은_updated_at_최신순() {
         long leaderId = member();
@@ -166,9 +194,9 @@ class DocumentMysqlTest {
         long teamId = teamWithLeader(leaderId);
         teamService.addMember(teamId, memberId);
 
-        long oldest = documentService.create(leaderId, teamId);
-        long sameTimeFirst = documentService.create(memberId, teamId);
-        long sameTimeSecond = documentService.create(leaderId, teamId);
+        long oldest = documentService.create(leaderId, teamId).documentId();
+        long sameTimeFirst = documentService.create(memberId, teamId).documentId();
+        long sameTimeSecond = documentService.create(leaderId, teamId).documentId();
         documentService.rename(memberId, sameTimeSecond, "팀원이 고친 제목");
         setUpdatedAt(oldest, LocalDateTime.of(2026, 11, 20, 10, 0));
         setUpdatedAt(sameTimeFirst, LocalDateTime.of(2026, 11, 22, 9, 0));
@@ -201,8 +229,8 @@ class DocumentMysqlTest {
         long memberId = member();
         long teamId = teamWithLeader(leaderId);
         teamService.addMember(teamId, memberId);
-        long kept = documentService.create(memberId, teamId);
-        long removed = documentService.create(memberId, teamId);
+        long kept = documentService.create(memberId, teamId).documentId();
+        long removed = documentService.create(memberId, teamId).documentId();
 
         assertThatThrownBy(() -> documentService.delete(leaderId + memberId + 1_000_000L, removed))
                 .extracting("errorCode")
@@ -232,7 +260,7 @@ class DocumentMysqlTest {
         long leaderId = member();
         long teamId = teamWithLeader(leaderId);
         insertDocuments(teamId, leaderId, 49);
-        long last = documentService.create(leaderId, teamId); // 50번째
+        long last = documentService.create(leaderId, teamId).documentId(); // 50번째
 
         assertThatThrownBy(() -> documentService.create(leaderId, teamId))
                 .extracting("errorCode")

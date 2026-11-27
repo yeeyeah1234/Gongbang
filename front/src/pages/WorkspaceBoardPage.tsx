@@ -1,9 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getApiError, getErrorMessage } from '../api/errors'
-import { ArrowLeftIcon } from '../components/icons/Icons'
 import { Toast } from '../components/ui/Toast'
 import { BoardCanvasPane } from '../features/workspace/board/components/BoardCanvasPane'
 import { BoardEmptyState } from '../features/workspace/board/components/BoardEmptyState'
@@ -18,6 +17,7 @@ import {
 } from '../features/workspace/board/hooks'
 import { readLastBoardId, writeLastBoardId } from '../features/workspace/board/lastOpened'
 import type { WhiteboardListItem } from '../features/workspace/board/types'
+import { WorkspaceDetailHeader } from '../features/workspace/components/WorkspaceDetailHeader'
 import { useWorkspace } from '../features/workspace/context'
 import { workspaceKeys } from '../features/workspace/hooks'
 import { NoticeConfirmModal } from '../features/workspace/notice/components/NoticeConfirmModal'
@@ -92,7 +92,9 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
   const deleteMutation = useDeleteBoard()
 
   const [renamingId, setRenamingId] = useState<number | null>(null)
+  const [pendingHeaderRenameId, setPendingHeaderRenameId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceSidebarItem | null>(null)
+  const clearPendingHeaderRename = useCallback(() => setPendingHeaderRenameId(null), [])
 
   const creatingRef = useRef(false)
   const deletingRef = useRef(false)
@@ -152,6 +154,7 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
     }
     notifiedDeletedIdsRef.current.add(deletedId)
     if (renamingId === deletedId) setRenamingId(null)
+    if (pendingHeaderRenameId === deletedId) setPendingHeaderRenameId(null)
     if (deleteTarget?.id === deletedId) setDeleteTarget(null)
     toast.show(GONE_MESSAGE)
     openFirstOrEmpty(deletedId)
@@ -221,8 +224,14 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
           ...(prev ?? []).filter((item) => item.whiteboardId !== whiteboardId),
         ])
         writeLastBoardId(teamId, whiteboardId)
-        // WB-01 ② PC에서는 새 항목을 이름 바꾸기 입력 상태로 두고, 1024px 미만은 바로 본문으로 진입
-        setRenamingId(isWide ? whiteboardId : null)
+        // WB-01 ② PC에서는 사이드바를, 1024px 미만은 본문 헤더를 이름 바꾸기 입력 상태로 둔다
+        if (isWide) {
+          setRenamingId(whiteboardId)
+          setPendingHeaderRenameId(null)
+        } else {
+          setRenamingId(null)
+          setPendingHeaderRenameId(whiteboardId)
+        }
         navigate(`${basePath}/${whiteboardId}`)
       },
       onError: (error) => {
@@ -242,10 +251,11 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
     })
   }
 
-  const handleSubmitRename = (boardId: number, title: string) => {
+  const handleSubmitRename = (boardId: number, title: string, onDone?: () => void) => {
     const current = boards?.find((item) => item.id === boardId)
     if (!current || current.title === title) {
       setRenamingId(null)
+      onDone?.()
       return
     }
     renameMutation.mutate(
@@ -253,9 +263,11 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
       {
         onSuccess: () => {
           setRenamingId(null)
+          onDone?.()
         },
         onError: (error) => {
           setRenamingId(null)
+          onDone?.()
           const { code } = getApiError(error)
           const status = axios.isAxiosError(error) ? error.response?.status : undefined
           if (code === 'NOT_TEAM_MEMBER') {
@@ -374,19 +386,22 @@ function BoardTab({ basePath, offlinePreview }: { basePath: string; offlinePrevi
                 className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface max-lg:fixed max-lg:inset-0 max-lg:z-30 max-lg:h-dvh max-lg:overflow-hidden lg:overflow-hidden"
               >
                 {!isWide && (
-                  <div className="flex shrink-0 items-center gap-2 border-b border-divider px-2 py-2 lg:hidden">
-                    <button
-                      type="button"
-                      onClick={() => navigate(basePath)}
-                      aria-label="보드 목록으로"
-                      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-text transition-colors hover:bg-bg"
-                    >
-                      <ArrowLeftIcon className="h-5 w-5" />
-                    </button>
-                    <h2 className="min-w-0 truncate text-body font-bold text-text">
-                      {selectedBoard?.title ?? '화이트보드'}
-                    </h2>
-                  </div>
+                  <WorkspaceDetailHeader
+                    title={selectedBoard?.title}
+                    fallbackTitle={BOARD_LABELS.heading}
+                    backAriaLabel="보드 목록으로"
+                    renameInputLabel={BOARD_LABELS.renameInputLabel}
+                    canRename={selectedBoard !== undefined}
+                    autoEdit={
+                      selectedBoard !== undefined && pendingHeaderRenameId === selectedBoard.id
+                    }
+                    renaming={renameMutation.isPending}
+                    onBack={() => navigate(basePath)}
+                    onAutoEditConsumed={clearPendingHeaderRename}
+                    onSubmitRename={(nextTitle, onDone) => {
+                      if (selectedBoard) handleSubmitRename(selectedBoard.id, nextTitle, onDone)
+                    }}
+                  />
                 )}
                 {selectedBoard ? (
                   <BoardCanvasPane

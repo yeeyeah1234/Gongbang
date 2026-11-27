@@ -634,8 +634,8 @@ function DocumentEditorContent({
 
   return (
     <div className="relative flex h-full min-h-[360px] flex-col">
-      {/* 상단 고정: 문서 제목 + 서식 툴바 */}
-      <header className="shrink-0 border-b border-divider px-6 py-4 lg:px-8">
+      {/* 상단 고정: 문서 제목(1024px 이상만 표시, 1024px 미만은 WorkspaceDetailHeader 사용) + 서식 툴바 */}
+      <header className="hidden shrink-0 border-b border-divider px-6 py-4 lg:block lg:px-8">
         <h1 className="text-heading font-bold wrap-anywhere text-text">{title}</h1>
       </header>
       <DocumentToolbar editor={editor} onOpenLinkModal={openLinkModal} />

@@ -20,6 +20,7 @@ import com.gongbang.workspace.whiteboard.domain.WhiteboardChangeType;
 import com.gongbang.workspace.whiteboard.domain.WhiteboardChangedEvent;
 import com.gongbang.workspace.whiteboard.dto.WhiteboardTitleResponse;
 import com.gongbang.workspace.whiteboard.repository.WhiteboardRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -105,6 +106,8 @@ class WhiteboardServiceTest {
     @DisplayName("만들기: 29개면 「제목 없는 보드」로 만들고 CREATED를 발행한다. 팀 행을 잠근 뒤 센다")
     void 만들기_성공() {
         when(whiteboardRepository.countByTeamIdAndDeletedAtIsNull(TEAM_ID)).thenReturn(29L);
+        when(whiteboardRepository.findDefaultTitles(TEAM_ID, Whiteboard.DEFAULT_TITLE))
+                .thenReturn(List.of());
         givenSaveAssignsId();
 
         WhiteboardTitleResponse response = whiteboardService.create(CREATOR_ID, TEAM_ID);
@@ -127,7 +130,21 @@ class WhiteboardServiceTest {
         order.verify(teamService).lockTeam(TEAM_ID);
         order.verify(teamMemberService).requireMember(TEAM_ID, CREATOR_ID);
         order.verify(whiteboardRepository).countByTeamIdAndDeletedAtIsNull(TEAM_ID);
+        order.verify(whiteboardRepository).findDefaultTitles(TEAM_ID, Whiteboard.DEFAULT_TITLE);
         order.verify(whiteboardRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("만들기: 기존 기본 제목이 있으면 가장 큰 번호 + 1로 만든다")
+    void 만들기_번호_증가() {
+        when(whiteboardRepository.countByTeamIdAndDeletedAtIsNull(TEAM_ID)).thenReturn(2L);
+        when(whiteboardRepository.findDefaultTitles(TEAM_ID, Whiteboard.DEFAULT_TITLE))
+                .thenReturn(List.of("제목 없는 보드 (2)", "제목 없는 보드 (5)", "제목 없는 보드 (복사본)"));
+        givenSaveAssignsId();
+
+        WhiteboardTitleResponse response = whiteboardService.create(CREATOR_ID, TEAM_ID);
+
+        assertThat(response).isEqualTo(new WhiteboardTitleResponse(WHITEBOARD_ID, "제목 없는 보드 (6)"));
     }
 
     @Test
