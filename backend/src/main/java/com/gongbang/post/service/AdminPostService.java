@@ -39,6 +39,17 @@ public class AdminPostService {
             long reportCount) {}
 
     @Transactional(readOnly = true)
+    public java.util.Map<Long, String> reportTitles(Long actor, java.util.Collection<Long> ids) {
+        access.requireAdmin(actor);
+        if (ids.isEmpty()) return java.util.Map.of();
+        return repository.findAllById(ids).stream()
+                .collect(
+                        java.util.stream.Collectors.toMap(
+                                com.gongbang.post.domain.RecruitPost::getId,
+                                com.gongbang.post.domain.RecruitPost::getTitle));
+    }
+
+    @Transactional(readOnly = true)
     public Long reportAuthor(Long id) {
         return repository
                 .findById(id)

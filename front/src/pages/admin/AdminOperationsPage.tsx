@@ -732,6 +732,26 @@ function ActionForm({
     </form>
   )
 }
+function ReportMemberName({
+  nickname,
+  admin,
+  fallback = '정보 확인 중…',
+}: {
+  nickname?: string
+  admin?: boolean
+  fallback?: string
+}) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-2">
+      <span>{nickname ?? fallback}</span>
+      {admin && (
+        <span className="rounded bg-primary-soft px-2 py-0.5 text-caption font-bold text-primary">
+          관리자
+        </span>
+      )}
+    </span>
+  )
+}
 function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
   const detail = useQuery({
     queryKey: ['admin', 'report-detail', item.id],
@@ -739,6 +759,12 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
       readAdmin<{
         report: AdminItem
         memberId: number
+        reporterNickname: string
+        authorNickname: string
+        reporterAdmin: boolean
+        authorAdmin: boolean
+        reviewerAdmin: boolean
+        reviewerNickname?: string
         content: string
         deletedAt?: string | null
       }>(`reports/${item.id}`),
@@ -760,15 +786,35 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
     <>
       <div className={panel}>
         <h2 className="mb-4 text-subheading font-bold">
-          신고 #{item.id} · {labels[item.status ?? '']}
+          {detail.data?.report.title ?? item.title ?? `신고 #${item.id}`} ·{' '}
+          {labels[item.status ?? '']}
         </h2>
         <p className="break-words whitespace-pre-wrap">{formatReportReason(item.reason)}</p>
         <dl className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Info label="신고자">#{item.reporterId}</Info>
-          <Info label="대상">
-            {labels[item.targetType ?? '']} #{item.targetId ?? detail.data?.memberId}
+          <Info label="신고자">
+            <ReportMemberName
+              nickname={detail.data?.reporterNickname}
+              admin={detail.data?.reporterAdmin}
+            />
           </Info>
-          <Info label="처리자">{item.reviewerId}</Info>
+          <Info label="글 작성자">
+            <ReportMemberName
+              nickname={detail.data?.authorNickname}
+              admin={detail.data?.authorAdmin}
+            />
+          </Info>
+          <Info label="대상">
+            {detail.data?.report.title ??
+              item.title ??
+              `${labels[item.targetType ?? '']} #${item.targetId ?? detail.data?.memberId}`}
+          </Info>
+          <Info label="처리자">
+            <ReportMemberName
+              nickname={detail.data?.reviewerNickname}
+              admin={detail.data?.reviewerAdmin}
+              fallback={item.reviewerId ? '정보 확인 중…' : '미처리'}
+            />
+          </Info>
           <Info label="처리 시각">
             <Stamp value={item.reviewedAt} />
           </Info>
@@ -782,9 +828,12 @@ function ReportDetail({ item, act }: { item: AdminItem; act: Act }) {
         {detail.isPending ? (
           <p>불러오는 중…</p>
         ) : detail.isError ? (
-          <p role="alert" className="text-danger">
-            {errorText(detail.error)}
-          </p>
+          <div role="alert">
+            <p className="text-danger">{errorText(detail.error)}</p>
+            <Button className="mt-2" onClick={() => detail.refetch()}>
+              다시 시도
+            </Button>
+          </div>
         ) : (
           <p className="mt-3 rounded-input bg-bg p-4 break-words whitespace-pre-wrap">
             {detail.data.content ?? '텍스트가 없는 대상입니다.'}

@@ -40,8 +40,13 @@ public class AdminReportService {
             String reviewNote,
             Long reviewerId,
             LocalDateTime reviewedAt,
-            LocalDateTime createdAt) {
+            LocalDateTime createdAt,
+            String title) {
         static Item of(Report r) {
+            return of(r, null);
+        }
+
+        static Item of(Report r, String title) {
             return new Item(
                     r.getId(),
                     r.getReporterId(),
@@ -53,15 +58,30 @@ public class AdminReportService {
                     r.getReviewNote(),
                     r.getReviewerId(),
                     r.getReviewedAt(),
-                    r.getCreatedAt());
+                    r.getCreatedAt(),
+                    title);
         }
     }
 
     public record Review(String action, String reason, LocalDateTime until) {}
 
-    public record Detail(Item report, Long memberId, String content, LocalDateTime deletedAt) {
+    public record Detail(
+            Item report,
+            Long memberId,
+            String content,
+            LocalDateTime deletedAt,
+            String reporterNickname,
+            String authorNickname,
+            String reviewerNickname,
+            boolean reporterAdmin,
+            boolean authorAdmin,
+            boolean reviewerAdmin) {
+        public Detail(Item report, Long memberId, String content, LocalDateTime deletedAt) {
+            this(report, memberId, content, deletedAt, null, null, null, false, false, false);
+        }
+
         public Detail(Item report, Long memberId, String content) {
-            this(report, memberId, content, null);
+            this(report, memberId, content, null, null, null, null, false, false, false);
         }
     }
 
@@ -85,8 +105,40 @@ public class AdminReportService {
                         .limit(20)
                         .fetch();
         Long count = q.select(r.count()).from(r).where(where).fetchOne();
+        var boardTitles =
+                boardPosts.reportTitles(
+                        actor,
+                        rows.stream()
+                                .filter(row -> row.getTargetType() == ReportTargetType.BOARD_POST)
+                                .map(Report::getTargetId)
+                                .distinct()
+                                .toList());
+        var postTitles =
+                posts.reportTitles(
+                        actor,
+                        rows.stream()
+                                .filter(row -> row.getTargetType() == ReportTargetType.POST)
+                                .map(Report::getTargetId)
+                                .distinct()
+                                .toList());
         return new PageImpl<>(
-                rows.stream().map(Item::of).toList(),
+                rows.stream()
+                        .map(
+                                row ->
+                                        Item.of(
+                                                row,
+                                                switch (row.getTargetType()) {
+                                                    case BOARD_POST ->
+                                                            boardTitles.getOrDefault(
+                                                                    row.getTargetId(),
+                                                                    "원문을 찾을 수 없는 글");
+                                                    case POST ->
+                                                            postTitles.getOrDefault(
+                                                                    row.getTargetId(),
+                                                                    "원문을 찾을 수 없는 글");
+                                                    default -> null;
+                                                }))
+                        .toList(),
                 PageRequest.of(page, 20),
                 count == null ? 0 : count);
     }
@@ -98,22 +150,40 @@ public class AdminReportService {
                 repository
                         .findById(id)
                         .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
-        return target(actor, r);
+        Detail target = target(actor, r);
+        return new Detail(
+                target.report(),
+                target.memberId(),
+                target.content(),
+                target.deletedAt(),
+                memberLookup.displayName(r.getReporterId()),
+                memberLookup.displayName(target.memberId()),
+                r.getReviewerId() == null ? null : memberLookup.displayName(r.getReviewerId()),
+                access.isAdmin(r.getReporterId()),
+                access.isAdmin(target.memberId()),
+                access.isAdmin(r.getReviewerId()));
     }
 
     private Detail target(Long actor, Report r) {
         if (r.getTargetType() == ReportTargetType.COMMENT) {
             var c = comments.target(actor, r.getTargetId());
-            return new Detail(Item.of(r), c.authorId(), c.content());
+            return new Detail(Item.of(r), c.authorId(), c.content(), c.deletedAt());
         }
         if (r.getTargetType() == ReportTargetType.POST) {
             var p = posts.target(actor, r.getTargetId());
-            return new Detail(Item.of(r), p.authorId(), p.content(), p.deletedAt());
+            return new Detail(
+                    Item.of(r, p.title()),
+                    p.authorId(),
+                    p.title() + "\n\n" + p.content(),
+                    p.deletedAt());
         }
         if (r.getTargetType() == ReportTargetType.BOARD_POST) {
             var p = boardPosts.target(actor, r.getTargetId());
             return new Detail(
-                    Item.of(r), p.authorId(), p.title() + "\n\n" + p.content(), p.deletedAt());
+                    Item.of(r, p.title()),
+                    p.authorId(),
+                    p.title() + "\n\n" + p.content(),
+                    p.deletedAt());
         }
         if (r.getTargetType() == ReportTargetType.MESSAGE) {
             var message = chat.read(actor, r.getTargetId(), true);
