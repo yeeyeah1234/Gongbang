@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -61,6 +62,10 @@ class TeamDeleteMysqlTest {
 
     @AfterEach
     void tearDown() {
+        for (Long memberId : memberIds) {
+            jdbcTemplate.update("DELETE FROM email_outbox WHERE receiver_id = ?", memberId);
+            jdbcTemplate.update("DELETE FROM notification WHERE receiver_id = ?", memberId);
+        }
         for (Long teamId : teamIds) {
             String teamRooms = "SELECT id FROM chat_room WHERE team_id = ?";
             jdbcTemplate.update(
@@ -73,6 +78,8 @@ class TeamDeleteMysqlTest {
             jdbcTemplate.update("DELETE FROM team WHERE id = ?", teamId);
         }
         for (Long postId : postIds) {
+            jdbcTemplate.update("DELETE FROM team_invitation WHERE post_id = ?", postId);
+            jdbcTemplate.update("DELETE FROM application WHERE post_id = ?", postId);
             jdbcTemplate.update("DELETE FROM recruit_post WHERE id = ?", postId);
         }
         for (Long memberId : memberIds) {
@@ -256,5 +263,46 @@ class TeamDeleteMysqlTest {
                         teamId,
                         leaderId);
         assertThat(leaderLeftAt).isNotNull();
+    }
+
+    @Test
+    @DisplayName("모집중 모집글이 있는 팀을 삭제하면 모집글은 모집완료, 대기 지원은 REJECTED가 된다")
+    void 모집중_모집글이_있는_팀_삭제시_모집완료와_대기지원_거절() {
+        long leaderId = createMember();
+        long applicantId = createMember();
+        long postId = createPost(leaderId, 3, 1);
+        long teamId = createTeamWithPost(postId, "모집마감팀", leaderId);
+        chatMembershipService.createTeamRoom(teamId, leaderId);
+        jdbcTemplate.update(
+                "INSERT INTO application (post_id, applicant_id) VALUES (?, ?)",
+                postId,
+                applicantId);
+
+        teamDeleteService.deleteTeam(teamId, leaderId);
+
+        assertThat(teamService.isDeleted(teamId)).isTrue();
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT status FROM recruit_post WHERE id = ?",
+                                String.class,
+                                postId))
+                .isEqualTo("COMPLETED");
+        LocalDateTime completedAt =
+                jdbcTemplate.queryForObject(
+                        "SELECT completed_at FROM recruit_post WHERE id = ?",
+                        LocalDateTime.class,
+                        postId);
+        LocalDateTime teamDeletedAt =
+                jdbcTemplate.queryForObject(
+                        "SELECT deleted_at FROM team WHERE id = ?", LocalDateTime.class, teamId);
+        assertThat(completedAt).isNotNull().isEqualTo(teamDeletedAt);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT status FROM application WHERE post_id = ?"
+                                        + " AND applicant_id = ?",
+                                String.class,
+                                postId,
+                                applicantId))
+                .isEqualTo("REJECTED");
     }
 }
