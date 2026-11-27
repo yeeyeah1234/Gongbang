@@ -73,11 +73,37 @@ public class PostQueryService {
 
     /** PST-001 모집글 목록. 비회원도 본다 (⑤). 삭제된 글은 빠진다. */
     public PageResponse<PostListItemResponse> getPosts(int page, int size) {
+        return getPosts(null, false, page, size);
+    }
+
+    /**
+     * PST-001 모집글 목록과 ⑩ 거르기. contestId가 있으면 그 서비스 공모전의 글만(외부 공모전 글은 빠짐), recruiting이 true면 지금 지원할 수
+     * 있는 글(모집중이고 모집 종료일이 오늘 이후, ④ 「모집마감」 제외)만 준다. 공모전 상세의 「팀원 모집 중」 칸(MAIN-02 ⑨)은
+     * contestId·recruiting=true·size=3으로 부르고 전체 개수는 totalElements를 쓴다. 정렬은 모두 최신 등록순.
+     */
+    public PageResponse<PostListItemResponse> getPosts(
+            Long contestId, boolean recruiting, int page, int size) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
             throw new BusinessException(ErrorCode.INVALID_INPUT);
         }
-        Page<RecruitPost> posts =
-                recruitPostRepository.findByDeletedAtIsNull(PageRequest.of(page, size, LATEST));
+        PageRequest pageable = PageRequest.of(page, size, LATEST);
+        LocalDate today = LocalDate.now(KST);
+        Page<RecruitPost> posts;
+        if (contestId != null && recruiting) {
+            posts =
+                    recruitPostRepository
+                            .findByContestIdAndStatusAndRecruitEndDateGreaterThanEqualAndDeletedAtIsNull(
+                                    contestId, PostStatus.RECRUITING, today, pageable);
+        } else if (contestId != null) {
+            posts = recruitPostRepository.findByContestIdAndDeletedAtIsNull(contestId, pageable);
+        } else if (recruiting) {
+            posts =
+                    recruitPostRepository
+                            .findByStatusAndRecruitEndDateGreaterThanEqualAndDeletedAtIsNull(
+                                    PostStatus.RECRUITING, today, pageable);
+        } else {
+            posts = recruitPostRepository.findByDeletedAtIsNull(pageable);
+        }
         return PageResponse.of(toItems(posts.getContent()), page, size, posts.getTotalElements());
     }
 

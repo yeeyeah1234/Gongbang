@@ -37,12 +37,14 @@ public class PostController {
     private final PostCommandService postCommandService;
     private final PostImageService postImageService;
 
-    /** PST-001: 공개. 최신 등록순, 20개씩 (⑦, 20은 제안값). */
+    /** PST-001: 공개. 최신 등록순, 20개씩 (⑦, 20은 제안값). ⑩ contestId·recruiting으로 거른다. */
     @GetMapping("/api/posts")
     public ApiResponse<PageResponse<PostListItemResponse>> getPosts(
+            @RequestParam(required = false) Long contestId,
+            @RequestParam(defaultValue = "false") boolean recruiting,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.success(postQueryService.getPosts(page, size));
+        return ApiResponse.success(postQueryService.getPosts(contestId, recruiting, page, size));
     }
 
     /** PST-005: 공개. 로그인 회원이면 24시간에 한 번 조회수 +1과 myStatus를 주고, 비회원(me null)은 조회수를 올리지 않는다. */
