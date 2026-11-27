@@ -22,12 +22,16 @@ class DeletedTeamReminderServiceTest {
         var at = LocalDateTime.now().plusDays(3);
         var own = new ScheduledNotification(NotificationType.EVENT_REMIND, "EVENT", 1L, at);
         var other = new ScheduledNotification(NotificationType.EVENT_REMIND, "EVENT", 2L, at);
-        var milestone =
-                new ScheduledNotification(NotificationType.TEAM_DEADLINE, "MILESTONE", 3L, at);
+        var milestoneD7 =
+                new ScheduledNotification(NotificationType.TEAM_DEADLINE, "MILESTONE_D7", 3L, at);
+        var milestoneD1 =
+                new ScheduledNotification(NotificationType.TEAM_DEADLINE, "MILESTONE_D1", 3L, at);
         when(repo.findByTargetTypeAndStatus("EVENT", ScheduledNotification.Status.PENDING))
                 .thenReturn(List.of(own, other));
-        when(repo.findByTargetTypeAndStatus("MILESTONE", ScheduledNotification.Status.PENDING))
-                .thenReturn(List.of(milestone));
+        when(repo.findByTargetTypeAndStatus("MILESTONE_D7", ScheduledNotification.Status.PENDING))
+                .thenReturn(List.of(milestoneD7));
+        when(repo.findByTargetTypeAndStatus("MILESTONE_D1", ScheduledNotification.Status.PENDING))
+                .thenReturn(List.of(milestoneD1));
         var deletedTeamEvent =
                 CalendarEvent.create(10L, 1L, "일정", at, at.plusHours(1), false, "BLUE", null);
         var otherEvent =
@@ -39,7 +43,8 @@ class DeletedTeamReminderServiceTest {
         service.onDeleted(new TeamDeletedEvent(10L));
         service.onDeleted(new TeamDeletedEvent(10L));
         assertThat(own.getStatus()).isEqualTo(ScheduledNotification.Status.CANCELED);
-        assertThat(milestone.getStatus()).isEqualTo(ScheduledNotification.Status.CANCELED);
+        assertThat(milestoneD7.getStatus()).isEqualTo(ScheduledNotification.Status.CANCELED);
+        assertThat(milestoneD1.getStatus()).isEqualTo(ScheduledNotification.Status.CANCELED);
         assertThat(other.getStatus()).isEqualTo(ScheduledNotification.Status.PENDING);
     }
 }

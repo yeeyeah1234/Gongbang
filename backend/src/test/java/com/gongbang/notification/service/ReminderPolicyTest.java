@@ -69,10 +69,12 @@ class ReminderPolicyTest {
         var calendar = mock(CalendarService.class);
         var scheduled = mock(ScheduledNotificationService.class);
         var event = mock(CalendarEvent.class);
-        var at = LocalDateTime.of(2030, 1, 2, 0, 0);
+        var at = LocalDateTime.of(2030, 1, 20, 0, 0);
+        var d7 = at.toLocalDate().minusDays(7).atTime(9, 0);
+        var d1 = at.toLocalDate().minusDays(1).atTime(9, 0);
         when(event.getId()).thenReturn(3L);
         when(event.getStartAt()).thenReturn(at);
-        when(calendar.milestones()).thenReturn(List.of(event));
+        when(calendar.contestDeadlines()).thenReturn(List.of(event));
         var service =
                 new TeamDeadlineReminderService(
                         calendar,
@@ -82,9 +84,13 @@ class ReminderPolicyTest {
                         mock(NotificationService.class),
                         mock(com.gongbang.team.service.TeamService.class));
         service.reconcile();
-        verify(scheduled).schedule(NotificationType.TEAM_DEADLINE, "MILESTONE", 3L, at.withHour(9));
+        verify(scheduled).schedule(NotificationType.TEAM_DEADLINE, "MILESTONE_D7", 3L, d7);
+        verify(scheduled).schedule(NotificationType.TEAM_DEADLINE, "MILESTONE_D1", 3L, d1);
         when(repo.existsByTargetTypeAndTargetIdAndFireAtAndStatusNot(
-                        "MILESTONE", 3L, at.withHour(9), ScheduledNotification.Status.CANCELED))
+                        "MILESTONE_D7", 3L, d7, ScheduledNotification.Status.CANCELED))
+                .thenReturn(true);
+        when(repo.existsByTargetTypeAndTargetIdAndFireAtAndStatusNot(
+                        "MILESTONE_D1", 3L, d1, ScheduledNotification.Status.CANCELED))
                 .thenReturn(true);
         service.reconcile();
         verifyNoMoreInteractions(scheduled);

@@ -1,6 +1,7 @@
 package com.gongbang.workspace.calendar.repository;
 
 import com.gongbang.workspace.calendar.domain.CalendarEvent;
+import com.gongbang.workspace.calendar.domain.CalendarEventAutoType;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,26 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Long> {
-    @Modifying
-    @Query(
-            value =
-                    "INSERT INTO calendar_event (team_id,title,start_at,end_at,all_day,color,auto_type) "
-                            + "SELECT t.id,:title,DATE_SUB(COALESCE(c.end_date,p.ext_deadline), INTERVAL :days DAY),"
-                            + "DATE_SUB(COALESCE(c.end_date,p.ext_deadline), INTERVAL :days DAY),TRUE,'RED',:type "
-                            + "FROM team t JOIN recruit_post p ON p.id=t.post_id LEFT JOIN contest c ON c.id=p.contest_id "
-                            + "WHERE (:teamId IS NULL OR t.id=:teamId) AND (:contestId IS NULL OR p.contest_id=:contestId) "
-                            + "ON DUPLICATE KEY UPDATE start_at=VALUES(start_at),end_at=VALUES(end_at)",
-            nativeQuery = true)
-    int upsertMilestone(
-            @Param("teamId") Long teamId,
-            @Param("contestId") Long contestId,
-            @Param("title") String title,
-            @Param("type") String type,
-            @Param("days") int days);
 
-    @Query(
-            "select e from CalendarEvent e where e.autoType in (com.gongbang.workspace.calendar.domain.CalendarEventAutoType.CONTEST_D7, com.gongbang.workspace.calendar.domain.CalendarEventAutoType.CONTEST_D1)")
-    java.util.List<CalendarEvent> findMilestones();
+    List<CalendarEvent> findByAutoType(CalendarEventAutoType autoType);
 
     /**
      * CAL-03 목록: 기간이 겹치는 일정을 모두 (자동 일정 포함). 여러 날 일정이 달 경계에 걸쳐도 나온다. 시작 시각 → ID 순.
