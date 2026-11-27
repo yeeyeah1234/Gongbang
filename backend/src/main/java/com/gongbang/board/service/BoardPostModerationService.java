@@ -20,6 +20,17 @@ public class BoardPostModerationService {
     public record Target(Long authorId, String title, String content, LocalDateTime deletedAt) {}
 
     @Transactional(readOnly = true)
+    public java.util.Map<Long, String> reportTitles(Long actor, java.util.Collection<Long> ids) {
+        access.requireAdmin(actor);
+        if (ids.isEmpty()) return java.util.Map.of();
+        return repository.findAllById(ids).stream()
+                .collect(
+                        java.util.stream.Collectors.toMap(
+                                com.gongbang.board.domain.BoardPost::getId,
+                                com.gongbang.board.domain.BoardPost::getTitle));
+    }
+
+    @Transactional(readOnly = true)
     public Target target(Long actor, Long id) {
         access.requireAdmin(actor);
         var post =
