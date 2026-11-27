@@ -15,7 +15,13 @@ import type {
 } from './types'
 
 // PST-001 모집글 목록. 비회원도 부를 수 있다 (⑤). page는 0부터.
-export async function fetchPosts(params: { page: number; size: number }) {
+// ⑩ contestId: 그 공모전 글만, recruiting: 지금 지원할 수 있는 글(모집중이고 종료일 전)만
+export async function fetchPosts(params: {
+  page: number
+  size: number
+  contestId?: number
+  recruiting?: boolean
+}) {
   const response = await apiClient.get<ApiResponse<PageResponse<PostListItem>>>('/api/posts', {
     params,
   })

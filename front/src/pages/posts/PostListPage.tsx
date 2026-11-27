@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate, useSearchParams } from 'react-router'
 import { Button } from '../../components/ui/Button'
 import { useIsLoggedIn } from '../../features/auth/store'
+import { useContestDetail } from '../../features/contest/hooks'
 import { CommunityTabs } from '../../features/board/components/CommunityTabs'
 import { LoginRequiredModal } from '../../features/post/components/LoginRequiredModal'
 import { PostPagination } from '../../features/post/components/PostPagination'
@@ -16,6 +17,36 @@ function readPage(value: string | null) {
   return Number.isInteger(page) && page >= 1 ? page - 1 : 0
 }
 
+// ⑩ 주소의 ?contestId=. 잘못된 값이면 거르지 않는다.
+function readContestId(value: string | null) {
+  const contestId = Number(value)
+  return value !== null && Number.isInteger(contestId) && contestId > 0 ? contestId : null
+}
+
+// ⑩ 공모전으로 거른 목록 위에 어떤 공모전인지와 거르기 해제를 보여 준다
+function ContestFilter({ contestId }: { contestId: number }) {
+  const { data } = useContestDetail(contestId)
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-input bg-surface-sub px-4 py-3">
+      <p className="min-w-0 flex-1 text-body text-text">
+        {data ? (
+          <>
+            <Link to={`/contests/${contestId}`} className="font-bold hover:underline">
+              {data.title}
+            </Link>{' '}
+            모집글
+          </>
+        ) : (
+          '이 공모전의 모집글'
+        )}
+      </p>
+      <Link to="/posts" className="shrink-0 text-small text-primary hover:underline">
+        전체 모집글 보기
+      </Link>
+    </div>
+  )
+}
+
 // PST-001 커뮤니티 모집글 목록 / Figma WF-01. 비회원도 본다 (⑤).
 export default function PostListPage() {
   const navigate = useNavigate()
@@ -24,7 +55,8 @@ export default function PostListPage() {
   const [loginModalOpen, setLoginModalOpen] = useState(false)
   // 페이지를 주소에 남겨, 상세에 갔다가 뒤로 오면 보던 페이지로 돌아온다
   const page = readPage(searchParams.get('page'))
-  const { data, isLoading, isError, refetch } = usePostList(page)
+  const contestId = readContestId(searchParams.get('contestId'))
+  const { data, isLoading, isError, refetch } = usePostList(page, contestId)
 
   const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / data.size)) : 1
   const isEmpty = data !== undefined && data.totalCount === 0
@@ -36,7 +68,10 @@ export default function PostListPage() {
   }
 
   const changePage = (next: number) => {
-    setSearchParams(next === 0 ? {} : { page: String(next + 1) })
+    setSearchParams({
+      ...(contestId === null ? {} : { contestId: String(contestId) }),
+      ...(next === 0 ? {} : { page: String(next + 1) }),
+    })
     window.scrollTo({ top: 0 })
   }
 
@@ -54,6 +89,7 @@ export default function PostListPage() {
           </Button>
         )}
       </div>
+      {contestId !== null && <ContestFilter contestId={contestId} />}
 
       <section className="mt-8" aria-label="모집글 목록">
         {isLoading ? (

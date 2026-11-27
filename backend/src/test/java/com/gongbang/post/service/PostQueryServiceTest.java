@@ -197,6 +197,50 @@ class PostQueryServiceTest {
         assertThat(result.hasNext()).isFalse();
     }
 
+    @Test
+    @DisplayName("contestId와 recruiting=true면 그 공모전의 모집중이고 종료일이 오늘 이후인 글을 최신순으로 읽는다 (⑩, MAIN-02 ⑨)")
+    void 공모전의_지원_가능한_글만_읽는다() {
+        Page<RecruitPost> page =
+                new PageImpl<>(List.of(contestPost(5L, 3L)), PageRequest.of(0, 3), 4);
+        given(
+                        recruitPostRepository
+                                .findByContestIdAndStatusAndRecruitEndDateGreaterThanEqualAndDeletedAtIsNull(
+                                        eq(3L),
+                                        eq(PostStatus.RECRUITING),
+                                        any(LocalDate.class),
+                                        any(Pageable.class)))
+                .willReturn(page);
+
+        PageResponse<PostListItemResponse> result = postQueryService.getPosts(3L, true, 0, 3);
+
+        assertThat(result.items()).extracting(PostListItemResponse::postId).containsExactly(5L);
+        // 「팀원 모집 중 {개수}」는 전체 개수를 쓴다
+        assertThat(result.totalCount()).isEqualTo(4);
+        ArgumentCaptor<LocalDate> today = ArgumentCaptor.forClass(LocalDate.class);
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(recruitPostRepository)
+                .findByContestIdAndStatusAndRecruitEndDateGreaterThanEqualAndDeletedAtIsNull(
+                        eq(3L), eq(PostStatus.RECRUITING), today.capture(), pageable.capture());
+        assertThat(today.getValue()).isEqualTo(LocalDate.now(java.time.ZoneId.of("Asia/Seoul")));
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(3);
+        assertThat(pageable.getValue().getSort()).isEqualTo(PostQueryService.LATEST);
+        verify(recruitPostRepository, never()).findByDeletedAtIsNull(any());
+    }
+
+    @Test
+    @DisplayName("contestId만 있으면 그 공모전 글을 모집완료까지 모두 읽는다 (⑩ 「더 보기」 목록)")
+    void 공모전_글을_모집완료까지_읽는다() {
+        Page<RecruitPost> page = new PageImpl<>(List.of(), PageRequest.of(0, 20), 0);
+        given(recruitPostRepository.findByContestIdAndDeletedAtIsNull(eq(3L), any(Pageable.class)))
+                .willReturn(page);
+
+        postQueryService.getPosts(3L, false, 0, 20);
+
+        verify(recruitPostRepository)
+                .findByContestIdAndDeletedAtIsNull(eq(3L), any(Pageable.class));
+        verify(recruitPostRepository, never()).findByDeletedAtIsNull(any());
+    }
+
     @ParameterizedTest
     @CsvSource({"-1, 20", "0, 0", "0, 51"})
     @DisplayName("page가 음수이거나 size가 1~50 밖이면 400 INVALID_INPUT")
