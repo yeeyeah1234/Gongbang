@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminReportService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final AdminMemberService access;
     private final AdminMemberManagementService members;
     private final MemberService memberLookup;
@@ -214,19 +215,19 @@ public class AdminReportService {
                 case "HIDE_COMMENT" -> {
                     if (r.getTargetType() != ReportTargetType.COMMENT)
                         throw new BusinessException(ErrorCode.INVALID_INPUT);
-                    comments.hide(actor, r.getTargetId());
+                    r.rememberHiddenAt(comments.hideForReview(actor, r.getTargetId()));
                 }
                 case "HIDE_POST" -> {
                     if (r.getTargetType() != ReportTargetType.POST)
                         throw new BusinessException(ErrorCode.INVALID_INPUT);
-                    posts.hide(actor, r.getTargetId());
+                    r.rememberHiddenAt(posts.hideForReview(actor, r.getTargetId()));
                 }
                 case "HIDE_BOARD_POST" -> {
                     if (r.getTargetType() != ReportTargetType.BOARD_POST)
                         throw new BusinessException(ErrorCode.INVALID_INPUT);
-                    boardPosts.hide(actor, r.getTargetId());
+                    r.rememberHiddenAt(boardPosts.hideForReview(actor, r.getTargetId()));
                 }
-                case "WARN", "SUSPEND", "REQUIRE_NICKNAME" ->
+                case "WARN", "SUSPEND", "SUSPEND_PERMANENT", "REQUIRE_NICKNAME" ->
                         members.act(
                                 actor,
                                 target.memberId(),
@@ -236,6 +237,65 @@ public class AdminReportService {
             }
         }
         r.review(action, reason, actor, LocalDateTime.now(ZoneId.of("Asia/Seoul")));
+        audit.record(actor, "REPORT_" + action, "REPORT", id, reason);
+        return Item.of(r);
+    }
+
+    @Transactional
+    public Item cancelReview(Long actor, Long id, Review body) {
+        access.requireAdmin(actor);
+        Report r = em.find(Report.class, id, LockModeType.PESSIMISTIC_WRITE);
+        if (r == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        if (r.getStatus() == ReportStatus.RECEIVED)
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "이미 접수 상태입니다");
+        String reason = body.reason() == null ? "" : body.reason().strip();
+        if (reason.isEmpty() || reason.length() > 200)
+            throw new BusinessException(ErrorCode.INVALID_INPUT);
+        if (!Set.of("HIDE_POST", "HIDE_BOARD_POST", "HIDE_COMMENT", "DISMISS")
+                .contains(r.getAction()))
+            throw new BusinessException(ErrorCode.INVALID_INPUT, "계정 제재는 회원 관리에서 별도로 해제해 주세요");
+        if (r.getAppliedHiddenAt() != null) {
+            var q = QReport.report;
+            Long others =
+                    new JPAQueryFactory(em)
+                            .select(q.count())
+                            .from(q)
+                            .where(
+                                    q.id.ne(id),
+                                    q.targetType.eq(r.getTargetType()),
+                                    q.targetId.eq(r.getTargetId()),
+                                    q.status.eq(ReportStatus.RESOLVED),
+                                    q.action.startsWith("HIDE_"))
+                            .fetchOne();
+            if (others != null && others > 0)
+                throw new BusinessException(ErrorCode.INVALID_INPUT, "같은 글의 다른 숨김 신고를 먼저 취소해 주세요");
+            switch (r.getAction()) {
+                case "HIDE_POST" ->
+                        posts.restoreHidden(actor, r.getTargetId(), r.getAppliedHiddenAt());
+                case "HIDE_BOARD_POST" ->
+                        boardPosts.restoreHidden(actor, r.getTargetId(), r.getAppliedHiddenAt());
+                case "HIDE_COMMENT" ->
+                        comments.restoreHidden(actor, r.getTargetId(), r.getAppliedHiddenAt());
+                default -> {}
+            }
+        } else if (r.getAction().startsWith("HIDE_")
+                && !r.isHideProvenanceKnown()
+                && target(actor, r).deletedAt() != null) {
+            throw new BusinessException(
+                    ErrorCode.INVALID_INPUT, "이 신고가 숨긴 글인지 확인할 수 없어 자동 복원할 수 없어요");
+        }
+        em.createNativeQuery(
+                        "INSERT INTO report_review_cancellation (report_id, previous_action, previous_note, previous_reviewer_id, previous_reviewed_at, canceled_by, cancel_reason) VALUES (:id,:action,:note,:reviewer,:time,:actor,:reason)")
+                .setParameter("id", id)
+                .setParameter("action", r.getAction())
+                .setParameter("note", r.getReviewNote())
+                .setParameter("reviewer", r.getReviewerId())
+                .setParameter("time", r.getReviewedAt())
+                .setParameter("actor", actor)
+                .setParameter("reason", reason)
+                .executeUpdate();
+        r.reopen();
+        audit.record(actor, "REPORT_CANCEL", "REPORT", id, reason);
         return Item.of(r);
     }
 }

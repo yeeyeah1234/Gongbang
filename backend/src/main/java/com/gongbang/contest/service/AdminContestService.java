@@ -20,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 public class AdminContestService {
+    private final com.gongbang.admin.service.AdminActivityWriter audit;
     private final AdminMemberService access;
     private final CategoryRepository categories;
     private final CalendarService calendar;
@@ -114,6 +115,17 @@ public class AdminContestService {
         c.updateByAdmin(body.title().strip(), body.endDate(), category);
         em.flush();
         calendar.syncContestMilestones(id);
+        audit.record(
+                actor,
+                "CONTEST_UPDATE",
+                "CONTEST",
+                id,
+                "마감일: "
+                        + body.expectedEndDate()
+                        + " → "
+                        + body.endDate()
+                        + ", 카테고리 #"
+                        + body.categoryId());
         return item(c);
     }
 
@@ -136,5 +148,11 @@ public class AdminContestService {
                 .findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
                 .update(body.name().strip(), body.sortOrder());
+        audit.record(
+                actor,
+                "CATEGORY_UPDATE",
+                "CATEGORY",
+                id,
+                body.name().strip() + " / 순서 " + body.sortOrder());
     }
 }

@@ -68,4 +68,12 @@ public class AdminModerationController {
             @RequestBody AdminReportService.Review body) {
         return ApiResponse.success(reports.review(me.getMemberId(), id, body));
     }
+
+    @PostMapping("/reports/{id}/cancel-review")
+    public ApiResponse<?> cancelReview(
+            @AuthenticationPrincipal LoginMember me,
+            @PathVariable Long id,
+            @RequestBody AdminReportService.Review body) {
+        return ApiResponse.success(reports.cancelReview(me.getMemberId(), id, body));
+    }
 }

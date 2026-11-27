@@ -22,8 +22,9 @@ public enum NotificationType {
     // 일반 운영 공지는 사이트만, 정책 변경 메일은 관리자 선택으로 별도 등록한다.
     SERVICE_NOTICE(null, null, Category.NOTICE),
     WELCOME(null, null, Category.NOTICE),
-    NICKNAME_CHANGE_REQUIRED(null, null, Category.NOTICE),
-    ACCOUNT_SANCTION(null, null, Category.NOTICE),
+    NICKNAME_CHANGE_REQUIRED(null, SendMode.IMMEDIATE, Category.NOTICE),
+    ACCOUNT_SANCTION(null, SendMode.IMMEDIATE, Category.NOTICE),
+    ADMIN_INVITE(null, null, Category.NOTICE),
     ADMIN_GRANTED(null, null, Category.NOTICE),
     POLICY_NOTICE(null, SendMode.IMMEDIATE, Category.NOTICE),
     BOARD_POST_NEW(SettingType.COMMUNITY_NEW, null, Category.NOTICE);

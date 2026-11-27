@@ -18,7 +18,12 @@ class AdminContestServiceTest {
     final CategoryRepository categories = mock(CategoryRepository.class);
     final CalendarService calendar = mock(CalendarService.class);
     final AdminContestService service =
-            new AdminContestService(mock(AdminMemberService.class), categories, calendar, em);
+            new AdminContestService(
+                    org.mockito.Mockito.mock(com.gongbang.admin.service.AdminActivityWriter.class),
+                    mock(AdminMemberService.class),
+                    categories,
+                    calendar,
+                    em);
 
     @Test
     void 확인한마감일이바뀌면_저장하지않는다() {

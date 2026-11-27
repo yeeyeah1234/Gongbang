@@ -20,7 +20,12 @@ class ServiceNoticeServiceTest {
     final MemberService members = mock(MemberService.class);
     final EmailOutboxService emails = mock(EmailOutboxService.class);
     final ServiceNoticeService service =
-            new ServiceNoticeService(repository, notifications, members, emails);
+            new ServiceNoticeService(
+                    org.mockito.Mockito.mock(com.gongbang.admin.service.AdminActivityWriter.class),
+                    repository,
+                    notifications,
+                    members,
+                    emails);
 
     void admin() {
         var m = Member.createEmailMember("admin@example.com", "hash", "관리자");

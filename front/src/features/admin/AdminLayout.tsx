@@ -58,14 +58,22 @@ export function AdminShell({
           </div>
         </header>
       )}
-      <div className="mx-auto flex max-w-[1680px] flex-col gap-6 px-4 pt-8 pb-[calc(112px+env(safe-area-inset-bottom))] md:px-6 md:py-12 lg:flex-row lg:gap-8 lg:px-8">
+      <div
+        className={`mx-auto flex w-full max-w-[1680px] gap-6 px-4 pt-8 pb-[calc(112px+env(safe-area-inset-bottom))] md:px-6 md:py-12 ${isWide ? 'flex-row gap-8 px-8' : 'flex-col'}`}
+      >
         {!isWide && (
-          <Button aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)}>
+          <Button
+            className="max-w-full self-start break-words whitespace-normal"
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
             ≡ 관리자 메뉴 · {nickname}
           </Button>
         )}
         {(isWide || menuOpen) && (
-          <aside className="border-b border-divider bg-surface pb-4 lg:w-52 lg:shrink-0 lg:border-b-0">
+          <aside
+            className={`min-w-0 border-divider bg-surface pb-4 ${isWide ? 'w-52 shrink-0' : 'w-full border-b'}`}
+          >
             <h1 className="mb-5 text-subheading font-bold">
               <span className="text-primary">관리자</span> 페이지
             </h1>
@@ -87,6 +95,7 @@ export function AdminShell({
                 { path: 'members', label: '회원 관리' },
                 { path: 'posts', label: '모집글·댓글 관리' },
                 { path: 'contests', label: '공모전 관리' },
+                { path: 'activity-logs', label: '관리자 활동 로그' },
               ].map((item) => (
                 <NavLink
                   onClick={() => setMenuOpen(false)}

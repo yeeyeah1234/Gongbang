@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AdminMemberController {
     private final AdminMemberService service;
+    private final com.gongbang.member.service.AdminInvitationService invitations;
 
     @GetMapping
     public ApiResponse<AdminMemberService.Result> list(
@@ -22,8 +23,8 @@ public class AdminMemberController {
     }
 
     @PostMapping("/{memberId}/admin-role")
-    public ApiResponse<AdminMemberService.Item> grant(
+    public ApiResponse<com.gongbang.member.service.AdminInvitationService.Result> grant(
             @AuthenticationPrincipal LoginMember me, @PathVariable Long memberId) {
-        return ApiResponse.success(service.grant(me.getMemberId(), memberId));
+        return ApiResponse.success(invitations.invite(me.getMemberId(), memberId));
     }
 }

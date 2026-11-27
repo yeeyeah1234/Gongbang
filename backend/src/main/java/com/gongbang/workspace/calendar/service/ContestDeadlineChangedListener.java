@@ -22,6 +22,7 @@ public class ContestDeadlineChangedListener {
     private final CalendarService calendarService;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @org.springframework.core.annotation.Order(0)
     public void handle(ContestDeadlineChangedEvent event) {
         try {
             calendarService.upsertAutoEventsByContest(event.contestId());

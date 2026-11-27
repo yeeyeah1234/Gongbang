@@ -40,6 +40,18 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     boolean existsByNickname(String nickname);
 
+    @Query(
+            value = "select count(*) from blocked_nickname where nickname = :nickname",
+            nativeQuery = true)
+    long countBlockedNickname(@Param("nickname") String nickname);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(
+            value =
+                    "insert into blocked_nickname(nickname) values (:nickname) on duplicate key update nickname = nickname",
+            nativeQuery = true)
+    void blockNickname(@Param("nickname") String nickname);
+
     List<Member> findByStatusAndWithdrawnAtBefore(MemberStatus status, LocalDateTime before);
 
     @Query("select m.id from Member m where m.status = :status")

@@ -21,6 +21,7 @@ class AdminReportServiceTest {
             mock(com.gongbang.board.service.BoardPostModerationService.class);
     final AdminReportService service =
             new AdminReportService(
+                    mock(com.gongbang.admin.service.AdminActivityWriter.class),
                     mock(AdminMemberService.class),
                     members,
                     mock(MemberService.class),
@@ -47,8 +48,12 @@ class AdminReportServiceTest {
                 .thenReturn(
                         new com.gongbang.board.service.BoardPostModerationService.Target(
                                 2L, "제목", "내용", null));
+        var hiddenAt = java.time.LocalDateTime.of(2026, 11, 27, 9, 0);
+        when(boardPosts.hideForReview(5L, 9L)).thenReturn(hiddenAt);
         service.review(5L, 8L, new AdminReportService.Review("HIDE_BOARD_POST", "부적절한 내용", null));
-        verify(boardPosts).hide(5L, 9L);
+        verify(boardPosts).hideForReview(5L, 9L);
+        assertThat(r.getAppliedHiddenAt()).isEqualTo(hiddenAt);
+        assertThat(r.isHideProvenanceKnown()).isTrue();
         assertThat(r.getStatus()).isEqualTo(ReportStatus.RESOLVED);
         assertThatThrownBy(
                         () ->
@@ -58,7 +63,7 @@ class AdminReportServiceTest {
                                         new AdminReportService.Review(
                                                 "HIDE_BOARD_POST", "재처리", null)))
                 .isInstanceOf(BusinessException.class);
-        verify(boardPosts, times(1)).hide(5L, 9L);
+        verify(boardPosts, times(1)).hideForReview(5L, 9L);
     }
 
     @Test
@@ -78,7 +83,7 @@ class AdminReportServiceTest {
                 .thenReturn(new CommentModerationService.Item(9L, 7L, 2L, "내용", null));
         service.review(5L, 8L, new AdminReportService.Review("HIDE_COMMENT", "욕설", null));
         assertThat(r.getStatus()).isEqualTo(ReportStatus.RESOLVED);
-        verify(comments).hide(5L, 9L);
+        verify(comments).hideForReview(5L, 9L);
         assertThatThrownBy(
                         () ->
                                 service.review(
@@ -86,7 +91,7 @@ class AdminReportServiceTest {
                                         8L,
                                         new AdminReportService.Review("DISMISS", "사유", null)))
                 .isInstanceOf(BusinessException.class);
-        verify(comments, times(1)).hide(5L, 9L);
+        verify(comments, times(1)).hideForReview(5L, 9L);
     }
 
     @Test
@@ -94,7 +99,7 @@ class AdminReportServiceTest {
         var r = report();
         when(comments.target(5L, 9L))
                 .thenReturn(new CommentModerationService.Item(9L, 7L, 2L, "내용", null));
-        doThrow(new IllegalStateException("db failure")).when(comments).hide(5L, 9L);
+        doThrow(new IllegalStateException("db failure")).when(comments).hideForReview(5L, 9L);
         assertThatThrownBy(
                         () ->
                                 service.review(

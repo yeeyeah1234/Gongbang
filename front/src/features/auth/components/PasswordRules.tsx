@@ -12,10 +12,10 @@ export function PasswordRules({ password, current }: { password: string; current
           key={check.label}
           className={[
             'flex items-center gap-2 text-small',
-            check.ok ? 'text-success' : 'text-text-sub',
+            password.length > 0 && check.ok ? 'text-success' : 'text-text-sub',
           ].join(' ')}
         >
-          <span aria-hidden="true">{check.ok ? '✓' : '•'}</span>
+          <span aria-hidden="true">{password.length > 0 && check.ok ? '✓' : '•'}</span>
           {check.label}
         </li>
       ))}

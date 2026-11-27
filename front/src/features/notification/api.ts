@@ -64,7 +64,11 @@ export async function fetchServiceNotice(id: number) {
   return (await apiClient.get<ApiResponse<ServiceNotice>>(`/api/service-notices/${id}`)).data.data
 }
 
-// TODO(확인 필요): 팀 초대 수락·거절은 김수형 INT-005 API 경로가 정해지면 바꾼다 (지금 가정 경로)
+// INT-005 명세: 수락 accept / 거절 decline
 export async function respondInvitation(invitationId: number, accept: boolean) {
-  await apiClient.post(`/api/invitations/${invitationId}/${accept ? 'accept' : 'reject'}`)
+  await apiClient.post(`/api/invitations/${invitationId}/${accept ? 'accept' : 'decline'}`)
+}
+
+export async function respondAdminInvitation(invitationId: number, accept: boolean) {
+  await apiClient.post(`/api/admin-invitations/${invitationId}/${accept ? 'accept' : 'decline'}`)
 }

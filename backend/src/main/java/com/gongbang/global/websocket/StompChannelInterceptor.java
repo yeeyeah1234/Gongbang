@@ -81,7 +81,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                         .orElseThrow(() -> new MessageDeliveryException("유효하지 않거나 만료된 토큰입니다."));
         if (memberService
                 .findActiveMember(claims.memberId())
-                .filter(m -> !m.isSuspended())
+                .filter(m -> !m.isSuspended() && !m.isNicknameChangeRequired())
                 .isEmpty()) {
             throw new MessageDeliveryException("유효하지 않거나 탈퇴한 회원입니다.");
         }
@@ -160,7 +160,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     }
 
     private void requireNotSuspended(Long id) {
-        if (memberService.findActiveMember(id).filter(m -> !m.isSuspended()).isEmpty())
+        if (memberService
+                .findActiveMember(id)
+                .filter(m -> !m.isSuspended() && !m.isNicknameChangeRequired())
+                .isEmpty())
             throw new MessageDeliveryException("활성 상태이며 이용 정지되지 않은 회원만 사용할 수 있습니다.");
     }
 }

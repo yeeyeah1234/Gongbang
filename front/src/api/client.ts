@@ -52,6 +52,20 @@ export function refreshAccessToken() {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
+    if (axios.isAxiosError(error)) {
+      const code = error.response?.data?.error?.code
+      if (code === 'ACCOUNT_SUSPENDED') {
+        useAuthStore.getState().clear()
+        if (window.location.pathname !== '/login')
+          window.location.replace('/login?reason=suspended')
+        return Promise.reject(error)
+      }
+      if (code === 'NICKNAME_CHANGE_REQUIRED') {
+        if (window.location.pathname !== '/mypage/nickname')
+          window.location.replace('/mypage/nickname')
+        return Promise.reject(error)
+      }
+    }
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       const config = error.config as
         (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined

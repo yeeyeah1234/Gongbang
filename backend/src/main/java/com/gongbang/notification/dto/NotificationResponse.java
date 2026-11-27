@@ -18,14 +18,20 @@ public record NotificationResponse(
 
     public record Actor(Long memberId, String nickname) {}
 
-    /** status: PENDING / ACCEPTED / REJECTED / CLOSED (팀 초대 알림만) */
+    /** status: PENDING / ACCEPTED / DECLINED / CANCELED (팀 초대 알림만) */
     public record Invitation(Long invitationId, String status) {}
 
-    public static NotificationResponse of(Notification n, Actor actor) {
+    public static NotificationResponse of(Notification n, Actor actor, String invitationStatus) {
+        boolean actionable =
+                (n.getType() == com.gongbang.notification.domain.NotificationType.TEAM_INVITE
+                                && "INVITATION".equals(n.getTargetType()))
+                        || (n.getType()
+                                        == com.gongbang.notification.domain.NotificationType
+                                                .ADMIN_INVITE
+                                && "ADMIN_INVITATION".equals(n.getTargetType()));
         Invitation invitation =
-                "INVITATION".equals(n.getTargetType()) && n.getTargetId() != null
-                        // TODO(확인 필요): 초대 상태는 team_invitation이 생기면 실제 값으로
-                        ? new Invitation(n.getTargetId(), "PENDING")
+                actionable && n.getTargetId() != null && invitationStatus != null
+                        ? new Invitation(n.getTargetId(), invitationStatus)
                         : null;
         return new NotificationResponse(
                 n.getId(),

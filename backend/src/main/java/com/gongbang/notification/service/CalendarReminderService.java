@@ -8,6 +8,7 @@ import com.gongbang.workspace.calendar.domain.CalendarEventChangedEvent;
 import com.gongbang.workspace.calendar.service.CalendarService;
 import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -20,24 +21,25 @@ public class CalendarReminderService {
     private final CalendarService calendar;
     private final TeamMemberService members;
     private final NotificationService notifications;
+    private final com.gongbang.team.service.TeamService teams;
 
     @PostConstruct
     void register() {
         scheduled.registerHandler("EVENT", this::send);
     }
 
-    /** CAL-07 기본 정책: 시작 시각, 종일은 시작일 09:00. 확정 명세 수신 시 조정한다. */
+    /** CAL-07: 시간 일정은 24시간 전, 종일 일정은 전날 오전 9시(한국 시간). */
     static LocalDateTime fireAt(CalendarEvent event) {
         return event.isAllDay()
-                ? event.getStartAt().toLocalDate().atTime(9, 0)
-                : event.getStartAt();
+                ? event.getStartAt().toLocalDate().minusDays(1).atTime(9, 0)
+                : event.getStartAt().minusHours(24);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void refresh(CalendarEventChangedEvent changed) {
         // 이벤트 도착 순서가 뒤바뀌어도 DB의 최종 상태를 기준으로 예약한다.
         CalendarEvent event = calendar.findForReminder(changed.eventId()).orElse(null);
-        if (event == null || event.isAuto()) {
+        if (event == null || event.isAuto() || teams.isDeleted(event.getTeamId())) {
             scheduled.cancel("EVENT", changed.eventId());
             return;
         }
@@ -48,11 +50,21 @@ public class CalendarReminderService {
     /** fireDue의 트랜잭션 안에서 알림 저장과 SENT 전환을 함께 처리한다. */
     void send(ScheduledNotification item) {
         CalendarEvent event = calendar.findForReminder(item.getTargetId()).orElse(null);
-        if (event == null || event.isAuto() || !fireAt(event).equals(item.getFireAt())) {
+        if (event == null
+                || event.isAuto()
+                || teams.isDeleted(event.getTeamId())
+                || !fireAt(event).equals(item.getFireAt())) {
             return;
         }
         String message =
-                event.isAllDay() ? "오늘 일정: " + event.getTitle() : "일정이 시작돼요: " + event.getTitle();
+                "내일 "
+                        + (event.isAllDay()
+                                ? ""
+                                : event.getStartAt().format(DateTimeFormatter.ofPattern("HH:mm"))
+                                        + " ")
+                        + "‘"
+                        + event.getTitle()
+                        + "’ 일정이 있어요";
         for (Long receiver : members.findActiveMemberIds(event.getTeamId())) {
             notifications.send(
                     receiver,
