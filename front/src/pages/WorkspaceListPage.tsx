@@ -4,9 +4,10 @@ import { Link, useNavigate } from 'react-router'
 import { getApiError, getErrorMessage } from '../api/errors'
 import { Button } from '../components/ui/Button'
 import { Toast } from '../components/ui/Toast'
+import { DeleteTeamModal } from '../features/workspace/components/DeleteTeamModal'
 import { LeaveTeamModal } from '../features/workspace/components/LeaveTeamModal'
 import { TeamCard } from '../features/workspace/components/TeamCard'
-import { useLeaveTeam, useMyTeams, workspaceKeys } from '../features/workspace/hooks'
+import { useDeleteTeam, useLeaveTeam, useMyTeams, workspaceKeys } from '../features/workspace/hooks'
 import type { MyTeam } from '../features/workspace/types'
 import { useTimedToast } from '../hooks/useTimedToast'
 
@@ -17,11 +18,13 @@ function TeamSection({
   teams,
   onToast,
   onRequestLeave,
+  onRequestDelete,
 }: {
   title: string
   teams: MyTeam[]
   onToast: (message: string) => void
   onRequestLeave: (team: MyTeam) => void
+  onRequestDelete: (team: MyTeam) => void
 }) {
   return (
     <section aria-label={title}>
@@ -36,6 +39,7 @@ function TeamSection({
             team={team}
             onToast={onToast}
             onRequestLeave={onRequestLeave}
+            onRequestDelete={onRequestDelete}
           />
         ))}
       </div>
@@ -50,10 +54,12 @@ export default function WorkspaceListPage() {
   const toast = useTimedToast()
   const { data, isLoading, isError } = useMyTeams()
   const leaveTeam = useLeaveTeam()
+  const deleteTeam = useDeleteTeam()
   const [leaveDialog, setLeaveDialog] = useState<{
     team: MyTeam
     leaderBlocked: boolean
   } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<MyTeam | null>(null)
 
   useEffect(() => {
     document.title = '워크스페이스 | 공방'
@@ -95,6 +101,24 @@ export default function WorkspaceListPage() {
     })
   }
 
+  const handleConfirmDelete = (team: MyTeam) => {
+    if (deleteTeam.isPending) return
+    deleteTeam.mutate(team.teamId, {
+      onSuccess: () => {
+        setDeleteTarget(null)
+        toast.show('팀을 삭제했어요.')
+      },
+      onError: (error) => {
+        const { code } = getApiError(error)
+        if (code === 'TEAM_HAS_OTHER_MEMBERS' || code === 'RESOURCE_NOT_FOUND') {
+          setDeleteTarget(null)
+          void queryClient.invalidateQueries({ queryKey: workspaceKeys.myTeams() })
+        }
+        toast.show(getErrorMessage(error))
+      },
+    })
+  }
+
   return (
     <div className="mx-auto w-full max-w-[1680px] px-4 py-10 sm:px-6 lg:px-12 xl:px-[120px]">
       <h1 className="text-title font-bold text-text">워크스페이스</h1>
@@ -127,6 +151,7 @@ export default function WorkspaceListPage() {
               teams={ongoing}
               onToast={toast.show}
               onRequestLeave={handleRequestLeave}
+              onRequestDelete={setDeleteTarget}
             />
           )}
           {ended.length > 0 && (
@@ -135,6 +160,7 @@ export default function WorkspaceListPage() {
               teams={ended}
               onToast={toast.show}
               onRequestLeave={handleRequestLeave}
+              onRequestDelete={setDeleteTarget}
             />
           )}
         </div>
@@ -150,6 +176,13 @@ export default function WorkspaceListPage() {
           setLeaveDialog(null)
           navigate(`/workspaces/${teamId}/chat`)
         }}
+      />
+
+      <DeleteTeamModal
+        team={deleteTarget}
+        isPending={deleteTeam.isPending}
+        onClose={() => setDeleteTarget(null)}
+        onConfirmDelete={handleConfirmDelete}
       />
 
       <Toast message={toast.message} />

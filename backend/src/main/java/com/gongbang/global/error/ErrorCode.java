@@ -206,6 +206,9 @@ public enum ErrorCode {
     // WS-09 ③ 문구 (TODO(확인 필요): API 명세서에 코드가 없어 LEADER_CANNOT_WITHDRAW에 맞춰 409로 정함)
     LEADER_CANNOT_LEAVE(
             HttpStatus.CONFLICT, "LEADER_CANNOT_LEAVE", "팀장은 다른 팀원에게 팀장 권한을 넘긴 뒤 나갈 수 있어요"),
+    // WS-08 ⑨ 팀 삭제: 팀장 외 활성 팀원이 남아 있으면 삭제 불가 (11/26 팀 결정)
+    TEAM_HAS_OTHER_MEMBERS(
+            HttpStatus.CONFLICT, "TEAM_HAS_OTHER_MEMBERS", "팀원이 남아 있으면 팀을 삭제할 수 없어요."),
     // NET-02 팀 초대 (API 명세서)
     ALREADY_INVITED(HttpStatus.CONFLICT, "ALREADY_INVITED", "이미 초대한 회원이에요"),
     // NET-02 · NOTI-02 ④ 문구 (API 명세서)

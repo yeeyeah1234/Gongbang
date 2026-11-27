@@ -35,17 +35,19 @@ public class TeamMemberService {
         return teamMemberRepository.findActiveMemberIdsByRole(teamId, TeamRole.MEMBER);
     }
 
-    /** 현재 팀원인지 (left_at IS NULL). */
+    /** 현재 팀원인지 (left_at IS NULL, 삭제된 팀이면 false). */
     @Transactional(readOnly = true)
     public boolean isActiveMember(Long teamId, Long memberId) {
-        return teamMemberRepository.existsByTeamIdAndMemberIdAndLeftAtIsNull(teamId, memberId);
+        return teamMemberRepository.existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndLeftAtIsNull(
+                teamId, memberId);
     }
 
-    /** 현재 팀원이면서 팀장인지. */
+    /** 현재 팀원이면서 팀장인지 (삭제된 팀이면 false). */
     @Transactional(readOnly = true)
     public boolean isLeader(Long teamId, Long memberId) {
-        return teamMemberRepository.existsByTeamIdAndMemberIdAndRoleAndLeftAtIsNull(
-                teamId, memberId, TeamRole.LEADER);
+        return teamMemberRepository
+                .existsByTeamIdAndTeamDeletedAtIsNullAndMemberIdAndRoleAndLeftAtIsNull(
+                        teamId, memberId, TeamRole.LEADER);
     }
 
     /**

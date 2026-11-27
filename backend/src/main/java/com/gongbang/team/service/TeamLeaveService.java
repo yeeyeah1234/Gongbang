@@ -42,7 +42,7 @@ public class TeamLeaveService {
     public void leaveTeam(Long teamId, Long memberId) {
         Team teamMeta =
                 teamRepository
-                        .findById(teamId)
+                        .findByIdAndDeletedAtIsNull(teamId)
                         .orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND));
 
         // 사전 검증(스칼라 조회): 팀장·비팀원 요청은 recruit_post 잠금·감소 전에 거절한다.

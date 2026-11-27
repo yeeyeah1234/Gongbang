@@ -63,7 +63,7 @@ class TeamLeaveServiceTest {
     @Test
     @DisplayName("없는 팀에서 나가려 하면 404 RESOURCE_NOT_FOUND이고 확정 인원을 건드리지 않는다")
     void 없는_팀이면_404() {
-        given(teamRepository.findById(99L)).willReturn(Optional.empty());
+        given(teamRepository.findByIdAndDeletedAtIsNull(99L)).willReturn(Optional.empty());
 
         BusinessException ex =
                 assertThrows(BusinessException.class, () -> service.leaveTeam(99L, 2L));
@@ -81,7 +81,7 @@ class TeamLeaveServiceTest {
     @DisplayName("팀원이 아니면 403 NOT_TEAM_MEMBER이고 확정 인원을 건드리지 않는다")
     void 팀원이_아니면_403() {
         Team team = team(10L, 100L, "공방팀");
-        given(teamRepository.findById(10L)).willReturn(Optional.of(team));
+        given(teamRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(team));
         given(teamMemberRepository.findActiveRole(10L, 2L)).willReturn(Optional.empty());
 
         BusinessException ex =
@@ -100,7 +100,7 @@ class TeamLeaveServiceTest {
     @DisplayName("팀장은 바로 나갈 수 없어 409 LEADER_CANNOT_LEAVE이고 decreaseCurrentCount를 부르지 않는다")
     void 팀장은_409_거절() {
         Team team = team(10L, 100L, "공방팀");
-        given(teamRepository.findById(10L)).willReturn(Optional.of(team));
+        given(teamRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(team));
         given(teamMemberRepository.findActiveRole(10L, 1L))
                 .willReturn(Optional.of(TeamRole.LEADER));
 
@@ -123,7 +123,7 @@ class TeamLeaveServiceTest {
         Team team = team(10L, 100L, "공방팀");
         TeamMember member = TeamMember.member(team, 2L, 2);
 
-        given(teamRepository.findById(10L)).willReturn(Optional.of(team));
+        given(teamRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(team));
         given(teamMemberRepository.findActiveRole(10L, 2L))
                 .willReturn(Optional.of(TeamRole.MEMBER));
         given(postCommandService.decreaseCurrentCount(100L)).willReturn(2);
@@ -154,7 +154,7 @@ class TeamLeaveServiceTest {
         Team team = team(10L, 100L, "공방팀");
         TeamMember delegatedLeader = TeamMember.leader(team, 2L);
 
-        given(teamRepository.findById(10L)).willReturn(Optional.of(team));
+        given(teamRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(team));
         given(teamMemberRepository.findActiveRole(10L, 2L))
                 .willReturn(Optional.of(TeamRole.MEMBER));
         given(postCommandService.decreaseCurrentCount(100L)).willReturn(2);
@@ -180,7 +180,7 @@ class TeamLeaveServiceTest {
     void 동시_이중_나가기_IllegalStateException_변환() {
         Team team = team(10L, 100L, "공방팀");
 
-        given(teamRepository.findById(10L)).willReturn(Optional.of(team));
+        given(teamRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(team));
         given(teamMemberRepository.findActiveRole(10L, 2L))
                 .willReturn(Optional.of(TeamRole.MEMBER));
         given(postCommandService.decreaseCurrentCount(100L))
@@ -207,7 +207,7 @@ class TeamLeaveServiceTest {
         Team team = team(10L, 100L, "공방팀");
         TeamMember member = TeamMember.member(team, 2L, 2);
 
-        given(teamRepository.findById(10L)).willReturn(Optional.of(team));
+        given(teamRepository.findByIdAndDeletedAtIsNull(10L)).willReturn(Optional.of(team));
         given(teamMemberRepository.findActiveRole(10L, 2L))
                 .willReturn(Optional.of(TeamRole.MEMBER));
         given(postCommandService.decreaseCurrentCount(100L))

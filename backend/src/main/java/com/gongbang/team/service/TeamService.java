@@ -87,17 +87,23 @@ public class TeamService {
                 .toList();
     }
 
-    /** 팀 존재 여부만 읽기 전용으로 확인한다. 없으면 404 RESOURCE_NOT_FOUND. */
+    /** WS-08 ⑨ 소프트 삭제된 팀인지 확인한다(알림 등 다른 도메인용). */
+    @Transactional(readOnly = true)
+    public boolean isDeleted(Long teamId) {
+        return teamRepository.existsByIdAndDeletedAtIsNotNull(teamId);
+    }
+
+    /** 팀 존재 여부만 읽기 전용으로 확인한다. 없거나 삭제된 팀이면 404 RESOURCE_NOT_FOUND. */
     @Transactional(readOnly = true)
     public void requireExists(Long teamId) {
-        if (!teamRepository.existsById(teamId)) {
+        if (!teamRepository.existsByIdAndDeletedAtIsNull(teamId)) {
             throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
         }
     }
 
     /**
      * 부르는 쪽 트랜잭션 안에서 팀 행을 잠근다 (SELECT … FOR UPDATE, AGENTS.md 7). 팀 단위 개수 제한(문서 50개 DOC-02 등)을 셀 때
-     * 쓴다. 잠금은 그 트랜잭션이 끝날 때 풀린다. 없는 팀이면 404 RESOURCE_NOT_FOUND.
+     * 쓴다. 잠금은 그 트랜잭션이 끝날 때 풀린다. 없거나 삭제된 팀이면 404 RESOURCE_NOT_FOUND.
      */
     @Transactional
     public void lockTeam(Long teamId) {

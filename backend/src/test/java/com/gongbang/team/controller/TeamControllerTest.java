@@ -13,6 +13,7 @@ import com.gongbang.global.error.GlobalExceptionHandler;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.member.domain.MemberRole;
 import com.gongbang.team.dto.TeamMemberKickResponse;
+import com.gongbang.team.service.TeamDeleteService;
 import com.gongbang.team.service.TeamLeaveService;
 import com.gongbang.team.service.TeamListService;
 import com.gongbang.team.service.TeamMemberManagementService;
@@ -41,6 +42,7 @@ class TeamControllerTest {
     @Mock private TeamMemberManagementService teamMemberManagementService;
     @Mock private TeamListService teamListService;
     @Mock private TeamLeaveService teamLeaveService;
+    @Mock private TeamDeleteService teamDeleteService;
 
     private MockMvc mockMvc;
 
@@ -52,7 +54,8 @@ class TeamControllerTest {
                                         teamQueryService,
                                         teamMemberManagementService,
                                         teamListService,
-                                        teamLeaveService))
+                                        teamLeaveService,
+                                        teamDeleteService))
                         .setControllerAdvice(new GlobalExceptionHandler())
                         .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                         .build();
@@ -127,5 +130,54 @@ class TeamControllerTest {
                 .andExpect(jsonPath("$.data.currentCount").value(2));
 
         verify(teamMemberManagementService).kickMember(10L, MEMBER_ID, 25L);
+    }
+
+    @Test
+    @DisplayName("팀 삭제: DELETE /api/teams/{teamId} 성공 시 200")
+    void 팀_삭제_성공() throws Exception {
+        mockMvc.perform(delete("/api/teams/10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").doesNotExist());
+
+        verify(teamDeleteService).deleteTeam(10L, MEMBER_ID);
+    }
+
+    @Test
+    @DisplayName("팀 삭제: 없거나 삭제된 팀이면 404 RESOURCE_NOT_FOUND")
+    void 팀_삭제_없는_팀() throws Exception {
+        willThrow(new BusinessException(ErrorCode.RESOURCE_NOT_FOUND))
+                .given(teamDeleteService)
+                .deleteTeam(999L, MEMBER_ID);
+
+        mockMvc.perform(delete("/api/teams/999"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error.code").value("RESOURCE_NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("팀 삭제: 팀장이 아니면 403 NOT_TEAM_LEADER")
+    void 팀_삭제_팀장_아님() throws Exception {
+        willThrow(new BusinessException(ErrorCode.NOT_TEAM_LEADER))
+                .given(teamDeleteService)
+                .deleteTeam(10L, MEMBER_ID);
+
+        mockMvc.perform(delete("/api/teams/10"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("NOT_TEAM_LEADER"));
+    }
+
+    @Test
+    @DisplayName("팀 삭제: 팀원이 남아 있으면 409 TEAM_HAS_OTHER_MEMBERS")
+    void 팀_삭제_남은_팀원_있음() throws Exception {
+        willThrow(new BusinessException(ErrorCode.TEAM_HAS_OTHER_MEMBERS))
+                .given(teamDeleteService)
+                .deleteTeam(10L, MEMBER_ID);
+
+        mockMvc.perform(delete("/api/teams/10"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("TEAM_HAS_OTHER_MEMBERS"))
+                .andExpect(jsonPath("$.error.message").value("팀원이 남아 있으면 팀을 삭제할 수 없어요."));
     }
 }
