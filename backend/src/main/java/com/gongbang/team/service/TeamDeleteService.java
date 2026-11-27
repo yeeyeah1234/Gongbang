@@ -4,6 +4,7 @@ import com.gongbang.chat.service.ChatMembershipService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.websocket.TeamEventPublisher;
+import com.gongbang.post.service.PostCommandService;
 import com.gongbang.team.domain.Team;
 import com.gongbang.team.domain.TeamMember;
 import com.gongbang.team.domain.TeamRole;
@@ -24,6 +25,7 @@ public class TeamDeleteService {
 
     private final TeamRepository teamRepository;
     private final TeamMemberRepository teamMemberRepository;
+    private final PostCommandService postCommandService;
     private final ChatMembershipService chatMembershipService;
     private final TeamEventPublisher teamEventPublisher;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -57,8 +59,7 @@ public class TeamDeleteService {
         LocalDateTime now = LocalDateTime.now();
         Long postId = teamMeta.getPostId();
         if (postId != null) {
-            // TODO(WS-08): #177 머지 후 postCommandService.closeForTeamDeletion(postId, now) 호출 — 반드시
-            // team 잠금 전에(recruit_post → team), postId null이면 부르지 않음
+            postCommandService.closeForTeamDeletion(postId, now);
         }
 
         // ③ team 행을 FOR UPDATE로 잠근다 (이미 삭제됐으면 404).

@@ -14,6 +14,7 @@ import com.gongbang.chat.service.ChatMembershipService;
 import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.global.websocket.TeamEventPublisher;
+import com.gongbang.post.service.PostCommandService;
 import com.gongbang.team.domain.LeaveType;
 import com.gongbang.team.domain.Team;
 import com.gongbang.team.domain.TeamMember;
@@ -37,6 +38,7 @@ class TeamDeleteServiceTest {
 
     @Mock private TeamRepository teamRepository;
     @Mock private TeamMemberRepository teamMemberRepository;
+    @Mock private PostCommandService postCommandService;
     @Mock private ChatMembershipService chatMembershipService;
     @Mock private TeamEventPublisher teamEventPublisher;
     @Mock private ApplicationEventPublisher applicationEventPublisher;
@@ -49,6 +51,7 @@ class TeamDeleteServiceTest {
                 new TeamDeleteService(
                         teamRepository,
                         teamMemberRepository,
+                        postCommandService,
                         chatMembershipService,
                         teamEventPublisher,
                         applicationEventPublisher);
@@ -65,6 +68,7 @@ class TeamDeleteServiceTest {
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.RESOURCE_NOT_FOUND);
         verifyNoInteractions(
                 teamMemberRepository,
+                postCommandService,
                 chatMembershipService,
                 teamEventPublisher,
                 applicationEventPublisher);
@@ -80,7 +84,11 @@ class TeamDeleteServiceTest {
                 assertThrows(BusinessException.class, () -> service.deleteTeam(10L, 2L));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NOT_TEAM_LEADER);
-        verifyNoInteractions(chatMembershipService, teamEventPublisher, applicationEventPublisher);
+        verifyNoInteractions(
+                postCommandService,
+                chatMembershipService,
+                teamEventPublisher,
+                applicationEventPublisher);
     }
 
     @Test
@@ -94,7 +102,11 @@ class TeamDeleteServiceTest {
                 assertThrows(BusinessException.class, () -> service.deleteTeam(10L, 2L));
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.NOT_TEAM_LEADER);
-        verifyNoInteractions(chatMembershipService, teamEventPublisher, applicationEventPublisher);
+        verifyNoInteractions(
+                postCommandService,
+                chatMembershipService,
+                teamEventPublisher,
+                applicationEventPublisher);
     }
 
     @Test
@@ -110,11 +122,16 @@ class TeamDeleteServiceTest {
 
         assertThat(ex.getErrorCode()).isEqualTo(ErrorCode.TEAM_HAS_OTHER_MEMBERS);
         verify(teamRepository, never()).findByIdForUpdate(10L);
-        verifyNoInteractions(chatMembershipService, teamEventPublisher, applicationEventPublisher);
+        verifyNoInteractions(
+                postCommandService,
+                chatMembershipService,
+                teamEventPublisher,
+                applicationEventPublisher);
     }
 
     @Test
-    @DisplayName("정상 삭제: 잠금 후 deletedAt과 팀장 leftAt을 기록하고 TEAM_DELETED·TeamDeletedEvent만 발행한다")
+    @DisplayName(
+            "정상 삭제: 모집글 마감 후 팀 잠금·deletedAt·팀장 leftAt을 기록하고 TEAM_DELETED·TeamDeletedEvent만 발행한다")
     void 정상_삭제_상태와_이벤트() {
         Team team = team(10L, 100L, "공방팀");
         TeamMember leader = TeamMember.leader(team, 1L);
@@ -134,7 +151,8 @@ class TeamDeleteServiceTest {
         assertThat(leader.getLeftAt()).isNotNull();
         assertThat(leader.getLeaveType()).isEqualTo(LeaveType.LEFT);
 
-        InOrder order = inOrder(teamRepository, teamMemberRepository);
+        InOrder order = inOrder(postCommandService, teamRepository, teamMemberRepository);
+        order.verify(postCommandService).closeForTeamDeletion(100L, team.getDeletedAt());
         order.verify(teamRepository).findByIdForUpdate(10L);
         order.verify(teamMemberRepository).findAllByTeamIdAndLeftAtIsNullForUpdate(10L);
 
@@ -143,6 +161,31 @@ class TeamDeleteServiceTest {
         verify(teamEventPublisher, never()).publish(eq(10L), eq("MEMBER_LEFT"), any(), any());
         verify(applicationEventPublisher).publishEvent(new TeamDeletedEvent(10L, 1L));
         verify(applicationEventPublisher, never()).publishEvent(any(TeamMemberLeftEvent.class));
+    }
+
+    @Test
+    @DisplayName("연결된 모집글이 없는 팀(postId null)은 closeForTeamDeletion을 부르지 않고 삭제한다")
+    void 모집글이_없는_팀이면_모집글_마감을_부르지_않는다() {
+        Team team = team(10L, null, "공방팀");
+        TeamMember leader = TeamMember.leader(team, 1L);
+
+        given(teamRepository.findActiveMeta(10L)).willReturn(Optional.of(meta(10L, null)));
+        given(teamMemberRepository.findActiveRole(10L, 1L))
+                .willReturn(Optional.of(TeamRole.LEADER));
+        given(teamMemberRepository.countByTeamIdAndLeftAtIsNull(10L)).willReturn(1L);
+        given(teamRepository.findByIdForUpdate(10L)).willReturn(Optional.of(team));
+        given(teamMemberRepository.findAllByTeamIdAndLeftAtIsNullForUpdate(10L))
+                .willReturn(List.of(leader));
+
+        service.deleteTeam(10L, 1L);
+
+        assertThat(team.isDeleted()).isTrue();
+        assertThat(leader.getLeftAt()).isNotNull();
+        verifyNoInteractions(postCommandService);
+        verify(teamRepository).findByIdForUpdate(10L);
+        verify(chatMembershipService).removeMemberFromTeamRooms(10L, 1L);
+        verify(teamEventPublisher).publish(10L, "TEAM_DELETED", 10L, 1L);
+        verify(applicationEventPublisher).publishEvent(new TeamDeletedEvent(10L, 1L));
     }
 
     @Test
