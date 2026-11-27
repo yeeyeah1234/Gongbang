@@ -13,7 +13,13 @@ export interface DocumentRenameRequest {
   title: string
 }
 
-// POST /api/teams/{teamId}/documents · PATCH /api/documents/{documentId} 응답
+// POST /api/teams/{teamId}/documents 응답 (DOC-02)
+export interface DocumentTitleResponse {
+  documentId: number
+  title: string
+}
+
+// PATCH /api/documents/{documentId} 응답 (DOC-03)
 export interface DocumentIdResponse {
   documentId: number
 }

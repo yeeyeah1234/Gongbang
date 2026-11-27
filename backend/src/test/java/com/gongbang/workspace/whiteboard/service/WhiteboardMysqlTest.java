@@ -159,6 +159,31 @@ class WhiteboardMysqlTest {
     }
 
     @Test
+    @DisplayName("만들기: 기본 제목 번호가 증가하고, 삭제·이름 변경된 보드와 이상한 형태는 무시한다")
+    void 기본_제목_번호가_증가한다() {
+        long leaderId = member();
+        long teamId = teamWithLeader(leaderId);
+
+        var first = whiteboardService.create(leaderId, teamId);
+        var second = whiteboardService.create(leaderId, teamId);
+        var third = whiteboardService.create(leaderId, teamId);
+        assertThat(first.title()).isEqualTo("제목 없는 보드");
+        assertThat(second.title()).isEqualTo("제목 없는 보드 (2)");
+        assertThat(third.title()).isEqualTo("제목 없는 보드 (3)");
+
+        // (3)을 삭제하고 (2)를 사용자 제목·복사본으로 바꾸면 살아 있는 기본 제목 중 최댓값은 1 → (2)
+        whiteboardService.delete(leaderId, third.whiteboardId());
+        whiteboardService.rename(leaderId, second.whiteboardId(), "제목 없는 보드 (복사본)");
+        var afterDelete = whiteboardService.create(leaderId, teamId);
+        assertThat(afterDelete.title()).isEqualTo("제목 없는 보드 (2)");
+
+        // (5)를 만들어 두면 다음 번호는 (6)
+        whiteboardService.rename(leaderId, afterDelete.whiteboardId(), "제목 없는 보드 (5)");
+        var sixth = whiteboardService.create(leaderId, teamId);
+        assertThat(sixth.title()).isEqualTo("제목 없는 보드 (6)");
+    }
+
+    @Test
     @DisplayName("목록: updated_at 최신순, 같은 시각이면 ID 역순. 제목 변경은 lastEditor를 바꾸지 않는다")
     void 목록은_updated_at_최신순() {
         long leaderId = member();

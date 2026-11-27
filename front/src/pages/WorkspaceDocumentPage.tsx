@@ -1,11 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { getApiError, getErrorMessage } from '../api/errors'
-import { ArrowLeftIcon } from '../components/icons/Icons'
 import { Toast } from '../components/ui/Toast'
 import { useLoginMember } from '../features/auth/store'
+import { WorkspaceDetailHeader } from '../features/workspace/components/WorkspaceDetailHeader'
 import { useWorkspace } from '../features/workspace/context'
 import { DocumentEditorPane } from '../features/workspace/document/components/DocumentEditorPane'
 import { DocumentEmptyState } from '../features/workspace/document/components/DocumentEmptyState'
@@ -93,7 +93,9 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
   const deleteMutation = useDeleteDocument()
 
   const [renamingId, setRenamingId] = useState<number | null>(null)
+  const [pendingHeaderRenameId, setPendingHeaderRenameId] = useState<number | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceSidebarItem | null>(null)
+  const clearPendingHeaderRename = useCallback(() => setPendingHeaderRenameId(null), [])
 
   const creatingRef = useRef(false)
   const deletingRef = useRef(false)
@@ -153,6 +155,7 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
     }
     notifiedDeletedIdsRef.current.add(deletedId)
     if (renamingId === deletedId) setRenamingId(null)
+    if (pendingHeaderRenameId === deletedId) setPendingHeaderRenameId(null)
     if (deleteTarget?.id === deletedId) setDeleteTarget(null)
     toast.show(GONE_MESSAGE)
     openFirstOrEmpty(deletedId)
@@ -205,13 +208,13 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
     if (creatingRef.current || createMutation.isPending) return
     creatingRef.current = true
     createMutation.mutate(undefined, {
-      onSuccess: (documentId) => {
+      onSuccess: ({ documentId, title }) => {
         creatingRef.current = false
         selfDeletedIdsRef.current.delete(documentId)
         notifiedDeletedIdsRef.current.delete(documentId)
         const created: DocumentListItem = {
           id: documentId,
-          title: DOCUMENT_LABELS.defaultTitle,
+          title,
           updatedByNickname: loginMember?.nickname ?? '나',
           updatedAt: nowKstDateTime(),
           createdBy: summary.myMemberId,
@@ -223,7 +226,13 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
           ...(prev ?? []).filter((item) => item.id !== documentId),
         ])
         writeLastDocumentId(teamId, documentId)
-        setRenamingId(isWide ? documentId : null)
+        if (isWide) {
+          setRenamingId(documentId)
+          setPendingHeaderRenameId(null)
+        } else {
+          setRenamingId(null)
+          setPendingHeaderRenameId(documentId)
+        }
         navigate(`${basePath}/${documentId}`)
       },
       onError: (error) => {
@@ -243,10 +252,11 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
     })
   }
 
-  const handleSubmitRename = (documentId: number, title: string) => {
+  const handleSubmitRename = (documentId: number, title: string, onDone?: () => void) => {
     const current = documents?.find((item) => item.id === documentId)
     if (!current || current.title === title) {
       setRenamingId(null)
+      onDone?.()
       return
     }
     renameMutation.mutate(
@@ -254,9 +264,11 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
       {
         onSuccess: () => {
           setRenamingId(null)
+          onDone?.()
         },
         onError: (error) => {
           setRenamingId(null)
+          onDone?.()
           const { code } = getApiError(error)
           const status = axios.isAxiosError(error) ? error.response?.status : undefined
           if (code === 'NOT_TEAM_MEMBER') {
@@ -373,17 +385,20 @@ function DocumentTab({ basePath, offlinePreview }: { basePath: string; offlinePr
                 className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface max-lg:fixed max-lg:inset-0 max-lg:z-30 max-lg:h-dvh max-lg:overflow-hidden lg:overflow-hidden"
               >
                 {!isWide && (
-                  <div className="flex shrink-0 items-center gap-2 border-b border-divider px-2 py-2 lg:hidden">
-                    <button
-                      type="button"
-                      onClick={() => navigate(basePath)}
-                      aria-label="문서 목록으로"
-                      className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-text transition-colors hover:bg-bg"
-                    >
-                      <ArrowLeftIcon className="h-5 w-5" />
-                    </button>
-                    <span className="truncate text-body font-bold text-text">문서 목록</span>
-                  </div>
+                  <WorkspaceDetailHeader
+                    title={selectedDoc?.title}
+                    fallbackTitle={DOCUMENT_LABELS.heading}
+                    backAriaLabel="문서 목록으로"
+                    renameInputLabel={DOCUMENT_LABELS.renameInputLabel}
+                    canRename={selectedDoc !== undefined}
+                    autoEdit={selectedDoc !== undefined && pendingHeaderRenameId === selectedDoc.id}
+                    renaming={renameMutation.isPending}
+                    onBack={() => navigate(basePath)}
+                    onAutoEditConsumed={clearPendingHeaderRename}
+                    onSubmitRename={(nextTitle, onDone) => {
+                      if (selectedDoc) handleSubmitRename(selectedDoc.id, nextTitle, onDone)
+                    }}
+                  />
                 )}
                 {selectedDoc ? (
                   <DocumentEditorPane

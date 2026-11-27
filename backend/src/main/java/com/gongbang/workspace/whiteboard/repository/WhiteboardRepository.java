@@ -16,6 +16,17 @@ public interface WhiteboardRepository extends JpaRepository<Whiteboard, Long> {
     long countByTeamIdAndDeletedAtIsNull(Long teamId);
 
     /**
+     * WB-01 기본 제목 번호: 삭제되지 않은 보드 중 기준 이름 또는 「기준 이름 (...」 제목만 읽는다. 본문(LONGBLOB)은 읽지 않는다 (AGENTS.md
+     * 6).
+     */
+    @Query(
+            "select w.title from Whiteboard w"
+                    + " where w.teamId = :teamId and w.deletedAt is null"
+                    + " and (w.title = :baseTitle or w.title like concat(:baseTitle, ' (%'))")
+    List<String> findDefaultTitles(
+            @Param("teamId") Long teamId, @Param("baseTitle") String baseTitle);
+
+    /**
      * WB-01 목록: 삭제되지 않은 보드를 updated_at 최신순(같으면 ID 역순)으로. 본문은 SELECT하지 않는다 (AGENTS.md 6).
      * idx(team_id, deleted_at, updated_at)를 탄다.
      */

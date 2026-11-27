@@ -56,15 +56,20 @@ public class Whiteboard {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
-    private Whiteboard(Long teamId, Long creatorId) {
+    private Whiteboard(Long teamId, Long creatorId, String title) {
         this.teamId = teamId;
-        this.title = DEFAULT_TITLE;
+        this.title = title;
         this.creatorId = creatorId;
     }
 
     /** WB-01 ② 새 보드: 제목 「제목 없는 보드」, 빈 캔버스(NULL). 30개 제한은 service가 확인한 뒤 부른다. */
     public static Whiteboard create(Long teamId, Long creatorId) {
-        return new Whiteboard(teamId, creatorId);
+        return create(teamId, creatorId, DEFAULT_TITLE);
+    }
+
+    /** WB-01 ② 새 보드: 번호가 붙은 기본 제목으로 만든다. 30개 제한·제목 계산은 service가 끝낸 뒤 부른다. */
+    public static Whiteboard create(Long teamId, Long creatorId, String title) {
+        return new Whiteboard(teamId, creatorId, title);
     }
 
     /** WB-01 ① 이름 변경 (DOC-03과 같음). 제목 정리·검증은 service가 끝낸 뒤 부른다. 같은 제목이면 바꾸지 않고 false. */
