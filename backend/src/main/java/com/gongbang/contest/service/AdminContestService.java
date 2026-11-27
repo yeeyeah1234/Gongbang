@@ -13,6 +13,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class AdminContestService {
     private final CategoryRepository categories;
     private final CalendarService calendar;
     private final EntityManager em;
+    private final ApplicationEventPublisher events;
 
     public record Item(
             Long id,
@@ -115,6 +117,9 @@ public class AdminContestService {
         c.updateByAdmin(body.title().strip(), body.endDate(), category);
         em.flush();
         calendar.syncContestMilestones(id);
+        if (!body.expectedEndDate().equals(body.endDate())) {
+            events.publishEvent(new ContestDeadlineChangedEvent(id, body.endDate()));
+        }
         audit.record(
                 actor,
                 "CONTEST_UPDATE",
