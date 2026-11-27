@@ -3,6 +3,7 @@ package com.gongbang.post.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.gongbang.application.service.ApplicationCommandService;
+import java.time.LocalDateTime;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +15,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * 모집글 삭제·모집 완료(수동·자동) 때 대기 중인 팀 초대가 실제 MySQL에서 CANCELED로 바뀌는지 확인한다 (PST-004 ④, REC-006, INT-005 ④).
+ * 모집글 삭제·모집 완료(수동·자동)·팀 삭제(WS-08) 때 대기 중인 팀 초대가 실제 MySQL에서 CANCELED로 바뀌는지 확인한다 (PST-004 ④, REC-006,
+ * INT-005 ④).
  *
  * <p>환경 변수 TEST_DATASOURCE_URL이 있을 때만 돈다 (ApplicationAcceptMysqlTest와 같은 방식). 반드시 테스트 전용 스키마(이름에
  * _test)를 가리키게 한다. 테스트가 끝나면 이 테스트가 넣은 행을 지운다.
@@ -159,5 +161,35 @@ class InvitationCancelLinkMysqlTest {
                                 postId))
                 .isEqualTo("COMPLETED");
         assertThat(invitationStatus(INVITEE_ID)).isEqualTo("CANCELED");
+    }
+
+    @Test
+    @DisplayName("팀 삭제로 글을 닫으면 모집완료·대기 지원 거절·대기 초대 취소, 다시 불러도 그대로 (WS-08)")
+    void 팀_삭제로_닫으면_모집완료되고_초대를_취소한다() {
+        LocalDateTime now = LocalDateTime.of(2026, 11, 26, 20, 0);
+
+        postCommandService.closeForTeamDeletion(postId, now);
+        postCommandService.closeForTeamDeletion(postId, now.plusHours(1));
+
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT status FROM recruit_post WHERE id = ?",
+                                String.class,
+                                postId))
+                .isEqualTo("COMPLETED");
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT completed_at FROM recruit_post WHERE id = ?",
+                                LocalDateTime.class,
+                                postId))
+                .isEqualTo(now);
+        assertThat(
+                        jdbcTemplate.queryForObject(
+                                "SELECT status FROM application WHERE post_id = ?",
+                                String.class,
+                                postId))
+                .isEqualTo("REJECTED");
+        assertThat(invitationStatus(INVITEE_ID)).isEqualTo("CANCELED");
+        assertThat(invitationStatus(OTHER_INVITEE_ID)).isEqualTo("DECLINED");
     }
 }
