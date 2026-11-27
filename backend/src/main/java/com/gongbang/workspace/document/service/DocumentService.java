@@ -4,9 +4,11 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.team.service.TeamMemberService;
 import com.gongbang.team.service.TeamService;
+import com.gongbang.workspace.DefaultTitleGenerator;
 import com.gongbang.workspace.document.domain.Document;
 import com.gongbang.workspace.document.domain.DocumentChangeType;
 import com.gongbang.workspace.document.domain.DocumentChangedEvent;
+import com.gongbang.workspace.document.dto.DocumentTitleResponse;
 import com.gongbang.workspace.document.repository.DocumentRepository;
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -40,9 +42,9 @@ public class DocumentService {
     private final TeamService teamService;
     private final ApplicationEventPublisher eventPublisher;
 
-    /** DOC-02 생성. 새 문서 ID를 돌려준다. */
+    /** DOC-02 생성. 새 문서 ID와 제목을 돌려준다. */
     @Transactional
-    public Long create(Long memberId, Long teamId) {
+    public DocumentTitleResponse create(Long memberId, Long teamId) {
         // 동시에 만들어도 50개를 넘지 않게 팀 행을 잠근 뒤 센다 (AGENTS.md 7).
         // 잠금이 이 트랜잭션의 첫 SQL이어야 한다: MySQL REPEATABLE READ는 첫 일반 SELECT 때 스냅숏을 잡고, FOR UPDATE는
         // 스냅숏을 다시 잡지 않는다. 팀원 확인을 먼저 하면 잠금을 기다리기 전의 스냅숏으로 세어 50개를 넘는다.
@@ -53,9 +55,13 @@ public class DocumentService {
             throw new BusinessException(ErrorCode.DOCUMENT_LIMIT);
         }
 
-        Document document = documentRepository.save(Document.create(teamId, memberId));
+        String title =
+                DefaultTitleGenerator.nextTitle(
+                        Document.DEFAULT_TITLE,
+                        documentRepository.findDefaultTitles(teamId, Document.DEFAULT_TITLE));
+        Document document = documentRepository.save(Document.create(teamId, memberId, title));
         publish(document, DocumentChangeType.CREATED);
-        return document.getId();
+        return new DocumentTitleResponse(document.getId(), document.getTitle());
     }
 
     /** DOC-03 이름 변경. 제목이 실제로 바뀌었을 때만 RENAMED를 발행한다. */

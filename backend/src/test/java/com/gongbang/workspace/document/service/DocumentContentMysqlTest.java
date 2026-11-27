@@ -119,7 +119,7 @@ class DocumentContentMysqlTest {
     void LONGBLOB_왕복() {
         long leaderId = member();
         long teamId = teamWithLeader(leaderId);
-        long documentId = documentService.create(leaderId, teamId);
+        long documentId = documentService.create(leaderId, teamId).documentId();
         assertThat(documentSyncService.loadContent(documentId)).isEmpty();
 
         byte[] bytes = yjsLikeBytes();
@@ -140,7 +140,7 @@ class DocumentContentMysqlTest {
     void 빈_본문은_빈_값() {
         long leaderId = member();
         long teamId = teamWithLeader(leaderId);
-        long documentId = documentService.create(leaderId, teamId);
+        long documentId = documentService.create(leaderId, teamId).documentId();
         documentSyncService.saveContent(documentId, leaderId, new byte[] {1, 2, 3});
 
         documentSyncService.saveContent(documentId, leaderId, new byte[0]);
@@ -155,7 +155,7 @@ class DocumentContentMysqlTest {
         long editorId = member();
         long teamId = teamWithLeader(leaderId);
         teamService.addMember(teamId, editorId);
-        long documentId = documentService.create(leaderId, teamId);
+        long documentId = documentService.create(leaderId, teamId).documentId();
         byte[] bytes = {9, 9, 9};
         documentSyncService.saveContent(documentId, leaderId, bytes);
         LocalDateTime old = LocalDateTime.of(2026, 1, 1, 0, 0);
@@ -179,7 +179,7 @@ class DocumentContentMysqlTest {
     void 삭제된_문서는_404() {
         long leaderId = member();
         long teamId = teamWithLeader(leaderId);
-        long documentId = documentService.create(leaderId, teamId);
+        long documentId = documentService.create(leaderId, teamId).documentId();
         documentSyncService.saveContent(documentId, leaderId, new byte[] {1, 2, 3});
         documentService.delete(leaderId, documentId);
 
@@ -209,7 +209,7 @@ class DocumentContentMysqlTest {
         long outsiderId = member();
         long teamId = teamWithLeader(leaderId);
         teamService.addMember(teamId, memberId);
-        long documentId = documentService.create(memberId, teamId);
+        long documentId = documentService.create(memberId, teamId).documentId();
 
         DocumentAccessResponse leader = documentSyncService.checkAccess(leaderId, documentId);
         DocumentAccessResponse member = documentSyncService.checkAccess(memberId, documentId);

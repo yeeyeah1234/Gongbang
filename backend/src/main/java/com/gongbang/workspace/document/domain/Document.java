@@ -53,16 +53,21 @@ public class Document {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
-    private Document(Long teamId, Long createdBy) {
+    private Document(Long teamId, Long createdBy, String title) {
         this.teamId = teamId;
-        this.title = DEFAULT_TITLE;
+        this.title = title;
         this.createdBy = createdBy;
         this.updatedBy = createdBy;
     }
 
     /** DOC-02 새 문서: 제목 「제목 없는 문서」, 빈 본문(NULL). 50개 제한은 service가 확인한 뒤 부른다. */
     public static Document create(Long teamId, Long createdBy) {
-        return new Document(teamId, createdBy);
+        return create(teamId, createdBy, DEFAULT_TITLE);
+    }
+
+    /** DOC-02 새 문서: 번호가 붙은 기본 제목으로 만든다. 50개 제한·제목 계산은 service가 끝낸 뒤 부른다. */
+    public static Document create(Long teamId, Long createdBy, String title) {
+        return new Document(teamId, createdBy, title);
     }
 
     /**

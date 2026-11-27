@@ -24,7 +24,12 @@ export const POST_PAGE_SIZE = 20
 export const postKeys = {
   all: ['posts'] as const,
   lists: () => [...postKeys.all, 'list'] as const,
-  list: (page: number) => [...postKeys.lists(), page] as const,
+  // contestId가 없으면 null (전체 목록)
+  list: (page: number, contestId: number | null = null) =>
+    [...postKeys.lists(), page, contestId] as const,
+  // MAIN-02 ⑨ 공모전 상세의 「팀원 모집 중」 칸. lists 아래에 두어 글 작성·삭제·모집완료 때 함께 새로 받는다
+  contestRecruiting: (contestId: number) =>
+    [...postKeys.lists(), 'contest-recruiting', contestId] as const,
   details: () => [...postKeys.all, 'detail'] as const,
   detail: (postId: number, viewer: string) => [...postKeys.details(), postId, viewer] as const,
   // 지원자 목록도 posts 아래에 두어, 지원·취소·수락·거절 때 한 번에 다시 불러온다
@@ -34,11 +39,26 @@ export const postKeys = {
 }
 
 // PST-001 모집글 목록. 페이지를 넘길 때 앞 페이지를 잠깐 그대로 보여 줘서 표가 깜빡이지 않게 한다.
-export function usePostList(page: number) {
+// ⑩ contestId가 있으면 그 공모전 글만 (공모전 상세 「더 보기」)
+export function usePostList(page: number, contestId: number | null = null) {
   return useQuery({
-    queryKey: postKeys.list(page),
-    queryFn: () => fetchPosts({ page, size: POST_PAGE_SIZE }),
+    queryKey: postKeys.list(page, contestId),
+    queryFn: () =>
+      fetchPosts({ page, size: POST_PAGE_SIZE, ...(contestId === null ? {} : { contestId }) }),
     placeholderData: keepPreviousData,
+  })
+}
+
+// MAIN-02 ⑨ 공모전 상세 「팀원 모집 중」 칸에 보여 줄 개수
+export const CONTEST_RECRUITING_SIZE = 3
+
+// MAIN-02 ⑨: 이 공모전에서 지금 지원할 수 있는 모집글 최신 3개와 전체 개수(totalCount)
+export function useContestRecruitingPosts(contestId: number) {
+  return useQuery({
+    queryKey: postKeys.contestRecruiting(contestId),
+    queryFn: () =>
+      fetchPosts({ page: 0, size: CONTEST_RECRUITING_SIZE, contestId, recruiting: true }),
+    enabled: Number.isInteger(contestId) && contestId > 0,
   })
 }
 

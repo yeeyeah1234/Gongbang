@@ -4,6 +4,7 @@ import com.gongbang.global.error.ErrorCode;
 import com.gongbang.global.error.exception.BusinessException;
 import com.gongbang.team.service.TeamMemberService;
 import com.gongbang.team.service.TeamService;
+import com.gongbang.workspace.DefaultTitleGenerator;
 import com.gongbang.workspace.whiteboard.domain.Whiteboard;
 import com.gongbang.workspace.whiteboard.domain.WhiteboardChangeType;
 import com.gongbang.workspace.whiteboard.domain.WhiteboardChangedEvent;
@@ -52,7 +53,12 @@ public class WhiteboardService {
             throw new BusinessException(ErrorCode.WHITEBOARD_LIMIT);
         }
 
-        Whiteboard whiteboard = whiteboardRepository.save(Whiteboard.create(teamId, memberId));
+        String title =
+                DefaultTitleGenerator.nextTitle(
+                        Whiteboard.DEFAULT_TITLE,
+                        whiteboardRepository.findDefaultTitles(teamId, Whiteboard.DEFAULT_TITLE));
+        Whiteboard whiteboard =
+                whiteboardRepository.save(Whiteboard.create(teamId, memberId, title));
         publish(whiteboard, WhiteboardChangeType.CREATED, memberId);
         return new WhiteboardTitleResponse(whiteboard.getId(), whiteboard.getTitle());
     }

@@ -18,7 +18,9 @@ import com.gongbang.team.service.TeamService;
 import com.gongbang.workspace.document.domain.Document;
 import com.gongbang.workspace.document.domain.DocumentChangeType;
 import com.gongbang.workspace.document.domain.DocumentChangedEvent;
+import com.gongbang.workspace.document.dto.DocumentTitleResponse;
 import com.gongbang.workspace.document.repository.DocumentRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -109,11 +111,13 @@ class DocumentServiceTest {
     @DisplayName("생성: 49개면 「제목 없는 문서」로 만들고 CREATED를 발행한다. 팀 행을 잠근 뒤 센다")
     void 생성_성공() {
         when(documentRepository.countByTeamIdAndDeletedAtIsNull(TEAM_ID)).thenReturn(49L);
+        when(documentRepository.findDefaultTitles(TEAM_ID, Document.DEFAULT_TITLE))
+                .thenReturn(List.of());
         givenSaveAssignsId();
 
-        Long id = documentService.create(AUTHOR_ID, TEAM_ID);
+        DocumentTitleResponse response = documentService.create(AUTHOR_ID, TEAM_ID);
 
-        assertThat(id).isEqualTo(DOCUMENT_ID);
+        assertThat(response).isEqualTo(new DocumentTitleResponse(DOCUMENT_ID, "제목 없는 문서"));
         ArgumentCaptor<Document> captor = ArgumentCaptor.forClass(Document.class);
         verify(documentRepository).save(captor.capture());
         Document saved = captor.getValue();
@@ -131,7 +135,21 @@ class DocumentServiceTest {
         order.verify(teamService).lockTeam(TEAM_ID);
         order.verify(teamMemberService).requireMember(TEAM_ID, AUTHOR_ID);
         order.verify(documentRepository).countByTeamIdAndDeletedAtIsNull(TEAM_ID);
+        order.verify(documentRepository).findDefaultTitles(TEAM_ID, Document.DEFAULT_TITLE);
         order.verify(documentRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("생성: 기존 기본 제목이 있으면 가장 큰 번호 + 1로 만든다")
+    void 생성_번호_증가() {
+        when(documentRepository.countByTeamIdAndDeletedAtIsNull(TEAM_ID)).thenReturn(2L);
+        when(documentRepository.findDefaultTitles(TEAM_ID, Document.DEFAULT_TITLE))
+                .thenReturn(List.of("제목 없는 문서", "제목 없는 문서 (4)", "제목 없는 문서 (복사본)"));
+        givenSaveAssignsId();
+
+        DocumentTitleResponse response = documentService.create(AUTHOR_ID, TEAM_ID);
+
+        assertThat(response).isEqualTo(new DocumentTitleResponse(DOCUMENT_ID, "제목 없는 문서 (5)"));
     }
 
     @Test

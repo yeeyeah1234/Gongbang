@@ -3,6 +3,7 @@ package com.gongbang.post.repository;
 import com.gongbang.post.domain.PostStatus;
 import com.gongbang.post.domain.RecruitPost;
 import jakarta.persistence.LockModeType;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +19,17 @@ public interface RecruitPostRepository extends JpaRepository<RecruitPost, Long> 
 
     /** PST-001: 삭제되지 않은 모집글 (PST-004 소프트 삭제 제외). */
     Page<RecruitPost> findByDeletedAtIsNull(Pageable pageable);
+
+    /** PST-001 ⑩ ?contestId=: 그 서비스 공모전의 삭제되지 않은 모집글 (모집완료 포함). */
+    Page<RecruitPost> findByContestIdAndDeletedAtIsNull(Long contestId, Pageable pageable);
+
+    /** PST-001 ⑩ ?recruiting=true: 지금 지원할 수 있는 글(모집중이고 모집 종료일이 today 이후). */
+    Page<RecruitPost> findByStatusAndRecruitEndDateGreaterThanEqualAndDeletedAtIsNull(
+            PostStatus status, LocalDate today, Pageable pageable);
+
+    /** PST-001 ⑩ ?contestId=&recruiting=true: 공모전 상세(MAIN-02 ⑨)의 「팀원 모집 중」 칸. */
+    Page<RecruitPost> findByContestIdAndStatusAndRecruitEndDateGreaterThanEqualAndDeletedAtIsNull(
+            Long contestId, PostStatus status, LocalDate today, Pageable pageable);
 
     /** MY-02 내 모집글 (삭제된 글 제외). */
     Page<RecruitPost> findByAuthorIdAndDeletedAtIsNull(Long authorId, Pageable pageable);

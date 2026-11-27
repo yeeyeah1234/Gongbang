@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'react-router'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -15,6 +15,8 @@ import {
 } from '../features/contest/hooks'
 import { sanitizeDescription } from '../features/contest/sanitizeDescription'
 import type { ContestDetail } from '../features/contest/types'
+import { ContestRecruitingPosts } from '../features/post/components/ContestRecruitingPosts'
+import { useContestRecruitingPosts } from '../features/post/hooks'
 import { useTimedToast } from '../hooks/useTimedToast'
 
 const PAGE_CLASS = 'mx-auto max-w-[1680px] px-4 py-8 md:px-6 md:py-12 lg:px-12 xl:px-[120px]'
@@ -50,6 +52,31 @@ function Poster({ contest }: { contest: ContestDetail }) {
   )
 }
 
+// 넓은 화면에서 오른쪽 칸이 GNB 아래(top-24, 96px)에 붙어 따라올 때, 칸 전체가 화면 안에 들어가는지 본다.
+// 「팀원 모집 중」 카드(MAIN-02 ⑨)까지 붙어 화면보다 길어지면 아래가 잘려 볼 수 없으므로 따라오지 않게 한다 (#180).
+const STICKY_TOP_PX = 96
+const STICKY_BOTTOM_GAP_PX = 24
+
+function useFitsViewport<T extends HTMLElement>() {
+  const ref = useRef<T>(null)
+  const [fits, setFits] = useState(true)
+  useEffect(() => {
+    const element = ref.current
+    if (!element) return
+    const check = () =>
+      setFits(element.offsetHeight + STICKY_TOP_PX + STICKY_BOTTOM_GAP_PX <= window.innerHeight)
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(element)
+    window.addEventListener('resize', check)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', check)
+    }
+  })
+  return [ref, fits] as const
+}
+
 function DetailSkeleton() {
   return (
     <main className={PAGE_CLASS} aria-busy="true">
@@ -73,6 +100,10 @@ export default function ContestDetailPage() {
   const toggleBookmark = useToggleBookmark()
   const toast = useTimedToast()
   const [loginModalOpen, setLoginModalOpen] = useState(false)
+  // MAIN-02 ⑨: 이 공모전의 지원할 수 있는 모집글. 불러오는 중·실패·0개면 카드를 그리지 않는다 (지금 화면과 같음)
+  const recruiting = useContestRecruitingPosts(contestId)
+  const recruitingPosts = recruiting.data?.items ?? []
+  const [asideRef, asideFits] = useFitsViewport<HTMLElement>()
 
   const safeDescription = useMemo(
     () => (contest?.description ? sanitizeDescription(contest.description, contest.sourceUrl) : ''),
@@ -201,9 +232,14 @@ export default function ContestDetailPage() {
         </article>
 
         {/* MAIN-02 ③: 포스터와 조회수. 넓은 화면에서는 본문을 내려도 GNB(72px) 아래에 고정된다.
-            1024px 미만에서는 긴 본문 아래로 밀리지 않게 제목과 본문 사이에, 최대 400px(휴대폰 288px)로 가운데 둔다 (#117) */}
-        <aside className="order-2 mx-auto w-full max-w-72 sm:max-w-100 lg:sticky lg:top-24 lg:order-none lg:mx-0 lg:w-100 lg:max-w-none lg:shrink-0 lg:self-start">
-          <div className="overflow-hidden rounded-card border border-line bg-surface">
+            1024px 미만에서는 긴 본문 아래로 밀리지 않게 제목과 본문 사이에, 최대 400px(휴대폰 288px)로 가운데 둔다 (#117)
+            ⑨ 「팀원 모집 중」 카드는 포스터 카드 아래에 두고 칸 전체가 함께 따라온다. 화면보다 길면 따라오지 않는다 (#180) */}
+        <aside
+          ref={asideRef}
+          className={`order-2 flex w-full flex-col gap-6 lg:order-none lg:w-100 lg:shrink-0 lg:self-start ${asideFits ? 'lg:sticky lg:top-24' : ''}`}
+        >
+          {/* 포스터 카드만 휴대폰 288px·태블릿 400px로 줄이고, 모집글 카드는 가로를 꽉 채운다 (#180) */}
+          <div className="mx-auto w-full max-w-72 overflow-hidden rounded-card border border-line bg-surface sm:max-w-100 lg:max-w-none">
             <div className="aspect-3/4 bg-surface-sub">
               <Poster contest={contest} />
             </div>
@@ -214,6 +250,14 @@ export default function ContestDetailPage() {
             {/* MAIN-02 ④ 버튼. 768px 미만(휴대폰)에서는 화면 아래 고정 줄로 옮긴다 */}
             <div className="hidden gap-2 p-6 pt-4 md:flex">{actionButtons}</div>
           </div>
+
+          {recruitingPosts.length > 0 && (
+            <ContestRecruitingPosts
+              contestId={contestId}
+              posts={recruitingPosts}
+              totalCount={recruiting.data?.totalCount ?? recruitingPosts.length}
+            />
+          )}
         </aside>
       </div>
 
