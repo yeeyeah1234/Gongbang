@@ -21,7 +21,7 @@ public class DeletedTeamReminderService {
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onDeleted(TeamDeletedEvent event) {
-        for (String type : java.util.List.of("EVENT", "MILESTONE")) {
+        for (String type : java.util.List.of("EVENT", "MILESTONE_D7", "MILESTONE_D1")) {
             for (var pending :
                     repository.findByTargetTypeAndStatus(
                             type, ScheduledNotification.Status.PENDING)) {

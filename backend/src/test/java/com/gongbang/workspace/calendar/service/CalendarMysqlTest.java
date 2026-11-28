@@ -268,7 +268,7 @@ class CalendarMysqlTest {
         assertThat(event.get("auto_type")).isEqualTo("CONTEST_DEADLINE");
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2026, 12, 20, 0, 0));
         assertThat(autoEndAt(teamId)).isEqualTo(LocalDateTime.of(2026, 12, 20, 0, 0));
-        assertMilestones(teamId, LocalDate.of(2026, 12, 20));
+        assertThat(countEvents(teamId)).isEqualTo(1);
     }
 
     @Test
@@ -288,23 +288,11 @@ class CalendarMysqlTest {
         assertThat(events.get(0).get("title")).isEqualTo("공모전 접수 마감");
         assertThat(autoStartAt(teamId)).isEqualTo(LocalDateTime.of(2027, 1, 5, 0, 0));
         assertThat(autoEndAt(teamId)).isEqualTo(LocalDateTime.of(2027, 1, 5, 0, 0));
-        assertMilestones(teamId, LocalDate.of(2027, 1, 5));
-    }
-
-    private void assertMilestones(long teamId, LocalDate deadline) {
-        for (int days : new int[] {7, 1}) {
-            List<LocalDateTime> starts =
-                    jdbcTemplate.queryForList(
-                            "SELECT start_at FROM calendar_event WHERE team_id = ? AND auto_type = ?",
-                            LocalDateTime.class,
-                            teamId,
-                            "CONTEST_D" + days);
-            assertThat(starts).containsExactly(deadline.minusDays(days).atStartOfDay());
-        }
+        assertThat(countEvents(teamId)).isEqualTo(1);
     }
 
     @Test
-    @DisplayName("두 번 불러도 자동 일정은 종류별 1개씩 총 3개")
+    @DisplayName("두 번 불러도 자동 일정은 팀당 1개")
     void 두_번_불러도_종류별_1개() {
         long teamId = team(servicePost(contest(LocalDate.of(2026, 12, 20))));
 
@@ -374,7 +362,7 @@ class CalendarMysqlTest {
     }
 
     @Test
-    @DisplayName("두 스레드가 같은 팀을 동시에 불러도 오류 없이 종류별 1개")
+    @DisplayName("두 스레드가 같은 팀을 동시에 불러도 오류 없이 1개")
     void 동시에_불러도_종류별_1개() throws Exception {
         long teamId = team(servicePost(contest(LocalDate.of(2026, 12, 20))));
         int threads = 2;
@@ -416,7 +404,7 @@ class CalendarMysqlTest {
         insertNormalEvent(teamId, "회의 2");
         calendarService.upsertAutoEvent(teamId);
 
-        assertThat(countEvents(teamId)).isEqualTo(5);
+        assertThat(countEvents(teamId)).isEqualTo(3);
         assertThat(autoDeadlineEvents(teamId)).hasSize(1);
     }
 
@@ -524,7 +512,7 @@ class CalendarMysqlTest {
                                 teamId,
                                 LocalDate.of(2026, 12, 1),
                                 LocalDate.of(2026, 12, 31)))
-                .containsExactly("달 경계 종일", "12월 회의", "공모전 마감 D-7", "공모전 마감 D-1", "공모전 접수 마감");
+                .containsExactly("달 경계 종일", "12월 회의", "공모전 접수 마감");
     }
 
     @Test
