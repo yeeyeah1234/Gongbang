@@ -77,13 +77,13 @@ function renderDayCell(arg: DayCellContentArg) {
 }
 
 // CAL-01 ③⑤, CAL-06 ②: 색 막대 + 제목. 시간 일정은 첫 조각에만 「19:00」을 붙인다
-// 자동 일정은 막대에서는 「자동 · 제목」 글자만 (자물쇠는 그날 팝업 카드에만)
+// 자동 일정은 막대에서는 제목만 굵게 (「자동」 배지·자물쇠는 그날 팝업 카드와 범례에)
 function renderEvent(arg: EventContentArg) {
   const event = eventOf(arg)
   const { soft, solid } = eventColorClasses(event)
   const auto = isAutoEvent(event)
   let text = event.title
-  if (auto) text = `자동 · ${event.title}`
+  if (!auto && !event.allDay && arg.isStart) text = `${timePart(event.startAt)} ${event.title}`
   else if (!event.allDay && arg.isStart) text = `${timePart(event.startAt)} ${event.title}`
 
   return (
