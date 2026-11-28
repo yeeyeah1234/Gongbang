@@ -40,7 +40,12 @@ class TeamServiceTest {
 
     @BeforeEach
     void setUp() {
-        teamService = new TeamService(teamRepository, teamMemberRepository);
+        teamService =
+                new TeamService(
+                        org.mockito.Mockito.mock(
+                                com.gongbang.member.service.MemberLifecycleService.class),
+                        teamRepository,
+                        teamMemberRepository);
     }
 
     private Team savedTeam() {

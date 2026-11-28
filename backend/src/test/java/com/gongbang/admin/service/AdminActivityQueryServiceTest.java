@@ -17,7 +17,9 @@ class AdminActivityQueryServiceTest {
     final AdminActivityRepository repo = mock(AdminActivityRepository.class);
     final AdminMemberService admins = mock(AdminMemberService.class);
     final MemberService members = mock(MemberService.class);
-    final AdminActivityQueryService service = new AdminActivityQueryService(repo, admins, members);
+    final AdminActivityQueryService service =
+            new AdminActivityQueryService(
+                    repo, admins, members, mock(AdminActivityTargetService.class));
 
     @Test
     void 일반회원의로그조회는차단한다() {

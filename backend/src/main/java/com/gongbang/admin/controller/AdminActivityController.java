@@ -20,4 +20,9 @@ public class AdminActivityController {
             @RequestParam(defaultValue = "0") int page) {
         return ApiResponse.success(service.list(me.getMemberId(), action, page));
     }
+
+    @GetMapping("/{id}/target")
+    public ApiResponse<?> target(@AuthenticationPrincipal LoginMember me, @PathVariable Long id) {
+        return ApiResponse.success(service.target(me.getMemberId(), id));
+    }
 }

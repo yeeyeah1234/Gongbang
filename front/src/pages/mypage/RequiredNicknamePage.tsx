@@ -32,6 +32,29 @@ export default function RequiredNicknamePage() {
       navigate('/mypage/profile', { replace: true })
     },
   })
+  if (profile.isPending)
+    return (
+      <p role="status" className="p-4">
+        회원 정보를 불러오는 중입니다…
+      </p>
+    )
+  if (profile.isError)
+    return (
+      <main className="mx-auto max-w-lg space-y-4 px-4 py-8" role="alert">
+        <p>회원 정보를 불러오지 못했어요. 다시 시도해 주세요.</p>
+        <Button onClick={() => profile.refetch()} disabled={profile.isFetching}>
+          다시 시도
+        </Button>
+        <Button
+          onClick={async () => {
+            await signOut()
+            navigate('/login', { replace: true })
+          }}
+        >
+          로그아웃
+        </Button>
+      </main>
+    )
   if (profile.data && !profile.data.nicknameChangeRequired) {
     return <Navigate to="/mypage/profile" replace />
   }
@@ -42,8 +65,6 @@ export default function RequiredNicknamePage() {
       <p className="mt-2 text-small text-text-sub">
         제재된 기존 닉네임은 다시 사용할 수 없습니다. 다른 프로필 정보는 변경하지 않아도 됩니다.
       </p>
-      {profile.isPending && <p className="mt-4">불러오는 중입니다…</p>}
-      {profile.isError && <Button onClick={() => profile.refetch()}>다시 시도</Button>}
       <form
         className="mt-6 space-y-4"
         onSubmit={(e) => {

@@ -11,6 +11,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface TeamRepository extends JpaRepository<Team, Long> {
 
+    /** MY-11: 탈퇴 전 잠글 팀·모집글 목록. 삭제된 팀은 제외한다. */
+    @Query(
+            "select t.id as id, t.postId as postId from Team t join TeamMember tm on tm.team.id = t.id where tm.memberId = :memberId and tm.leftAt is null and t.deletedAt is null order by t.id")
+    List<ActiveTeamMeta> findWithdrawalTeams(@Param("memberId") Long memberId);
+
     Optional<Team> findByPostId(Long postId);
 
     boolean existsByPostId(Long postId);

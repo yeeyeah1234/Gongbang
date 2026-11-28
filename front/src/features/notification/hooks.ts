@@ -42,6 +42,7 @@ export function useRecentNotifications(enabled: boolean) {
   return useQuery({
     queryKey: notificationKeys.recent,
     queryFn: () => fetchNotifications({ page: 0, size: 5 }),
+    retry: false,
     enabled,
   })
 }

@@ -61,6 +61,8 @@ class TeamJoinServiceTest {
     void setUp() {
         teamJoinService =
                 new TeamJoinService(
+                        org.mockito.Mockito.mock(
+                                com.gongbang.member.service.MemberLifecycleService.class),
                         postCommandService,
                         teamService,
                         applicationCloseService,

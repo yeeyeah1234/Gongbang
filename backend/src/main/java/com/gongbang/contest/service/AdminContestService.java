@@ -56,6 +56,26 @@ public class AdminContestService {
     }
 
     @Transactional(readOnly = true)
+    public Item detail(Long actor, Long id) {
+        access.requireAdmin(actor);
+        Contest c = em.find(Contest.class, id);
+        if (c == null) throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND);
+        return item(c);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<Long, String> titles(Long actor, java.util.Collection<Long> ids) {
+        access.requireAdmin(actor);
+        if (ids.isEmpty()) return java.util.Map.of();
+        var c = QContest.contest;
+        return new JPAQueryFactory(em)
+                .select(c.id, c.title).from(c).where(c.id.in(ids)).fetch().stream()
+                        .collect(
+                                java.util.stream.Collectors.toMap(
+                                        row -> row.get(c.id), row -> row.get(c.title)));
+    }
+
+    @Transactional(readOnly = true)
     public Page<Item> list(Long actor, String keyword, int page) {
         access.requireAdmin(actor);
         if (page < 0 || keyword.length() > 100)

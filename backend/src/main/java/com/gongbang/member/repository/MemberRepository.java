@@ -13,6 +13,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface MemberRepository extends JpaRepository<Member, Long> {
 
+    @Query(
+            value = "SELECT status FROM member WHERE id IN (:ids) ORDER BY id FOR UPDATE",
+            nativeQuery = true)
+    List<String> findStatusesForUpdate(@Param("ids") Collection<Long> ids);
+
     Optional<Member> findByEmail(String email);
 
     List<Member> findByRoleAndStatus(MemberRole role, MemberStatus status);

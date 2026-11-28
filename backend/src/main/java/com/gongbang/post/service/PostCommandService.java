@@ -301,6 +301,13 @@ public class PostCommandService {
         return rejectedApplicantIds.size();
     }
 
+    /** MY-11: 삭제된 모집글의 팀도 남으므로 삭제 여부와 무관하게 행을 잠근다. */
+    public void lockForWithdrawal(Long postId) {
+        recruitPostRepository
+                .findByIdForUpdate(postId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+    }
+
     /**
      * 팀 도메인용 (WS-09 팀 나가기·NET-06 강제 퇴장·MY-11 탈퇴): 확정 인원을 1 줄이고 줄어든 인원을 돌려준다 (INT-006 ④, NET-06 응답
      * currentCount). 모집글 행을 잠근 뒤 줄여서 수락과 겹치지 않는다 (AGENTS.md 7). 모집완료 글은 모집중으로 되돌리지 않는다 (⑤,
